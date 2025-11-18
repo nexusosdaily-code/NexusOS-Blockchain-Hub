@@ -479,13 +479,18 @@ class NexusNativeWallet:
             from_address=from_address,
             to_address=to_address,
             content=content,
-            spectral_region=spectral_region.value,
+            spectral_region=spectral_region.display_name,
             wavelength=wave_msg.wavelength,
             cost_nxt=cost_nxt,
             dag_parents=json.dumps(parent_messages) if parent_messages else None
         )
         self.db.add(msg)
-        self.db.commit()
+        
+        try:
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            raise e
         
         return {
             'message_id': message_id,
@@ -493,7 +498,7 @@ class NexusNativeWallet:
             'to': to_address or 'broadcast',
             'wavelength': wave_msg.wavelength,
             'frequency': wave_msg.frequency,
-            'spectral_region': spectral_region.value,
+            'spectral_region': spectral_region.display_name,
             'cost_nxt': cost_nxt,
             'dag_parents': parent_messages or []
         }
