@@ -143,31 +143,38 @@ class ValidatorEconomics:
         """Apply slashing penalty"""
         total_stake = self.get_total_stake()
         slash_amount = total_stake * (slash_percentage / 100)
+        original_slash = slash_amount
         
         # Slash validator's stake first
         if self.stake >= slash_amount:
             self.stake -= slash_amount
+            slash_amount = 0  # All slashing absorbed by validator stake
         else:
             slash_amount -= self.stake
             self.stake = 0
             
             # Slash delegated stake proportionally
+            total_delegated_slashed = 0.0
             if self.total_delegated > 0:
                 for delegation in self.delegations:
                     if delegation.status == DelegationStatus.ACTIVE:
                         delegation_slash = (delegation.amount / self.total_delegated) * slash_amount
-                        delegation.amount -= delegation_slash
+                        delegation.amount = max(0, delegation.amount - delegation_slash)  # Clamp to 0
+                        total_delegated_slashed += delegation_slash
+                
+                # Update total_delegated to reflect slashing
+                self.total_delegated = max(0, self.total_delegated - total_delegated_slashed)
         
         # Record slashing event
         self.slashing_events.append({
             'type': slash_type.value,
             'percentage': slash_percentage,
-            'amount': slash_amount,
+            'amount': original_slash,
             'reason': reason,
             'timestamp': time.time()
         })
         
-        self.total_slashed += slash_amount
+        self.total_slashed += original_slash
         
         # Impact reputation
         self.reputation_score = max(0, self.reputation_score - (slash_percentage * 2))
