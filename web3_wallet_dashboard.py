@@ -193,10 +193,13 @@ def render_create_wallet_tab(wallet):
                         with col1:
                             st.metric("Balance", f"{result['balance_nxt']:.2f} NXT")
                         with col2:
-                            st.metric("Spectral Regions", result['spectral_regions'])
+                            st.metric("Spectral Regions", len(result['spectral_regions']))
                         
                         st.caption("**Your NexusOS Address:**")
                         st.code(result['address'], language=None)
+                        
+                        st.caption("**Quantum Spectral Signature:**")
+                        st.text(", ".join(result['spectral_regions']))
                         
                         st.warning("⚠️ **SAVE YOUR PASSWORD!** It cannot be recovered if lost.")
                         
