@@ -14,7 +14,7 @@ Supply Model:
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from enum import Enum
 
 
@@ -29,12 +29,12 @@ class AdoptionScenario(Enum):
 @dataclass
 class BurnParameters:
     """Burn rate parameters - PRODUCTION VALUES (from native_token.py)"""
-    # These match the ACTUAL production burn rates in NativeTokenSystem
-    # All values in NXT (converted from integer units: 1 unit = 0.01 NXT)
-    message_burn: float = 0.01      # 1 unit = 0.01 NXT per message
-    link_burn: float = 0.01         # 1 unit = 0.01 NXT per link  
-    video_burn: float = 0.02        # 2 units = 0.02 NXT per video
-    transfer_fee: float = 0.01      # 1 unit = 0.01 NXT per transaction
+    # Bitcoin-style denomination: 100M units per NXT (like satoshis)
+    # These match ACTUAL production burns in NativeTokenSystem
+    message_burn: float = 0.000057   # 5,700 units = 0.000057 NXT per message
+    link_burn: float = 0.0000285     # 2,850 units = 0.0000285 NXT per link
+    video_burn: float = 0.000114     # 11,400 units = 0.000114 NXT per video
+    transfer_fee: float = 0.00001    # 1,000 units = 0.00001 NXT per transaction
     
     # Activity ratios
     message_ratio: float = 0.7     # 70% of activity
@@ -70,7 +70,7 @@ class LongTermTokenomicsSimulator:
     INITIAL_SUPPLY = 1_000_000.0  # NXT
     GENESIS_SUPPLY = 500_000.0    # Available at launch
     
-    def __init__(self, burn_params: BurnParameters = None):
+    def __init__(self, burn_params: Optional[BurnParameters] = None):
         self.burn_params = burn_params or BurnParameters()
         self.metrics_history: List[NetworkMetrics] = []
     

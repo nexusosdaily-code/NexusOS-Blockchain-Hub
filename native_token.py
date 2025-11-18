@@ -56,7 +56,7 @@ class Account:
     
     def get_balance_nxt(self) -> float:
         """Get balance in NXT (human-readable)"""
-        return self.balance / 100.0
+        return self.balance / 100_000_000.0  # 100M units per NXT
     
     def has_sufficient_balance(self, amount: int) -> bool:
         """Check if account has sufficient balance"""
@@ -74,22 +74,23 @@ class NativeTokenSystem:
     - Inflationary: Block rewards for validators (controlled rate)
     """
     
-    # Token constants
-    TOTAL_SUPPLY = 100_000_000  # 1M NXT in units (100 units = 1 NXT)
-    UNITS_PER_NXT = 100
-    GENESIS_SUPPLY = 50_000_000  # 500K NXT for genesis distribution
-    VALIDATOR_RESERVE = 30_000_000  # 300K NXT for validator rewards
-    ECOSYSTEM_RESERVE = 20_000_000  # 200K NXT for ecosystem development
+    # Token constants (Bitcoin model: 21M BTC × 100M satoshis)
+    # NexusOS: 1M NXT × 100M units = 100 trillion total units
+    UNITS_PER_NXT = 100_000_000  # 100 million units per NXT (like satoshis)
+    TOTAL_SUPPLY = 100_000_000_000_000  # 100 trillion units = 1M NXT
+    GENESIS_SUPPLY = 50_000_000_000_000  # 50 trillion units = 500K NXT
+    VALIDATOR_RESERVE = 30_000_000_000_000  # 30 trillion units = 300K NXT
+    ECOSYSTEM_RESERVE = 20_000_000_000_000  # 20 trillion units = 200K NXT
     
     # SUSTAINABLE Burn rates (in integer UNITS for 100+ year lifespan)
-    # Calibrated to prevent supply depletion while maintaining deflationary pressure
-    # 1 unit = 0.01 NXT, so minimum burn = 1 unit = 0.01 NXT
-    MESSAGE_BURN_RATE = 1  # 1 unit = 0.01 NXT per message (reduced from 10)
-    LINK_SHARE_BURN_RATE = 1  # 1 unit = 0.01 NXT per link (reduced from 5)
-    VIDEO_SHARE_BURN_RATE = 2  # 2 units = 0.02 NXT per video (reduced from 20)
+    # Calibrated for ~1% annual burn at scale (verified by simulation)
+    # With 100M units/NXT, we can now support micro-payments
+    MESSAGE_BURN_RATE = 5_700  # 5,700 units = 0.000057 NXT per message
+    LINK_SHARE_BURN_RATE = 2_850  # 2,850 units = 0.0000285 NXT per link
+    VIDEO_SHARE_BURN_RATE = 11_400  # 11,400 units = 0.000114 NXT per video
     
     # Transaction fees
-    BASE_TRANSFER_FEE = 1  # 1 unit = 0.01 NXT per transfer
+    BASE_TRANSFER_FEE = 1_000  # 1,000 units = 0.00001 NXT per transfer
     
     # Economic balancing parameters (for future implementation)
     ENABLE_DYNAMIC_BURNS = False  # TODO: Implement in burn logic
@@ -140,7 +141,7 @@ class NativeTokenSystem:
             return self.create_account(address)
         return self.accounts[address]
     
-    def transfer(self, from_address: str, to_address: str, amount: int, fee: int = None) -> Optional[TokenTransaction]:
+    def transfer(self, from_address: str, to_address: str, amount: int, fee: Optional[int] = None) -> Optional[TokenTransaction]:
         """Transfer tokens between accounts"""
         if fee is None:
             fee = self.BASE_TRANSFER_FEE
@@ -261,10 +262,6 @@ class NativeTokenSystem:
         if tx:
             tx.tx_type = TransactionType.VIDEO_SHARE_PAYMENT
         return tx
-    
-    def get_circulating_supply(self) -> int:
-        """Calculate circulating supply (total minted - burned)"""
-        return self.total_minted - self.total_burned
     
     def get_total_supply(self) -> int:
         """Get total possible supply"""
