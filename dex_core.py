@@ -1,6 +1,7 @@
 """
 Decentralized Exchange (DEX) Core Module
 Layer 2 integration for NexusOS blockchain with AMM, liquidity pools, and token standards
+Integrated with NativeTokenSystem (NXT) as exclusive base currency
 """
 
 import hashlib
@@ -9,6 +10,74 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import math
+from native_token import NativeTokenSystem, TransactionType
+
+
+class NativeTokenAdapter:
+    """
+    Adapter layer bridging DEX with NativeTokenSystem (NXT)
+    Handles unit conversions, balance queries, transfers, and fee routing
+    """
+    
+    UNITS_PER_NXT = NativeTokenSystem.UNITS_PER_TOKEN  # 100 units = 1 NXT
+    
+    def __init__(self, token_system: NativeTokenSystem):
+        """Initialize adapter with NativeTokenSystem reference"""
+        self.token_system = token_system
+    
+    def nxt_to_units(self, nxt_amount: float) -> int:
+        """Convert NXT (float) to units (int)"""
+        return int(nxt_amount * self.UNITS_PER_NXT)
+    
+    def units_to_nxt(self, units: int) -> float:
+        """Convert units (int) to NXT (float)"""
+        return units / self.UNITS_PER_NXT
+    
+    def get_balance(self, address: str) -> float:
+        """Get NXT balance for address (in NXT, not units)"""
+        units = self.token_system.get_balance(address)
+        return self.units_to_nxt(units)
+    
+    def transfer(self, from_address: str, to_address: str, nxt_amount: float) -> bool:
+        """Transfer NXT between addresses"""
+        units = self.nxt_to_units(nxt_amount)
+        success, _ = self.token_system.transfer(from_address, to_address, units)
+        return success
+    
+    def transfer_units(self, from_address: str, to_address: str, units: int) -> bool:
+        """Transfer NXT using units directly"""
+        success, _ = self.token_system.transfer(from_address, to_address, units)
+        return success
+    
+    def route_fee_to_validator_pool(self, units: int) -> bool:
+        """Route trading fees to validator pool"""
+        # Fees go directly to validator pool account
+        validator_pool = NativeTokenSystem.VALIDATOR_POOL
+        
+        # Record fee as a special transaction type
+        tx_hash = self.token_system._record_transaction(
+            from_address="DEX_FEES",
+            to_address=validator_pool,
+            amount=units,
+            tx_type=TransactionType.REWARD,  # Treat as validator reward
+            metadata={"source": "dex_trading_fees"}
+        )
+        
+        # Credit validator pool (fees come from DEX operations, not user accounts)
+        current_balance = self.token_system.get_balance(validator_pool)
+        self.token_system.accounts[validator_pool].balance = current_balance + units
+        
+        return tx_hash is not None
+    
+    def get_total_supply(self) -> float:
+        """Get total NXT supply in NXT"""
+        stats = self.token_system.get_token_stats()
+        return stats['total_supply']
+    
+    def get_circulating_supply(self) -> float:
+        """Get circulating NXT supply in NXT"""
+        stats = self.token_system.get_token_stats()
+        return stats['circulating_supply']
 
 
 class TokenStandard(Enum):
@@ -302,10 +371,18 @@ class LiquidityPool:
 
 
 class DEXEngine:
-    """Decentralized Exchange Engine with AMM"""
+    """Decentralized Exchange Engine with AMM integrated with NXT"""
     
-    def __init__(self):
-        """Initialize DEX engine"""
+    NXT_SYMBOL = "NXT"  # Native token symbol
+    
+    def __init__(self, nxt_adapter: Optional[NativeTokenAdapter] = None):
+        """
+        Initialize DEX engine
+        
+        Args:
+            nxt_adapter: NativeTokenAdapter for NXT integration (required for production)
+        """
+        self.nxt_adapter = nxt_adapter
         self.tokens: Dict[str, Token] = {}
         self.pools: Dict[str, LiquidityPool] = {}
         
@@ -313,22 +390,13 @@ class DEXEngine:
         self.total_swaps = 0
         self.total_volume = 0.0
         self.total_liquidity_added = 0.0
+        self.total_fees_to_validators = 0.0  # Track fees routed to validators
         
         # Initialize with default tokens
         self._initialize_default_tokens()
     
     def _initialize_default_tokens(self):
-        """Create default tokens for testing"""
-        # Native token (like ETH/SOL)
-        native = Token(
-            symbol="NXS",
-            name="Nexus Token",
-            decimals=18,
-            creator="system"
-        )
-        native.mint("treasury", 1_000_000)
-        self.tokens["NXS"] = native
-        
+        """Create default ERC-20 tokens (NXT handled by adapter)"""
         # Stablecoin
         usdc = Token(
             symbol="USDC",
@@ -350,7 +418,10 @@ class DEXEngine:
         self.tokens["GOV"] = gov
     
     def create_token(self, symbol: str, name: str, initial_supply: float, creator: str, decimals: int = 18) -> Tuple[bool, str]:
-        """Create new token"""
+        """Create new ERC-20 token (cannot create NXT - handled by native system)"""
+        if symbol == self.NXT_SYMBOL:
+            return False, f"Cannot create {self.NXT_SYMBOL} - it is the native token"
+        
         if symbol in self.tokens:
             return False, f"Token {symbol} already exists"
         
@@ -366,36 +437,62 @@ class DEXEngine:
         return True, f"Token {symbol} created with {initial_supply} initial supply"
     
     def create_pool(self, token_a: str, token_b: str, initial_a: float, initial_b: float, provider: str) -> Tuple[bool, str]:
-        """Create new liquidity pool"""
-        # Validate tokens
-        if token_a not in self.tokens or token_b not in self.tokens:
-            return False, "One or both tokens do not exist"
+        """
+        Create new liquidity pool (enforces TOKEN/NXT pairs only)
+        One token must be NXT to ensure all trading pairs use native currency
+        """
+        # ENFORCE: One token must be NXT
+        if token_a != self.NXT_SYMBOL and token_b != self.NXT_SYMBOL:
+            return False, f"All pools must pair with {self.NXT_SYMBOL}. One token must be {self.NXT_SYMBOL}."
         
-        # Ensure consistent ordering
-        if token_a > token_b:
+        # ENFORCE: Cannot create NXT/NXT pool
+        if token_a == self.NXT_SYMBOL and token_b == self.NXT_SYMBOL:
+            return False, f"Cannot create {self.NXT_SYMBOL}/{self.NXT_SYMBOL} pool"
+        
+        # Validate NXT adapter is available
+        if self.nxt_adapter is None:
+            return False, "NXT adapter not initialized - cannot create pools"
+        
+        # Validate non-NXT token exists
+        other_token = token_a if token_b == self.NXT_SYMBOL else token_b
+        if other_token not in self.tokens:
+            return False, f"Token {other_token} does not exist"
+        
+        # Ensure consistent ordering: always TOKEN-NXT (not NXT-TOKEN)
+        if token_a == self.NXT_SYMBOL:
             token_a, token_b = token_b, token_a
             initial_a, initial_b = initial_b, initial_a
         
-        pool_id = f"{token_a}-{token_b}"
+        pool_id = f"{token_a}-{self.NXT_SYMBOL}"
         if pool_id in self.pools:
             return False, f"Pool {pool_id} already exists"
         
+        # Check provider has sufficient balances
+        # Check ERC-20 token balance
+        token_obj = self.tokens[token_a]
+        if token_obj.balance_of(provider) < initial_a:
+            return False, f"Insufficient {token_a} balance"
+        
+        # Check NXT balance via adapter
+        nxt_balance = self.nxt_adapter.get_balance(provider)
+        if nxt_balance < initial_b:
+            return False, f"Insufficient NXT balance: have {nxt_balance:.4f}, need {initial_b:.4f}"
+        
         # Create pool
-        pool = LiquidityPool(token_a=token_a, token_b=token_b)
+        pool = LiquidityPool(token_a=token_a, token_b=self.NXT_SYMBOL)
         
         # Add initial liquidity
         success, lp_tokens, message = pool.add_liquidity(provider, initial_a, initial_b)
         if not success:
             return False, f"Failed to add initial liquidity: {message}"
         
-        # Transfer tokens from provider
-        token_a_obj = self.tokens[token_a]
-        token_b_obj = self.tokens[token_b]
-        
-        if not token_a_obj.transfer(provider, pool_id, initial_a):
+        # Transfer ERC-20 token from provider to pool
+        if not token_obj.transfer(provider, pool_id, initial_a):
             return False, f"Failed to transfer {token_a}"
-        if not token_b_obj.transfer(provider, pool_id, initial_b):
-            return False, f"Failed to transfer {token_b}"
+        
+        # Transfer NXT from provider to pool via adapter
+        if not self.nxt_adapter.transfer(provider, pool_id, initial_b):
+            return False, f"Failed to transfer NXT"
         
         self.pools[pool_id] = pool
         self.total_liquidity_added += initial_a + initial_b
