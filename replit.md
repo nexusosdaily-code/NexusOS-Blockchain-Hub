@@ -46,7 +46,7 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 
 **GhostDAG Ecosystem Optimization**: Implements DAG and GhostDAG for parallel block processing (PHANTOM protocol) in blockchain consensus, and a universal DAG optimizer for dependency resolution and parallel execution across various ecosystem components.
 
-**DEX (Decentralized Exchange) - Layer 2 Integration**: An automated market maker (AMM) with ERC-20-like token standard, constant product formula, liquidity pools, and swap mechanisms. Provides interactive UI for swaps, liquidity management, and analytics.
+**DEX (Decentralized Exchange) - Layer 2 Integration**: An automated market maker (AMM) with ERC-20-like token standard, constant product formula, liquidity pools, and swap mechanisms. **NXT-Exclusive Base Currency**: All trading pairs must be TOKEN/NXT format (NXT is the exclusive base currency). Uses NativeTokenAdapter to bridge DEX with the native payment layer, ensuring NXT balances and transfers interact with the Layer 1 NativeTokenSystem. Trading fees (0.3%) collected from NXT side of swaps are routed to VALIDATOR_POOL via DEX_FEES account, creating economic flow from DEX activity to validators. UI enforces TOKEN/NXT pairing, queries NXT balances from native system, and handles NXT transfers via adapter rather than ERC-20 Token class. Provides interactive UI for swaps, liquidity management, and analytics.
 
 **Enhanced Validator Economics**: A staking and delegation system with proportional reward distribution, configurable commission rates, unbonding periods, and slashing conditions. Includes a validator reputation system and economic modeling for profitability.
 
