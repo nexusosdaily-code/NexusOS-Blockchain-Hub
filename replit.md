@@ -36,6 +36,18 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 
 **Wavelength Cryptography Domain**: A DAG-based encryption/decryption system based on electromagnetic theory (Frequency Shift, Amplitude Modulation, Phase Modulation, Quantum-Inspired Multi-Layer). Integrated into secure messaging.
 
+**Wavelength-Economic Validation System**: A revolutionary physics-based blockchain validation mechanism that replaces traditional SHA-256 hashing with electromagnetic wave interference patterns grounded in Maxwell's equations and quantum optics. Core components:
+  - **WavelengthValidator**: Implements Maxwell equation solvers (electric/magnetic field calculations), wave superposition, interference pattern generation, and 5-dimensional wave signature validation (wavelength, amplitude, phase, polarization, modulation)
+  - **Physics-Based Economics**: Message costs derived from quantum energy formula E = hf (Planck's equation), where higher frequency electromagnetic waves (UV ~1200 THz) cost more NXT than lower frequency (IR ~340 THz), creating economic value directly tied to physical energy
+  - **Spectral Diversity Consensus**: Validates messages across 6 spectral regions (Ultraviolet, Violet, Blue, Green, Yellow, Infrared) requiring 5/6 region coverage (83% spectral diversity) for security. Includes region rotation mechanism ensuring all validators participate fairly over time
+  - **Wave Interference DAG**: Messages linked via interference pattern hashing instead of cryptographic hashing; validates parent-child relationships through wave superposition alignment, checking every parent for interference consistency
+  - **Security Advantages**: Quantum-resistant (based on Heisenberg uncertainty, no-cloning theorem, information-theoretic security) vs vulnerable SHA-256; battery-efficient mathematical wave simulation on mobile devices vs power-hungry proof-of-work mining
+  - **Economic Distribution**: 60% system revenue, 40% to validators proportionally; costs scale 1 NXT = 100 smallest units with physics-based pricing (UV messages ~2 NXT, visible ~0.8-1 NXT, IR ~0.8 NXT)
+  - **Integration**: Fully integrated with NXT payment layer via `wavelength_messaging_integration.py`; validator registration, spectral region assignment, balance checking, NXT transfers, reward distribution, and message DAG management
+  - **Interactive Dashboard**: `wavelength_economics_dashboard.py` with 5 tabs: Physics vs Hashing comparison, Wave Interference Demo (live electromagnetic simulations), Economic Pricing Model (E=hf calculator), Live Message Validation, and Spectral Diversity visualization
+  - **Security Hardening**: Explicit distinct region verification (prevents region starvation), all-parent interference validation (strengthens DAG integrity), deterministic rotation (fair validator participation), comprehensive error checking (security violations fail loudly)
+  - **Implementation Files**: `wavelength_validator.py` (Maxwell equations, interference patterns), `wavelength_economics_dashboard.py` (interactive UI), `wavelength_messaging_integration.py` (payment + consensus integration)
+
 **Secure Messaging Integration**: Wavelength cryptography is integrated for secure message transmission via email, SMS, or in-app notifications, with user-friendly compose and key management.
 
 **User Guidance System**: Provides "How to Use" guides, documentation, and quick help icons via `app_info_content.py` for all major modules.

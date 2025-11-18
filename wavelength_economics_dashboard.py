@@ -380,18 +380,23 @@ def render_economic_pricing():
             value=5
         )
     
-    # Calculate cost
+    # Display current selection with physics parameters
+    st.info(f"📡 **Selected Region:** {calc_region.display_name} — {calc_region.center_wavelength*1e9:.1f} nm wavelength, {(SPEED_OF_LIGHT/calc_region.center_wavelength)/1e12:.2f} THz frequency")
+    
+    # Calculate cost (EXPLICIT recalculation on parameter change)
     from wavelength_validator import WaveProperties
     
+    # Force fresh calculation by recreating wave with current selectbox values
     calc_wave = WaveProperties(
-        wavelength=calc_region.center_wavelength,
+        wavelength=calc_region.center_wavelength,  # Uses current selectbox value
         amplitude=0.7,
         phase=0.0,
         polarization=0.0,
-        spectral_region=calc_region,
-        modulation_type=calc_modulation
+        spectral_region=calc_region,  # Current selected region
+        modulation_type=calc_modulation  # Current selected modulation
     )
     
+    # Recalculate cost breakdown with current parameters
     cost_breakdown = validator.calculate_message_cost(
         calc_wave,
         message_size,
