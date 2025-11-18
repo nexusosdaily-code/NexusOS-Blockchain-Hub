@@ -2,10 +2,23 @@
 Native Payment Token System for NexusOS Layer 1 Blockchain
 
 NexusToken (NXT): The native currency powering the entire ecosystem
-- Total Supply: 1,000,000 NXT
-- Denomination: 100 units = 1 NXT (smallest unit: 0.01 NXT)
-- Use Cases: Validator rewards, messaging payments, DEX trading, transaction fees
-- Deflationary Model: Tokens burned for messaging activities
+
+**Bitcoin-Style Tokenomics:**
+- Total Supply: 1,000,000 NXT (fixed, like Bitcoin's 21M BTC)
+- Denomination: 100,000,000 units = 1 NXT (like 100M satoshis = 1 BTC)
+- Total Units: 100 trillion units (1M NXT × 100M units)
+- Smallest Unit: 1 unit = 0.00000001 NXT
+
+**Economic Model:**
+- Deflationary: Tokens burned for messaging activities (NOT fixed 4-year halving)
+- Issuance: AI-controlled validator rewards (NOT predetermined mining schedule)
+- Sustainability: Dynamic burn reduction + annual burn caps for 100+ year lifespan
+
+**Use Cases:**
+- Validator rewards and staking
+- Messaging payments (WNSP protocol)
+- DEX trading and liquidity
+- Transaction fees
 """
 
 from dataclasses import dataclass, field
@@ -29,13 +42,17 @@ class TransactionType(Enum):
 
 @dataclass
 class TokenTransaction:
-    """Represents a token transaction"""
+    """
+    Represents a token transaction on NexusOS blockchain.
+    
+    All amounts in integer units (100M units = 1 NXT, Bitcoin-style).
+    """
     tx_id: str
     tx_type: TransactionType
     from_address: str
     to_address: str
-    amount: int  # In smallest units (0.01 NXT)
-    fee: int = 0
+    amount: int  # In units (100M units = 1 NXT)
+    fee: int = 0  # In units
     timestamp: float = field(default_factory=time.time)
     data: dict = field(default_factory=dict)
     signature: str = ""
@@ -48,9 +65,13 @@ class TokenTransaction:
 
 @dataclass
 class Account:
-    """Token account"""
+    """
+    Token account for NexusOS blockchain.
+    
+    Balances stored in integer units (100M units = 1 NXT, like Bitcoin satoshis).
+    """
     address: str
-    balance: int = 0  # In smallest units
+    balance: int = 0  # In units (100M units = 1 NXT)
     nonce: int = 0
     created_at: float = field(default_factory=time.time)
     
@@ -92,11 +113,11 @@ class NativeTokenSystem:
     # Transaction fees
     BASE_TRANSFER_FEE = 1_000  # 1,000 units = 0.00001 NXT per transfer
     
-    # Economic balancing parameters (for future implementation)
-    ENABLE_DYNAMIC_BURNS = False  # TODO: Implement in burn logic
-    ENABLE_VALIDATOR_INFLATION = False  # TODO: Implement in block rewards
-    VALIDATOR_INFLATION_RATE = 0.02  # 2% annual (halves every 4 years)
-    MAX_ANNUAL_BURN_PCT = 5.0  # Cap burns at 5% of circulating supply
+    # Economic balancing parameters (Bitcoin-adapted for messaging burns)
+    ENABLE_DYNAMIC_BURNS = True  # Auto-reduce burns as supply decreases (sqrt dampening)
+    ENABLE_VALIDATOR_INFLATION = True  # AI-controlled validator rewards from VALIDATOR_RESERVE
+    VALIDATOR_INFLATION_RATE = 0.02  # 2% annual (halves every 4 years, Bitcoin-style)
+    MAX_ANNUAL_BURN_PCT = 5.0  # Cap burns at 5% of circulating supply per year
     
     def __init__(self):
         self.accounts: Dict[str, Account] = {}
@@ -243,22 +264,46 @@ class NativeTokenSystem:
         return tx
     
     def pay_for_message(self, from_address: str) -> Optional[TokenTransaction]:
-        """Pay and burn tokens for sending encrypted message"""
-        tx = self.burn(from_address, self.MESSAGE_BURN_RATE, "Encrypted message payment")
+        """
+        Pay and burn tokens for sending encrypted message.
+        Applies dynamic burn reduction if enabled.
+        """
+        # Calculate dynamic burn if enabled
+        base_burn_nxt = self.units_to_nxt(self.MESSAGE_BURN_RATE)
+        adjusted_burn_nxt = self.calculate_dynamic_burn(base_burn_nxt)
+        burn_amount = self.nxt_to_units(adjusted_burn_nxt)
+        
+        tx = self.burn(from_address, burn_amount, "Encrypted message payment")
         if tx:
             tx.tx_type = TransactionType.MESSAGE_PAYMENT
         return tx
     
     def pay_for_link_share(self, from_address: str) -> Optional[TokenTransaction]:
-        """Pay and burn tokens for sharing link"""
-        tx = self.burn(from_address, self.LINK_SHARE_BURN_RATE, "Link share payment")
+        """
+        Pay and burn tokens for sharing link.
+        Applies dynamic burn reduction if enabled.
+        """
+        # Calculate dynamic burn if enabled
+        base_burn_nxt = self.units_to_nxt(self.LINK_SHARE_BURN_RATE)
+        adjusted_burn_nxt = self.calculate_dynamic_burn(base_burn_nxt)
+        burn_amount = self.nxt_to_units(adjusted_burn_nxt)
+        
+        tx = self.burn(from_address, burn_amount, "Link share payment")
         if tx:
             tx.tx_type = TransactionType.LINK_SHARE_PAYMENT
         return tx
     
     def pay_for_video_share(self, from_address: str) -> Optional[TokenTransaction]:
-        """Pay and burn tokens for sharing video"""
-        tx = self.burn(from_address, self.VIDEO_SHARE_BURN_RATE, "Video share payment")
+        """
+        Pay and burn tokens for sharing video.
+        Applies dynamic burn reduction if enabled.
+        """
+        # Calculate dynamic burn if enabled
+        base_burn_nxt = self.units_to_nxt(self.VIDEO_SHARE_BURN_RATE)
+        adjusted_burn_nxt = self.calculate_dynamic_burn(base_burn_nxt)
+        burn_amount = self.nxt_to_units(adjusted_burn_nxt)
+        
+        tx = self.burn(from_address, burn_amount, "Video share payment")
         if tx:
             tx.tx_type = TransactionType.VIDEO_SHARE_PAYMENT
         return tx
@@ -367,9 +412,57 @@ class NativeTokenSystem:
         }
     
     def format_balance(self, units: int) -> str:
-        """Format balance for display"""
+        """
+        Format balance for user display (Bitcoin-style).
+        
+        Shows appropriate precision based on amount:
+        - < 0.001 NXT: Up to 8 decimals (like satoshis)
+        - < 1 NXT: Up to 6 decimals
+        - >= 1 NXT: 2-4 decimals
+        
+        Strips trailing zeros for clarity.
+        """
         nxt = self.units_to_nxt(units)
-        return f"{nxt:,.2f} NXT"
+        
+        if nxt == 0:
+            return "0 NXT"
+        elif nxt < 0.001:
+            # Micro-amounts: show up to 8 decimals (satoshi-level precision)
+            formatted = f"{nxt:.8f}".rstrip('0').rstrip('.')
+        elif nxt < 1:
+            # Small amounts: show up to 6 decimals
+            formatted = f"{nxt:.6f}".rstrip('0').rstrip('.')
+        elif nxt < 1000:
+            # Medium amounts: show 4 decimals
+            formatted = f"{nxt:,.4f}".rstrip('0').rstrip('.')
+        else:
+            # Large amounts: show 2 decimals with thousands separators
+            formatted = f"{nxt:,.2f}"
+        
+        return f"{formatted} NXT"
+
+
+def format_nxt_amount(nxt: float) -> str:
+    """
+    Format NXT amount for display (Bitcoin-style precision).
+    
+    Helper function that can be imported and used across UI components.
+    Shows appropriate decimal precision based on amount size.
+    """
+    if nxt == 0:
+        return "0"
+    elif nxt < 0.001:
+        # Micro-amounts: up to 8 decimals (satoshi-level)
+        return f"{nxt:.8f}".rstrip('0').rstrip('.')
+    elif nxt < 1:
+        # Small amounts: up to 6 decimals
+        return f"{nxt:.6f}".rstrip('0').rstrip('.')
+    elif nxt < 1000:
+        # Medium amounts: 4 decimals
+        return f"{nxt:,.4f}".rstrip('0').rstrip('.')
+    else:
+        # Large amounts: 2 decimals with commas
+        return f"{nxt:,.2f}"
 
 
 # Global token system instance
