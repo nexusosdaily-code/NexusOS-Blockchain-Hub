@@ -173,17 +173,22 @@ class WavelengthMessagingSystem:
             modulation_type
         )
         
-        # 2. Calculate cost from quantum physics
-        cost_breakdown = self.wavelength_validator.calculate_message_cost(
-            wave_props,
-            len(content),
-            spectral_diversity_required=5  # Need 5/6 regions
-        )
+        # 2. Calculate cost from quantum physics using simplified E=hf
+        PLANCK = 6.626e-34  # Planck's constant (J·s)
+        SPEED_OF_LIGHT = 3e8  # Speed of light (m/s)
         
-        # Scale down for reasonable costs (adjust as needed)
-        COST_SCALE_FACTOR = 1e6
-        total_cost_nxt = cost_breakdown['total_nxt'] / COST_SCALE_FACTOR
-        total_cost_nxt = max(0.01, total_cost_nxt)  # Minimum 0.01 NXT
+        # Calculate frequency from wavelength
+        frequency = SPEED_OF_LIGHT / spectral_region.center_wavelength  # Hz
+        
+        # Quantum energy cost (E = hf)
+        quantum_energy = PLANCK * frequency  # Joules
+        
+        # Scale to NXT with appropriate factor
+        BASE_SCALE = 1e21  # Scale joules to reasonable NXT amounts
+        message_bytes = len(content.encode('utf-8'))
+        
+        quantum_base_nxt = (quantum_energy * BASE_SCALE * message_bytes) / 1e6
+        total_cost_nxt = max(0.01, quantum_base_nxt)  # Minimum 0.01 NXT
         
         # Convert to smallest units (1 NXT = 100 units)
         total_cost_units = int(total_cost_nxt * 100)

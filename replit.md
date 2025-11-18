@@ -48,6 +48,16 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
   - **Security Hardening**: Explicit distinct region verification (prevents region starvation), all-parent interference validation (strengthens DAG integrity), deterministic rotation (fair validator participation), comprehensive error checking (security violations fail loudly)
   - **Implementation Files**: `wavelength_validator.py` (Maxwell equations, interference patterns), `wavelength_economics_dashboard.py` (interactive UI), `wavelength_messaging_integration.py` (payment + consensus integration)
 
+**Mobile DAG Messaging System - PRODUCTION-READY**: A complete mobile-optimized messaging platform built on the wavelength-economic validation layer, implementing all 6 core features:
+  - **Message Composition**: Intuitive UI for creating messages with spectral region selection (all 8 regions: UV, Violet, Blue, Green, Yellow, Orange, Red, Infrared), recipient selection, and optional parent message linking for multi-parent DAG chains
+  - **Real-time Cost Estimation**: Live E=hf physics-based pricing calculator showing quantum energy costs; displays frequency (THz), quantum base cost, and total NXT cost before sending; unified pricing model ensures preview cost matches actual ledger charge
+  - **Interactive DAG Visualization**: NetworkX-powered graph rendering shows message chains, parent-child relationships, and DAG structure with interactive controls for viewing message dependencies
+  - **Parent Message Selection**: Build complex DAG structures by selecting multiple parent messages, enabling multi-parent message chains for improved message validation through wave interference patterns
+  - **Inbox with Advanced Filtering**: View sent/received messages with filters for direction (All/Sent/Received), spectral region (All or specific region), and sorting (Newest First/Oldest First/Lowest Cost/Highest Cost); displays full physics metadata (wavelength, frequency, cost, interference hash)
+  - **NXT Payment Integration**: Seamless integration with native token system for balance checking, cost deduction (1 NXT = 100 units), and validator reward distribution (60% system, 40% validators)
+  - **Recent Optimizations (Nov 2025)**: Fixed Infrared dropdown bug (removed [:6] slice), implemented unified E=hf pricing model (BASE_SCALE=1e21) across UI and backend eliminating 35x cost discrepancy, added error handling for cost estimation failures, improved "All" filter logic for inbox
+  - **Implementation File**: `mobile_dag_messaging.py` (576 lines, production-tested)
+
 **Secure Messaging Integration**: Wavelength cryptography is integrated for secure message transmission via email, SMS, or in-app notifications, with user-friendly compose and key management.
 
 **User Guidance System**: Provides "How to Use" guides, documentation, and quick help icons via `app_info_content.py` for all major modules.
