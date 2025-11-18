@@ -19,15 +19,21 @@ class NativeTokenAdapter:
     Handles unit conversions, balance queries, transfers, and fee routing
     """
     
-    UNITS_PER_NXT = NativeTokenSystem.UNITS_PER_TOKEN  # 100 units = 1 NXT
-    
     def __init__(self, token_system: NativeTokenSystem):
         """Initialize adapter with NativeTokenSystem reference"""
         self.token_system = token_system
+        self.UNITS_PER_NXT = token_system.UNITS_PER_NXT  # Use system constant
+        # DEX fee treasury account for proper accounting
+        self._ensure_dex_fee_account()
+    
+    def _ensure_dex_fee_account(self):
+        """Ensure DEX fee collection account exists"""
+        if self.token_system.get_account("DEX_FEES") is None:
+            self.token_system.create_account("DEX_FEES", initial_balance=0)
     
     def nxt_to_units(self, nxt_amount: float) -> int:
-        """Convert NXT (float) to units (int)"""
-        return int(nxt_amount * self.UNITS_PER_NXT)
+        """Convert NXT (float) to units (int) with proper rounding"""
+        return round(nxt_amount * self.UNITS_PER_NXT)
     
     def units_to_nxt(self, units: int) -> float:
         """Convert units (int) to NXT (float)"""
@@ -35,39 +41,49 @@ class NativeTokenAdapter:
     
     def get_balance(self, address: str) -> float:
         """Get NXT balance for address (in NXT, not units)"""
-        units = self.token_system.get_balance(address)
-        return self.units_to_nxt(units)
+        account = self.token_system.get_account(address)
+        if account is None:
+            # Create account if it doesn't exist
+            account = self.token_system.create_account(address, initial_balance=0)
+        return self.units_to_nxt(account.balance)
     
     def transfer(self, from_address: str, to_address: str, nxt_amount: float) -> bool:
         """Transfer NXT between addresses"""
         units = self.nxt_to_units(nxt_amount)
-        success, _ = self.token_system.transfer(from_address, to_address, units)
-        return success
+        # Ensure both accounts exist
+        if self.token_system.get_account(from_address) is None:
+            self.token_system.create_account(from_address, initial_balance=0)
+        if self.token_system.get_account(to_address) is None:
+            self.token_system.create_account(to_address, initial_balance=0)
+        
+        tx = self.token_system.transfer(from_address, to_address, units)
+        return tx is not None
     
     def transfer_units(self, from_address: str, to_address: str, units: int) -> bool:
         """Transfer NXT using units directly"""
-        success, _ = self.token_system.transfer(from_address, to_address, units)
-        return success
+        # Ensure both accounts exist
+        if self.token_system.get_account(from_address) is None:
+            self.token_system.create_account(from_address, initial_balance=0)
+        if self.token_system.get_account(to_address) is None:
+            self.token_system.create_account(to_address, initial_balance=0)
+        
+        tx = self.token_system.transfer(from_address, to_address, units)
+        return tx is not None
     
-    def route_fee_to_validator_pool(self, units: int) -> bool:
-        """Route trading fees to validator pool"""
-        # Fees go directly to validator pool account
-        validator_pool = NativeTokenSystem.VALIDATOR_POOL
+    def route_fee_to_validator_pool(self, units: int, fee_source: str = "DEX_FEES") -> bool:
+        """
+        Route trading fees to validator pool via proper transfer
+        Fees are collected in DEX_FEES account then transferred to VALIDATOR_POOL
+        """
+        if units <= 0:
+            return True
         
-        # Record fee as a special transaction type
-        tx_hash = self.token_system._record_transaction(
-            from_address="DEX_FEES",
-            to_address=validator_pool,
-            amount=units,
-            tx_type=TransactionType.REWARD,  # Treat as validator reward
-            metadata={"source": "dex_trading_fees"}
-        )
+        validator_pool_address = "VALIDATOR_POOL"
         
-        # Credit validator pool (fees come from DEX operations, not user accounts)
-        current_balance = self.token_system.get_balance(validator_pool)
-        self.token_system.accounts[validator_pool].balance = current_balance + units
-        
-        return tx_hash is not None
+        # Transfer fees from DEX_FEES to VALIDATOR_POOL
+        # DEX_FEES account acts as intermediary for proper accounting
+        tx = self.token_system.transfer(fee_source, validator_pool_address, units)
+        return tx is not None
     
     def get_total_supply(self) -> float:
         """Get total NXT supply in NXT"""
@@ -500,29 +516,84 @@ class DEXEngine:
         return True, f"Pool {pool_id} created with {lp_tokens:.4f} LP tokens"
     
     def swap_tokens(self, user: str, input_token: str, output_token: str, input_amount: float, slippage_tolerance: float = 0.01) -> Tuple[bool, float, str]:
-        """Execute token swap"""
-        # Find pool
-        pool_id = f"{min(input_token, output_token)}-{max(input_token, output_token)}"
+        """
+        Execute token swap with NXT integration and fee routing to validators
+        All pools are TOKEN/NXT pairs, so one side is always NXT
+        """
+        if self.nxt_adapter is None:
+            return False, 0.0, "NXT adapter not initialized"
+        
+        # Determine which token is NXT
+        is_input_nxt = (input_token == self.NXT_SYMBOL)
+        is_output_nxt = (output_token == self.NXT_SYMBOL)
+        
+        # Validate: exactly one must be NXT (enforced by create_pool, but double-check)
+        if not (is_input_nxt or is_output_nxt):
+            return False, 0.0, f"Invalid swap: neither token is {self.NXT_SYMBOL}"
+        if is_input_nxt and is_output_nxt:
+            return False, 0.0, f"Cannot swap {self.NXT_SYMBOL} for {self.NXT_SYMBOL}"
+        
+        # Find pool (always ordered TOKEN-NXT)
+        other_token = output_token if is_input_nxt else input_token
+        pool_id = f"{other_token}-{self.NXT_SYMBOL}"
+        
         if pool_id not in self.pools:
             return False, 0.0, f"Pool {pool_id} does not exist"
         
         pool = self.pools[pool_id]
         
+        # Check user balances
+        if is_input_nxt:
+            nxt_balance = self.nxt_adapter.get_balance(user)
+            if nxt_balance < input_amount:
+                return False, 0.0, f"Insufficient NXT: have {nxt_balance:.4f}, need {input_amount:.4f}"
+        else:
+            token_obj = self.tokens[input_token]
+            token_balance = token_obj.balance_of(user)
+            if token_balance < input_amount:
+                return False, 0.0, f"Insufficient {input_token}: have {token_balance:.4f}, need {input_amount:.4f}"
+        
         # Calculate minimum output with slippage
         expected_output, _ = pool.calculate_output_amount(input_token, input_amount)
         min_output = expected_output * (1 - slippage_tolerance)
         
-        # Execute swap
+        # Execute swap in pool (updates reserves)
         success, output_amount, message = pool.swap(input_token, input_amount, min_output)
         
         if success:
-            # Transfer tokens
-            input_token_obj = self.tokens[input_token]
-            output_token_obj = self.tokens[output_token]
+            # Transfer input tokens from user to pool
+            if is_input_nxt:
+                # User pays NXT → Pool
+                if not self.nxt_adapter.transfer(user, pool_id, input_amount):
+                    return False, 0.0, "Failed to transfer NXT to pool"
+            else:
+                # User pays TOKEN → Pool
+                input_token_obj = self.tokens[input_token]
+                if not input_token_obj.transfer(user, pool_id, input_amount):
+                    return False, 0.0, f"Failed to transfer {input_token} to pool"
             
-            input_token_obj.transfer(user, pool_id, input_amount)
-            output_token_obj.transfer(pool_id, user, output_amount)
+            # Transfer output tokens from pool to user
+            if is_output_nxt:
+                # Pool pays NXT → User
+                if not self.nxt_adapter.transfer(pool_id, user, output_amount):
+                    return False, 0.0, "Failed to transfer NXT to user"
+            else:
+                # Pool pays TOKEN → User
+                output_token_obj = self.tokens[output_token]
+                if not output_token_obj.transfer(pool_id, user, output_amount):
+                    return False, 0.0, f"Failed to transfer {output_token} to user"
             
+            # Calculate and route fees to validator pool
+            # Fees are taken from the NXT side of the swap
+            fee_amount_nxt = input_amount * pool.fee_rate if is_input_nxt else output_amount * pool.fee_rate
+            fee_units = self.nxt_adapter.nxt_to_units(fee_amount_nxt)
+            
+            # Route fees to validator pool
+            if fee_units > 0:
+                self.nxt_adapter.route_fee_to_validator_pool(fee_units)
+                self.total_fees_to_validators += fee_amount_nxt
+            
+            # Update statistics
             self.total_swaps += 1
             self.total_volume += input_amount
         
@@ -552,10 +623,19 @@ class DEXEngine:
         return [token.to_dict() for token in self.tokens.values()]
     
     def get_user_balances(self, user: str) -> Dict[str, float]:
-        """Get all token balances for a user"""
+        """Get all token balances for a user (includes NXT from native system)"""
         balances = {}
+        
+        # Add NXT balance from native system
+        if self.nxt_adapter:
+            nxt_balance = self.nxt_adapter.get_balance(user)
+            if nxt_balance > 0:
+                balances[self.NXT_SYMBOL] = nxt_balance
+        
+        # Add ERC-20 token balances
         for symbol, token in self.tokens.items():
             balance = token.balance_of(user)
             if balance > 0:
                 balances[symbol] = balance
+        
         return balances

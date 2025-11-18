@@ -1,6 +1,7 @@
 """
 DEX (Decentralized Exchange) UI Module
 Interactive dashboard for token swapping, liquidity provision, and pool analytics
+Integrated with NativeTokenSystem (NXT) as exclusive base currency
 """
 
 import streamlit as st
@@ -9,28 +10,49 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import pandas as pd
 import time
-from dex_core import DEXEngine, Token, LiquidityPool
+from dex_core import DEXEngine, Token, LiquidityPool, NativeTokenAdapter
+from native_token import NativeTokenSystem
 
 
 def initialize_dex():
-    """Initialize or get DEX engine from session state"""
+    """Initialize or get DEX engine with NXT integration from session state"""
+    # Initialize NativeTokenSystem if not already done
+    if 'native_token_system' not in st.session_state:
+        st.session_state.native_token_system = NativeTokenSystem()
+    
+    # Initialize DEX engine with NXT adapter
     if 'dex_engine' not in st.session_state:
-        st.session_state.dex_engine = DEXEngine()
+        # Create NXT adapter
+        nxt_adapter = NativeTokenAdapter(st.session_state.native_token_system)
         
-        # Add some initial liquidity for demo
+        # Create DEX engine with adapter
+        st.session_state.dex_engine = DEXEngine(nxt_adapter=nxt_adapter)
+        
         dex = st.session_state.dex_engine
-        dex.create_pool("NXS", "USDC", 10000, 10000, "treasury")
-        dex.create_pool("GOV", "USDC", 1000, 5000, "treasury")
-        dex.create_pool("GOV", "NXS", 1000, 2000, "treasury")
+        token_system = st.session_state.native_token_system
         
-        # Give user some initial tokens
+        # Set up user address
         if 'user_address' not in st.session_state:
-            st.session_state.user_address = "user_0x1234"
+            st.session_state.user_address = "dex_user_1"
         
         user = st.session_state.user_address
-        dex.tokens["NXS"].mint(user, 1000)
+        
+        # Give user initial NXT tokens (from treasury)
+        treasury = "TREASURY"
+        token_system.transfer(treasury, user, 100000)  # 1000 NXT in units
+        
+        # Give user some ERC-20 tokens
         dex.tokens["USDC"].mint(user, 10000)
         dex.tokens["GOV"].mint(user, 100)
+        
+        # Give treasury some ERC-20 tokens for initial liquidity
+        dex.tokens["USDC"].mint("treasury", 100000)
+        dex.tokens["GOV"].mint("treasury", 10000)
+        
+        # Give treasury NXT for pools (already has genesis allocation)
+        # Create initial pools (all must be TOKEN/NXT pairs)
+        dex.create_pool("USDC", "NXT", 10000, 1000, "treasury")  # USDC/NXT pool
+        dex.create_pool("GOV", "NXT", 1000, 200, "treasury")     # GOV/NXT pool
     
     return st.session_state.dex_engine
 
@@ -196,38 +218,43 @@ def render_liquidity_interface(dex: DEXEngine):
             df = pd.DataFrame(user_pools)
             st.dataframe(df, use_container_width=True, hide_index=True)
             
-            selected_pool = st.selectbox("Select Pool", [p['Pool'] for p in user_pools])
-            pool = dex.pools[selected_pool]
-            
-            max_lp = pool.lp_balances.get(user, 0)
-            lp_amount = st.number_input(
-                "LP Tokens to Remove",
-                min_value=0.0,
-                max_value=float(max_lp),
-                value=0.0,
-                step=0.1
-            )
-            
-            if lp_amount > 0:
-                share = lp_amount / pool.lp_token_supply
-                expected_a = pool.reserve_a * share
-                expected_b = pool.reserve_b * share
+            selected_pool = st.selectbox("Select Pool", [p['Pool'] for p in user_pools], key="remove_liq_pool")
+            if selected_pool:
+                pool = dex.pools[selected_pool]
                 
-                st.info(f"You will receive: {expected_a:.4f} {pool.token_a} + {expected_b:.4f} {pool.token_b}")
-            
-            if st.button("💧 Remove Liquidity", type="primary", use_container_width=True):
-                if lp_amount <= 0:
-                    st.error("Please enter amount")
-                else:
-                    success, amount_a, amount_b, message = pool.remove_liquidity(user, lp_amount)
-                    if success:
-                        # Transfer tokens back
-                        dex.tokens[pool.token_a].transfer(selected_pool, user, amount_a)
-                        dex.tokens[pool.token_b].transfer(selected_pool, user, amount_b)
-                        st.success(f"✅ {message}")
-                        st.rerun()
+                max_lp = pool.lp_balances.get(user, 0)
+                lp_amount = st.number_input(
+                    "LP Tokens to Remove",
+                    min_value=0.0,
+                    max_value=float(max_lp),
+                    value=0.0,
+                    step=0.1
+                )
+                
+                if lp_amount > 0:
+                    share = lp_amount / pool.lp_token_supply
+                    expected_a = pool.reserve_a * share
+                    expected_b = pool.reserve_b * share
+                    
+                    st.info(f"You will receive: {expected_a:.4f} {pool.token_a} + {expected_b:.4f} {pool.token_b}")
+                
+                if st.button("💧 Remove Liquidity", type="primary", use_container_width=True):
+                    if lp_amount <= 0:
+                        st.error("Please enter amount")
                     else:
-                        st.error(f"❌ {message}")
+                        success, amount_a, amount_b, message = pool.remove_liquidity(user, lp_amount)
+                        if success:
+                            # Transfer tokens back (pool.token_b is always NXT)
+                            # Transfer ERC-20 token (token_a)
+                            if pool.token_a in dex.tokens:
+                                dex.tokens[pool.token_a].transfer(selected_pool, user, amount_a)
+                            # Transfer NXT (token_b) via adapter
+                            if dex.nxt_adapter:
+                                dex.nxt_adapter.transfer(selected_pool, user, amount_b)
+                            st.success(f"✅ {message}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {message}")
         else:
             st.info("You don't have any liquidity positions")
 
