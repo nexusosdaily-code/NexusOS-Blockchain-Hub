@@ -81,13 +81,21 @@ class NativeTokenSystem:
     VALIDATOR_RESERVE = 30_000_000  # 300K NXT for validator rewards
     ECOSYSTEM_RESERVE = 20_000_000  # 200K NXT for ecosystem development
     
-    # Burn rates for messaging activities (in units)
-    MESSAGE_BURN_RATE = 10  # 0.1 NXT per encrypted message
-    LINK_SHARE_BURN_RATE = 5  # 0.05 NXT per link share
-    VIDEO_SHARE_BURN_RATE = 20  # 0.2 NXT per video share
+    # SUSTAINABLE Burn rates (in integer UNITS for 100+ year lifespan)
+    # Calibrated to prevent supply depletion while maintaining deflationary pressure
+    # 1 unit = 0.01 NXT, so minimum burn = 1 unit = 0.01 NXT
+    MESSAGE_BURN_RATE = 1  # 1 unit = 0.01 NXT per message (reduced from 10)
+    LINK_SHARE_BURN_RATE = 1  # 1 unit = 0.01 NXT per link (reduced from 5)
+    VIDEO_SHARE_BURN_RATE = 2  # 2 units = 0.02 NXT per video (reduced from 20)
     
     # Transaction fees
-    BASE_TRANSFER_FEE = 1  # 0.01 NXT
+    BASE_TRANSFER_FEE = 1  # 1 unit = 0.01 NXT per transfer
+    
+    # Economic balancing parameters (for future implementation)
+    ENABLE_DYNAMIC_BURNS = False  # TODO: Implement in burn logic
+    ENABLE_VALIDATOR_INFLATION = False  # TODO: Implement in block rewards
+    VALIDATOR_INFLATION_RATE = 0.02  # 2% annual (halves every 4 years)
+    MAX_ANNUAL_BURN_PCT = 5.0  # Cap burns at 5% of circulating supply
     
     def __init__(self):
         self.accounts: Dict[str, Account] = {}
@@ -300,6 +308,66 @@ class NativeTokenSystem:
     def nxt_to_units(self, nxt: float) -> int:
         """Convert NXT to units"""
         return int(nxt * self.UNITS_PER_NXT)
+    
+    def get_circulating_supply(self) -> int:
+        """Get current circulating supply in units"""
+        return self.total_minted - self.total_burned
+    
+    def get_supply_ratio(self) -> float:
+        """Get ratio of circulating supply to total supply"""
+        return self.get_circulating_supply() / self.TOTAL_SUPPLY
+    
+    def calculate_dynamic_burn(self, base_burn: float) -> float:
+        """
+        Calculate burn rate adjusted for remaining supply.
+        
+        Formula: adjusted_burn = base_burn * sqrt(supply_ratio)
+        
+        Examples:
+        - 100% supply → 100% burn rate
+        - 50% supply → 71% burn rate  
+        - 25% supply → 50% burn rate
+        - 10% supply → 32% burn rate
+        """
+        if not self.ENABLE_DYNAMIC_BURNS:
+            return base_burn
+        
+        supply_ratio = self.get_supply_ratio()
+        adjustment = supply_ratio ** 0.5  # Square root dampening
+        return base_burn * adjustment
+    
+    def get_sustainability_metrics(self) -> Dict[str, float]:
+        """
+        Calculate economic sustainability metrics.
+        
+        Returns:
+            Dict with circulating_nxt, total_burned_nxt, supply_pct, 
+            burn_velocity, sustainability_score
+        """
+        circulating = self.get_circulating_supply()
+        circulating_nxt = self.units_to_nxt(circulating)
+        burned_nxt = self.units_to_nxt(self.total_burned)
+        supply_pct = (circulating / self.TOTAL_SUPPLY) * 100
+        
+        # Simple sustainability score
+        if supply_pct >= 90:
+            score = 100
+        elif supply_pct >= 75:
+            score = 90
+        elif supply_pct >= 50:
+            score = 75
+        elif supply_pct >= 25:
+            score = 50
+        else:
+            score = max(0, supply_pct * 2)  # Linear degradation
+        
+        return {
+            'circulating_nxt': circulating_nxt,
+            'total_burned_nxt': burned_nxt,
+            'supply_percentage': supply_pct,
+            'sustainability_score': score,
+            'total_supply_nxt': self.units_to_nxt(self.TOTAL_SUPPLY)
+        }
     
     def format_balance(self, units: int) -> str:
         """Format balance for display"""

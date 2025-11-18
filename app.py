@@ -25,6 +25,7 @@ from wavelength_economics_dashboard import render_wavelength_economics_dashboard
 from mobile_dag_messaging import render_mobile_dag_messaging
 from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
 from web3_wallet_dashboard import render_web3_wallet_dashboard
+from longterm_supply_dashboard import render_longterm_supply_dashboard
 
 st.set_page_config(
     page_title="NexusOS Advance Systems",
@@ -683,6 +684,7 @@ def main():
             "🏦 DEX - Layer 2",
             "💰 Validator Economics",
             "💳 Payment Layer",
+            "📈 Supply Sustainability",
             "🔧 Task Orchestration",
             "🌐 Multi-Agent Networks",
             "📈 Economic Simulator",
@@ -745,6 +747,8 @@ def main():
         render_validator_economics_page()
     elif selected_module == "💳 Payment Layer":
         render_payment_layer_page()
+    elif selected_module == "📈 Supply Sustainability":
+        render_longterm_supply_dashboard()
     elif selected_module == "🔧 Task Orchestration":
         render_task_orchestration()
     elif selected_module == "🌐 Multi-Agent Networks":
