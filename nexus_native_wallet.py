@@ -396,8 +396,8 @@ class NexusNativeWallet:
         
         return {
             'tx_id': tx.tx_id,
-            'from': from_address,
-            'to': to_address,
+            'from_address': from_address,
+            'to_address': to_address,
             'amount_nxt': amount_nxt,
             'fee_nxt': tx.fee / 100.0,
             'timestamp': tx.timestamp,
@@ -557,8 +557,8 @@ class NexusNativeWallet:
         return [
             {
                 'tx_id': tx.tx_id,
-                'from': tx.from_address,
-                'to': tx.to_address,
+                'from_address': tx.from_address,
+                'to_address': tx.to_address,
                 'amount_nxt': tx.amount_nxt,
                 'fee_nxt': tx.fee_nxt,
                 'status': tx.status,
@@ -580,11 +580,11 @@ class NexusNativeWallet:
         
         return [
             {
-                'msg_id': msg.msg_id,
-                'message_type': msg.message_type,
+                'message_id': msg.message_id,
+                'to_address': msg.to_address,
+                'content': msg.content,
                 'cost_nxt': msg.cost_nxt,
-                'transition_type': msg.transition_type,
-                'wavelength_nm': msg.wavelength_nm,
+                'wavelength': msg.wavelength,
                 'spectral_region': msg.spectral_region,
                 'timestamp': msg.timestamp.isoformat(),
                 'status': 'sent'
