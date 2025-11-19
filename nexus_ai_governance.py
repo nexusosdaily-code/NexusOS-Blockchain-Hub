@@ -13,6 +13,19 @@ from datetime import datetime
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
+# DAG agent management integration
+try:
+    from dag_agent_management import get_agent_manager, AgentType
+except ImportError:
+    get_agent_manager = None
+    AgentType = None
+
+# Reserve pool telemetry integration
+try:
+    from reserve_pool_telemetry import get_reserve_telemetry
+except ImportError:
+    get_reserve_telemetry = None
+
 
 @dataclass
 class ResearchObservation:
@@ -394,6 +407,106 @@ class NexusAIGovernance:
         }
         
         return insights
+    
+    def orchestrate_dag_agents(self) -> List[str]:
+        """
+        AI-powered orchestration of DAG agents throughout the ecosystem
+        Based on learned patterns and current system state
+        
+        Returns:
+            List of orchestration actions taken
+        """
+        if get_agent_manager is None:
+            return ["DAG agent management not available"]
+        
+        agent_manager = get_agent_manager()
+        actions = []
+        
+        # Get agent health status
+        health = agent_manager.health_check()
+        
+        # Detect anomalies in agent behavior
+        anomalies = agent_manager.detect_anomalies()
+        
+        # Build governance recommendations based on learned patterns
+        recommendations = {}
+        
+        # Scale validators if health is degraded
+        if health['health_percentage'] < 70:
+            recommendations['scale_validators'] = True
+            recommendations['target_validator_count'] = max(5, len(agent_manager.get_agents_by_type(AgentType.VALIDATOR)) + 2)
+            actions.append(f"⚠️ Low health ({health['health_percentage']:.0f}%) - scaling validators")
+        
+        # Optimize routing if latency is high
+        ecosystem_metrics = agent_manager.get_ecosystem_metrics()
+        if ecosystem_metrics['average_latency_ms'] > 500:
+            recommendations['optimize_routing'] = True
+            recommendations['routing_strategy'] = 'priority_queue'  # Switch to priority routing
+            actions.append(f"⚠️ High latency ({ecosystem_metrics['average_latency_ms']:.0f}ms) - optimizing routing")
+        
+        # Handle anomalies
+        if anomalies:
+            recommendations['suspend_underperformers'] = True
+            actions.extend([f"⚠️ Anomaly detected: {anomaly}" for anomaly in anomalies])
+        
+        # Reactivate agents when conditions improve
+        if health['health_percentage'] > 80 and not anomalies:
+            recommendations['reactivate_agents'] = True
+            actions.append("✅ System healthy - reactivating suspended agents")
+        
+        # Execute orchestration
+        if recommendations:
+            orchestration_actions = agent_manager.ai_orchestrate(recommendations)
+            actions.extend(orchestration_actions)
+        
+        return actions
+    
+    def enforce_f_floor_with_telemetry(self, f_floor_value: float, beneficiary_count: int, 
+                                      token_system: Optional[Any] = None) -> Tuple[bool, str]:
+        """
+        Enforce F_floor using reserve pool telemetry (live system state)
+        
+        Args:
+            f_floor_value: Requested F_floor value
+            beneficiary_count: Number of people receiving F_floor payments
+            token_system: NativeTokenSystem instance for real reserve data
+        
+        Returns:
+            (is_valid, message)
+        """
+        if get_reserve_telemetry is None:
+            # Fallback to simple minimum check
+            if f_floor_value < self.f_floor_minimum:
+                return (False, f"⚠️ F_floor ({f_floor_value}) below minimum ({self.f_floor_minimum})")
+            return (True, f"✅ F_floor ({f_floor_value}) meets minimum")
+        
+        telemetry = get_reserve_telemetry()
+        
+        # Get current reserve snapshot if token system provided
+        current_snapshot = None
+        if token_system is not None:
+            from reserve_pool_telemetry import create_snapshot_from_token_system
+            current_snapshot = create_snapshot_from_token_system(token_system, f_floor_value)
+            telemetry.record_snapshot(current_snapshot)
+        
+        # Validate F_floor change with sustainability check
+        is_valid, message = telemetry.validate_f_floor_change(
+            f_floor_value, 
+            beneficiary_count,
+            current_snapshot
+        )
+        
+        # Record violation if rejected
+        if not is_valid:
+            self.learned_patterns.setdefault('f_floor_enforcement', {}).setdefault('violations', []).append({
+                'timestamp': datetime.now().isoformat(),
+                'requested_f_floor': f_floor_value,
+                'beneficiary_count': beneficiary_count,
+                'reason': message
+            })
+            self.save_knowledge()
+        
+        return (is_valid, message)
 
 
 # Global AI governance instance

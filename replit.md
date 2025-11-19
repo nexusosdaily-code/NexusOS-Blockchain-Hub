@@ -44,9 +44,28 @@ NexusOS Advance Systems is a revolutionary Layer 1 blockchain platform that util
 The platform features interactive dashboards built with Streamlit and Plotly for real-time visualization and user engagement. Key dashboards include a 6-tab WNSP v2.0 dashboard, an economics dashboard, a DAG network view, and mobile-optimized interfaces. Color-coded alerts and visual stress testing scenarios enhance user experience.
 
 **Nexus AI Integration**: Every research component includes comprehensive AI-powered analysis and reporting through three integrated systems:
-1. **Nexus AI Reports** - Generate user-friendly explanations, insights, and recommendations for researchers testing theories
-2. **Nexus AI Governance** - AI that learns from research activities, governs forward adaptation for civilization sustainability, and manages DAG agents throughout the ecosystem
-3. **Reserve Pool Telemetry** - Monitors burn/issuance flows and projects F_floor coverage to ensure basic human living standards (F_floor from Nexus equation) are never compromised through reserve pool management
+
+1. **Nexus AI Reports** (`nexus_ai.py`) - Generate user-friendly explanations, insights, and recommendations for researchers testing theories across all dashboards
+
+2. **Nexus AI Governance** (`nexus_ai_governance.py`) - AI that learns from research activities and governs forward adaptation for civilization sustainability with methods for:
+   - Learning from researcher observations across all components
+   - Detecting F_floor violations and civilization-level risks
+   - Governing forward adaptation while preserving basic living standards
+   - Orchestrating DAG agents based on health and performance (`orchestrate_dag_agents()`)
+   - Enforcing F_floor with reserve pool telemetry (`enforce_f_floor_with_telemetry()`)
+
+3. **Reserve Pool Telemetry** (`reserve_pool_telemetry.py`) - Monitors burn/issuance flows and projects F_floor coverage with:
+   - Real-time snapshots from NativeTokenSystem reserve accounts
+   - F_floor sustainability projections based on beneficiary count
+   - Validation that rejects unsustainable F_floor increases
+   - Integration with token system (VALIDATOR_POOL, TRANSITION_RESERVE, ECOSYSTEM_FUND)
+
+4. **DAG Agent Management** (`dag_agent_management.py`) - AI-powered orchestration of DAG agents throughout the ecosystem:
+   - Agent types: validators, message routers, consensus participants, block validators
+   - Performance metrics: messages processed, blocks validated, uptime, latency, errors
+   - Health checks and anomaly detection
+   - AI orchestration based on governance recommendations
+   - Adaptive parameter tuning for network optimization
 
 ### Technical Implementations & Feature Specifications
 **1. Economic Simulation Engine:** A comprehensive system simulator based on the Nexus equation, featuring self-regulating issuance/burn mechanics, PID feedback control, multi-factor ecosystem health calculation, and conservation constraints. It uses differential equations, Numba optimization, SQLAlchemy for persistence, and various analysis tools like Monte Carlo simulations.
