@@ -669,55 +669,104 @@ def main():
     across multiple domains: administration, communications, data processing, and integrations.
     """)
     
+    # Mobile-optimized CSS for better cursor display and readability
+    st.markdown("""
+        <style>
+        /* Enhanced cursor pointer on interactive elements */
+        button, a, img, [data-testid="stSelectbox"], 
+        [data-testid="stExpander"], .stButton, select {
+            cursor: pointer !important;
+        }
+        
+        /* Make selectbox larger and more readable on mobile */
+        [data-testid="stSelectbox"] select {
+            font-size: 16px !important;
+            padding: 12px !important;
+            min-height: 48px !important;
+        }
+        
+        /* Mobile-first responsive layout */
+        @media (max-width: 768px) {
+            [data-testid="stSelectbox"] select {
+                font-size: 18px !important;
+                padding: 14px !important;
+                min-height: 52px !important;
+            }
+            
+            /* Stack columns on mobile */
+            [data-testid="column"] {
+                width: 100% !important;
+                min-width: 100% !important;
+            }
+        }
+        
+        /* Hover effects for better interactivity */
+        img:hover {
+            cursor: pointer !important;
+            opacity: 0.9;
+            transform: scale(1.02);
+            transition: all 0.2s ease;
+        }
+        
+        button:hover, [data-testid="stButton"]:hover {
+            cursor: pointer !important;
+            transform: translateY(-2px);
+            transition: all 0.2s ease;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # Clean dropdown-based navigation
     st.divider()
     
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        module_options = [
-            "📊 Dashboard",
-            "🔐 Web3 Wallet",
-            "📱 Mobile DAG Messaging",
-            "📲 Mobile Connectivity",
-            "🔮 Predictive Analytics",
-            "🔱 Nexus Consensus",
-            "🌊 Wavelength Economics",
-            "⛓️ Blockchain Simulator",
-            "🌈 Proof of Spectrum",
-            "⚡ GhostDAG System",
-            "🏦 DEX - Layer 2",
-            "💰 Validator Economics",
-            "💳 Payment Layer",
-            "📈 Supply Sustainability",
-            "🔧 Task Orchestration",
-            "🌐 Multi-Agent Networks",
-            "📈 Economic Simulator",
-            "🔬 Advanced Analysis",
-            "📜 Smart Contracts",
-            "🔗 Oracle Integration",
-            "🤖 ML Optimization",
-            "💾 Scenario Manager",
-            "📡 WNSP Protocol",
-            "ℹ️ About NexusOS"
-        ]
-        
-        if AuthManager.has_role('admin'):
-            module_options.append("👥 Administration")
-        
-        selected_module = st.selectbox(
-            "Select Module",
-            module_options,
-            help="Choose a module to access its features"
-        )
-    
-    with col2:
-        current_user = st.session_state.get('current_user')
-        user_roles = st.session_state.get('user_roles', [])
-        if current_user:
+    # User info at top on mobile for better UX
+    current_user = st.session_state.get('current_user')
+    user_roles = st.session_state.get('user_roles', [])
+    if current_user:
+        col_info1, col_info2 = st.columns(2)
+        with col_info1:
             st.caption(f"👤 {current_user.email}")
+        with col_info2:
             if user_roles:
                 st.caption(f"🎯 {user_roles[0].title()}")
+        st.divider()
+    
+    # Full-width module selector for better mobile experience
+    module_options = [
+        "📊 Dashboard",
+        "🔐 Web3 Wallet",
+        "📱 Mobile DAG Messaging",
+        "📲 Mobile Connectivity",
+        "🔮 Predictive Analytics",
+        "🔱 Nexus Consensus",
+        "🌊 Wavelength Economics",
+        "⛓️ Blockchain Simulator",
+        "🌈 Proof of Spectrum",
+        "⚡ GhostDAG System",
+        "🏦 DEX - Layer 2",
+        "💰 Validator Economics",
+        "💳 Payment Layer",
+        "📈 Supply Sustainability",
+        "🔧 Task Orchestration",
+        "🌐 Multi-Agent Networks",
+        "📈 Economic Simulator",
+        "🔬 Advanced Analysis",
+        "📜 Smart Contracts",
+        "🔗 Oracle Integration",
+        "🤖 ML Optimization",
+        "💾 Scenario Manager",
+        "📡 WNSP Protocol",
+        "ℹ️ About NexusOS"
+    ]
+    
+    if AuthManager.has_role('admin'):
+        module_options.append("👥 Administration")
+    
+    selected_module = st.selectbox(
+        "📱 Select Module",
+        module_options,
+        help="Choose a module to access its features"
+    )
     
     st.divider()
     

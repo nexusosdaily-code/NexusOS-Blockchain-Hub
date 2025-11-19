@@ -31,6 +31,66 @@ def render_web3_wallet_dashboard():
     init_wallet_session()
     wallet = st.session_state.nexus_wallet
     
+    # Mobile-optimized CSS for better cursor display and readability
+    st.markdown("""
+        <style>
+        /* Enhanced cursor pointer on interactive elements */
+        button, a, img, [data-testid="stSelectbox"], 
+        [data-testid="stExpander"], .stButton, select, 
+        [data-testid="stTab"], input, textarea {
+            cursor: pointer !important;
+        }
+        
+        /* Make form inputs and buttons larger on mobile */
+        input, textarea, select {
+            font-size: 16px !important;
+            padding: 12px !important;
+            min-height: 48px !important;
+        }
+        
+        button, [data-testid="stButton"] button {
+            font-size: 16px !important;
+            padding: 12px 24px !important;
+            min-height: 48px !important;
+        }
+        
+        /* Mobile-first responsive layout */
+        @media (max-width: 768px) {
+            input, textarea, select {
+                font-size: 18px !important;
+                padding: 14px !important;
+                min-height: 52px !important;
+            }
+            
+            button, [data-testid="stButton"] button {
+                font-size: 18px !important;
+                padding: 14px 28px !important;
+                min-height: 52px !important;
+            }
+        }
+        
+        /* Hover effects for better interactivity */
+        img:hover {
+            cursor: pointer !important;
+            opacity: 0.9;
+            transform: scale(1.02);
+            transition: all 0.2s ease;
+        }
+        
+        button:hover, [data-testid="stButton"]:hover {
+            cursor: pointer !important;
+            transform: translateY(-2px);
+            transition: all 0.2s ease;
+        }
+        
+        [data-testid="stExpander"]:hover {
+            cursor: pointer !important;
+            background-color: rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # Display NEXUS logo
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
