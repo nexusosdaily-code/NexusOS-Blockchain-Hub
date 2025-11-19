@@ -67,6 +67,32 @@ The platform features interactive dashboards built with Streamlit and Plotly for
    - AI orchestration based on governance recommendations
    - Adaptive parameter tuning for network optimization
 
+5. **Hierarchical Pool Ecosystem** (`pool_ecosystem.py`) - Complete economic pool architecture as stated in the Nexus equation:
+   
+   **Architecture: Reserve Pools → F_floor → Service Pools**
+   
+   - **Layer 1 (Reserve Pools)** - Support F_floor:
+     * VALIDATOR_POOL: Validator rewards and network security
+     * TRANSITION_RESERVE: Orbital transition energy collection
+     * ECOSYSTEM_FUND: Long-term ecosystem development
+   
+   - **Layer 2 (Foundation)** - F_floor enables all economic activity:
+     * F_FLOOR_POOL: Guaranteed basic human living standards
+     * Minimum survival floor enforced by AI governance
+     * Supported by reserve pools, enables all service pools
+   
+   - **Layer 3 (Service Pools)** - All enabled by F_floor foundation:
+     * DEX_POOL: Decentralized exchange liquidity
+     * INVESTMENT_POOL: Capital allocation and growth opportunities
+     * STAKING_POOL: Network security through staking
+     * BONUS_POOL: Performance-based bonus distribution
+     * LOTTERY_POOL: Chance-based economic distribution
+     * ENVIRONMENTAL_POOL: Climate action and environmental initiatives
+     * RECYCLING_POOL: Circular economy programs
+     * PRODUCT_SERVICE_POOL: Commerce and marketplace economics
+     * COMMUNITY_POOL: Community development and social programs
+     * INNOVATION_POOL: Research, development, and innovation funding
+
 ### Technical Implementations & Feature Specifications
 **1. Economic Simulation Engine:** A comprehensive system simulator based on the Nexus equation, featuring self-regulating issuance/burn mechanics, PID feedback control, multi-factor ecosystem health calculation, and conservation constraints. It uses differential equations, Numba optimization, SQLAlchemy for persistence, and various analysis tools like Monte Carlo simulations.
 
