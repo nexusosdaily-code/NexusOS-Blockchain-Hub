@@ -29,7 +29,7 @@ from longterm_supply_dashboard import render_longterm_supply_dashboard
 
 st.set_page_config(
     page_title="NexusOS Advance Systems",
-    page_icon="🔄",
+    page_icon="assets/nexus_logo.jpg",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -658,35 +658,94 @@ def main():
     
     AuthManager.render_logout()
     
-    # Display NEXUS logo
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image("assets/nexus_logo.jpg", width='stretch')
-    
-    st.title("🔄 NexusOS Advance Systems")
-    st.markdown("""
-    **DAG-Based Platform** for task orchestration, workflow automation, and advanced messaging 
-    across multiple domains: administration, communications, data processing, and integrations.
-    """)
-    
-    # Mobile-optimized CSS for better cursor display and readability
+    # Spectral gradient theme background and elegant styling
     st.markdown("""
         <style>
+        /* Spectral gradient background - Economic Loop Equation theme */
+        .main {
+            background: linear-gradient(135deg, 
+                #1a0033 0%,    /* Deep violet */
+                #0f0040 15%,   /* Ultraviolet */
+                #00004d 30%,   /* Deep blue */
+                #001a4d 45%,   /* Blue */
+                #003d33 60%,   /* Cyan-green */
+                #1a2600 75%,   /* Green */
+                #331a00 90%,   /* Orange */
+                #1a0000 100%   /* Deep red */
+            );
+            background-attachment: fixed;
+        }
+        
+        /* Clean header design */
+        .nexus-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nexus-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+        }
+        
+        .nexus-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #9370DB, #00CED1, #32CD32, #FFD700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+        
+        .nexus-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+        
         /* Enhanced cursor pointer on interactive elements */
         button, a, img, [data-testid="stSelectbox"], 
         [data-testid="stExpander"], .stButton, select {
             cursor: pointer !important;
         }
         
-        /* Make selectbox larger and more readable on mobile */
+        /* Elegant card styling */
+        [data-testid="stExpander"] {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Make selectbox larger and more readable */
         [data-testid="stSelectbox"] select {
             font-size: 16px !important;
             padding: 12px !important;
             min-height: 48px !important;
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 8px !important;
         }
         
         /* Mobile-first responsive layout */
         @media (max-width: 768px) {
+            .nexus-title {
+                font-size: 1.8rem;
+            }
+            
+            .nexus-logo {
+                width: 50px;
+                height: 50px;
+            }
+            
             [data-testid="stSelectbox"] select {
                 font-size: 18px !important;
                 padding: 14px !important;
@@ -700,20 +759,22 @@ def main():
             }
         }
         
-        /* Hover effects for better interactivity */
-        img:hover {
-            cursor: pointer !important;
-            opacity: 0.9;
-            transform: scale(1.02);
-            transition: all 0.2s ease;
-        }
-        
+        /* Smooth hover effects */
         button:hover, [data-testid="stButton"]:hover {
             cursor: pointer !important;
             transform: translateY(-2px);
             transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
         }
         </style>
+        
+        <div class="nexus-header">
+            <img src="app/assets/nexus_logo.jpg" class="nexus-logo" alt="Nexus Logo" />
+            <div>
+                <h1 class="nexus-title">NexusOS Advance Systems</h1>
+                <p class="nexus-subtitle">Research-Driven Economic Civilization Safetynet • All Lives Matter</p>
+            </div>
+        </div>
     """, unsafe_allow_html=True)
     
     # Clean dropdown-based navigation

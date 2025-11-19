@@ -91,11 +91,6 @@ def render_web3_wallet_dashboard():
         </style>
     """, unsafe_allow_html=True)
     
-    # Display NEXUS logo
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image("assets/nexus_logo.jpg", width='stretch')
-    
     st.title("💎 NexusOS Native Wallet")
     st.markdown("""
     **Your Phone IS the Blockchain Node!** 🚀  
