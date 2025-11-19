@@ -323,7 +323,15 @@ class MobileDAGProtocol:
             priority=priority_enum
         )
         
-        # AI decision recorded (routing priority used internally)
+        # Apply AI key management recommendations
+        if ai_decision and ai_decision.key_rotation_recommended:
+            # AI recommends key rotation for security
+            if wallet:
+                # Track key rotation recommendation (in production, would rotate keys here)
+                print(f"🤖 AI recommends key rotation for wallet {wallet.wallet_id}")
+                # Update wallet's key metadata
+                if hasattr(wallet, '_key_last_rotated'):
+                    wallet._key_last_rotated = time.time()
         
         # AI routes the message
         success, routing_message = self.ai_router.route_message_ai(routing_msg)

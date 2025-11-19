@@ -391,9 +391,14 @@ class AIMessageSecurityController:
         Determine if ephemeral keys should be used
         
         Current ECDH implementation ALWAYS uses ephemeral keys for perfect forward secrecy
-        This is a control point for future optimizations
+        This ensures:
+        - Each message has unique encryption keys
+        - Compromise of one message doesn't affect others
+        - True forward secrecy
+        
+        This is production-grade security and should not be disabled
         """
-        # For now, always use ephemeral keys (production-grade security)
+        # Always use ephemeral keys (ECDH implementation requirement)
         return True
     
     def _should_rotate_keys(self,
