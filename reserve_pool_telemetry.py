@@ -67,57 +67,63 @@ class ReservePoolTelemetry:
     
     def project_f_floor_coverage(self, 
                                  current_snapshot: ReservePoolSnapshot,
+                                 beneficiary_count: int,
                                  projection_years: int = 100) -> FFloorProjection:
         """
         Project how long reserves can sustain F_floor payments
         
         Args:
             current_snapshot: Current reserve state
+            beneficiary_count: Number of people receiving F_floor payments
             projection_years: Years to project forward (default 100 for civilization sustainability)
         
         Returns:
             FFloorProjection with sustainability analysis
         """
-        # Calculate minimum reserves needed to guarantee F_floor forever
-        # Assuming F_floor is paid continuously to maintain basic living standards
-        min_annual_f_floor_cost = current_snapshot.f_floor_value * 365  # Daily payments
-        min_reserve_threshold = min_annual_f_floor_cost * 10  # 10 years minimum buffer
+        # Calculate ACTUAL F_floor obligation load
+        # F_floor represents daily basic living standards payment per person
+        daily_f_floor_obligation = current_snapshot.f_floor_value * beneficiary_count
+        annual_f_floor_obligation = daily_f_floor_obligation * 365
         
-        # Project reserve depletion based on current burn/issuance rates
+        # Minimum reserves = 10 years of F_floor obligations
+        min_reserve_threshold = annual_f_floor_obligation * 10
+        
+        # Calculate NET flow after subtracting F_floor obligations
+        # net_flow = (issuance - burns) - F_floor_obligations
         total_reserves = current_snapshot.total_reserves
-        net_daily_flow = current_snapshot.net_flow_24h
+        net_daily_flow = current_snapshot.net_flow_24h - daily_f_floor_obligation
         
-        # Calculate years of coverage at current rates
+        # Project coverage including F_floor obligation load
         if net_daily_flow >= 0:
-            # Reserves growing or stable - sustainable
+            # Reserves growing even after F_floor payments - sustainable
             coverage_years = float('inf')
             is_sustainable = True
             risk_level = "safe"
-            recommended_action = "Continue current policy - reserves growing"
+            recommended_action = f"Sustainable - reserves growing {net_daily_flow:.2f} NXT/day after F_floor obligations"
         else:
-            # Reserves depleting
-            daily_depletion = abs(net_daily_flow)
-            days_until_depletion = total_reserves / daily_depletion if daily_depletion > 0 else float('inf')
+            # Reserves depleting after F_floor payments
+            daily_deficit = abs(net_daily_flow)
+            days_until_depletion = total_reserves / daily_deficit if daily_deficit > 0 else float('inf')
             coverage_years = days_until_depletion / 365.0
             
             if coverage_years >= projection_years:
                 is_sustainable = True
                 risk_level = "safe"
-                recommended_action = f"Reserves adequate for {coverage_years:.0f} years"
+                recommended_action = f"Adequate - {coverage_years:.0f} years coverage after F_floor obligations"
             elif coverage_years >= projection_years * 0.5:
                 is_sustainable = True
                 risk_level = "warning"
-                recommended_action = f"Monitor closely - {coverage_years:.0f} years coverage remaining"
+                recommended_action = f"WARNING: Only {coverage_years:.0f} years coverage remaining. Daily deficit: {daily_deficit:.2f} NXT"
             else:
                 is_sustainable = False
                 risk_level = "critical"
-                recommended_action = f"URGENT: Reduce burn rate or increase issuance - only {coverage_years:.0f} years remaining"
+                recommended_action = f"CRITICAL: Only {coverage_years:.0f} years until F_floor unsustainable. Deficit: {daily_deficit:.2f} NXT/day"
         
         # Check if current reserves meet minimum threshold
         if total_reserves < min_reserve_threshold:
             risk_level = "critical"
             is_sustainable = False
-            recommended_action = f"CRITICAL: Reserves below minimum threshold ({total_reserves:.0f} < {min_reserve_threshold:.0f})"
+            recommended_action = f"CRITICAL: Reserves {total_reserves:.0f} NXT below minimum {min_reserve_threshold:.0f} NXT for {beneficiary_count} beneficiaries"
         
         return FFloorProjection(
             current_f_floor=current_snapshot.f_floor_value,
@@ -128,9 +134,57 @@ class ReservePoolTelemetry:
             recommended_action=recommended_action
         )
     
+    def validate_f_floor_change(self, 
+                               requested_f_floor: float,
+                               beneficiary_count: int,
+                               current_snapshot: Optional[ReservePoolSnapshot] = None) -> tuple[bool, str]:
+        """
+        Validate F_floor change request against both minimum AND sustainability
+        
+        Args:
+            requested_f_floor: Requested F_floor value
+            beneficiary_count: Number of people receiving F_floor payments
+            current_snapshot: Current reserve state (if available)
+        
+        Returns:
+            (is_valid, message)
+        """
+        # FIRST: Enforce absolute minimum
+        if requested_f_floor < self.f_floor_minimum:
+            return (False, 
+                    f"⚠️ REJECTED: F_floor ({requested_f_floor}) below minimum basic living standards "
+                    f"({self.f_floor_minimum}). This violates civilization sustainability constraints.")
+        
+        # SECOND: Check sustainability if we have reserve data
+        if current_snapshot is not None:
+            # Create hypothetical snapshot with new F_floor
+            test_snapshot = ReservePoolSnapshot(
+                timestamp=current_snapshot.timestamp,
+                validator_reserve=current_snapshot.validator_reserve,
+                transition_reserve=current_snapshot.transition_reserve,
+                ecosystem_reserve=current_snapshot.ecosystem_reserve,
+                total_circulating=current_snapshot.total_circulating,
+                f_floor_value=requested_f_floor,  # NEW value
+                burn_rate_24h=current_snapshot.burn_rate_24h,
+                issuance_rate_24h=current_snapshot.issuance_rate_24h
+            )
+            
+            # Project coverage with new F_floor
+            projection = self.project_f_floor_coverage(test_snapshot, beneficiary_count)
+            
+            # Reject if unsustainable
+            if projection.risk_level == "critical":
+                return (False,
+                        f"⚠️ REJECTED: F_floor ({requested_f_floor}) unsustainable. {projection.recommended_action}")
+            elif projection.risk_level == "warning":
+                return (True,
+                        f"⚠️ WARNING: F_floor ({requested_f_floor}) approved but risky. {projection.recommended_action}")
+        
+        return (True, f"✅ F_floor ({requested_f_floor}) approved - meets minimum and sustainability requirements")
+    
     def enforce_f_floor_minimum(self, requested_f_floor: float) -> tuple[bool, str]:
         """
-        Enforce that F_floor never goes below minimum
+        Legacy method - enforce only minimum (use validate_f_floor_change for full validation)
         
         Args:
             requested_f_floor: Requested F_floor value
@@ -194,6 +248,48 @@ class ReservePoolTelemetry:
             anomalies.append("F_floor violation detected in recent history")
         
         return anomalies
+
+
+def create_snapshot_from_token_system(token_system, f_floor_value: float) -> ReservePoolSnapshot:
+    """
+    Create a reserve pool snapshot from NativeTokenSystem state
+    
+    Args:
+        token_system: NativeTokenSystem instance
+        f_floor_value: Current F_floor parameter value
+    
+    Returns:
+        ReservePoolSnapshot with real reserve data
+    """
+    from datetime import datetime
+    
+    # Get real reserve balances from token system (CORRECT account names)
+    validator_pool = token_system.accounts.get('VALIDATOR_POOL')
+    transition_reserve_acc = token_system.accounts.get('TRANSITION_RESERVE')
+    ecosystem_fund = token_system.accounts.get('ECOSYSTEM_FUND')
+    
+    validator_reserve = validator_pool.balance if validator_pool else 0
+    transition_reserve = transition_reserve_acc.balance if transition_reserve_acc else 0
+    ecosystem_reserve = ecosystem_fund.balance if ecosystem_fund else 0
+    
+    # Get circulating supply using correct method
+    total_circulating = token_system.get_circulating_supply() / token_system.UNITS_PER_NXT
+    
+    # TODO: Track actual burn/issuance rates from transaction history
+    # For now, use placeholder values - will be replaced with real tracking
+    burn_rate_24h = 0.0
+    issuance_rate_24h = 0.0
+    
+    return ReservePoolSnapshot(
+        timestamp=datetime.now().isoformat(),
+        validator_reserve=validator_reserve / token_system.UNITS_PER_NXT,  # Convert to NXT
+        transition_reserve=transition_reserve / token_system.UNITS_PER_NXT,
+        ecosystem_reserve=ecosystem_reserve / token_system.UNITS_PER_NXT,
+        total_circulating=total_circulating,
+        f_floor_value=f_floor_value,
+        burn_rate_24h=burn_rate_24h,
+        issuance_rate_24h=issuance_rate_24h
+    )
 
 
 # Global telemetry instance
