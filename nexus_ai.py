@@ -1,12 +1,16 @@
 """
 Nexus AI - Comprehensive Reporting System for Researchers
 Generates user-friendly explanations, insights, and recommendations across all NexusOS components
+
+Integrated with Nexus AI Governance that learns from research and ensures
+basic human living standards (F_floor) are never compromised.
 """
 
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime
 import streamlit as st
+from nexus_ai_governance import get_ai_governance, GovernanceDecision
 
 
 class NexusAI:
@@ -497,16 +501,26 @@ class NexusAI:
 def render_nexus_ai_button(component_name: str, data: Dict) -> None:
     """
     Render a button that shows Nexus AI analysis when clicked
+    Integrates with AI Governance for learning and forward adaptation
     
     Args:
         component_name: Name of the component (e.g., 'economic_simulator', 'dex', 'wnsp')
         data: Component-specific data for analysis
     """
-    if st.button("🤖 Generate Nexus AI Research Report", key=f"ai_report_{component_name}", 
-                 help="Get comprehensive AI analysis and recommendations"):
-        
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        show_report = st.button("🤖 Generate Nexus AI Research Report", key=f"ai_report_{component_name}", 
+                     help="Get comprehensive AI analysis and recommendations")
+    
+    with col2:
+        show_civilization = st.button("🌍 Civilization Report", key=f"civ_report_{component_name}",
+                                     help="View long-term sustainability analysis")
+    
+    if show_report:
         with st.expander("📊 Nexus AI Comprehensive Report", expanded=True):
             ai = NexusAI()
+            governance = get_ai_governance()
             
             # Route to appropriate report generator
             report_generators = {
@@ -525,5 +539,66 @@ def render_nexus_ai_button(component_name: str, data: Dict) -> None:
                     generator(data, data.get('results'))
                 else:
                     generator(data)
+                
+                # Record observation for AI learning
+                st.divider()
+                st.markdown("### 🧠 AI Governance Learning")
+                
+                # Extract metrics for learning
+                metrics = {}
+                if component_name == 'economic_simulator':
+                    metrics = {
+                        'N_final': data.get('N_final', 0),
+                        'system_health_avg': data.get('system_health_avg', 0),
+                        'F_floor': data.get('F_floor', 10.0)  # CRITICAL: Track F_floor
+                    }
+                elif component_name == 'validator_economics':
+                    metrics = {'apr': data.get('apr', 0), 'uptime': data.get('uptime', 0)}
+                elif component_name == 'dex':
+                    metrics = {'liquidity': data.get('liquidity', 0), 'volume': data.get('volume', 0)}
+                elif component_name == 'wnsp':
+                    metrics = {'cost': data.get('cost', 0)}
+                elif component_name == 'supply_sustainability':
+                    metrics = {'years_remaining': data.get('years_remaining', 0)}
+                elif component_name == 'payment_layer':
+                    metrics = {'total_burned': data.get('total_burned', 0), 'burn_rate': data.get('burn_rate', 0)}
+                
+                # Get current user if available
+                researcher_email = st.session_state.get('current_user', {}).email if hasattr(st.session_state.get('current_user', {}), 'email') else None
+                
+                # Record observation
+                governance.observe_research(component_name, data, metrics, researcher_email)
+                
+                # Get and show governance decision
+                decision = governance.govern_forward_adaptation(component_name, data)
+                
+                NexusAI.render_report_section(
+                    "AI Governance Decision",
+                    f"""**Rationale**: {decision.rationale}
+                    
+**F_floor (Basic Living Standards) Protected**: {'✅ YES' if decision.f_floor_preserved else '⚠️ NO'}
+
+**Civilization Impact**: {decision.civilization_impact}
+
+**Recommended Adaptations**: {len(decision.parameter_adjustments)} parameters""",
+                    "success" if decision.f_floor_preserved else "critical"
+                )
+                
+                if decision.parameter_adjustments:
+                    st.json(decision.parameter_adjustments)
+                
+                # Show learning insights
+                insights = governance.get_learning_insights(component_name)
+                st.metric("AI Learning Sample Size", insights['sample_size'])
+                if insights['risks_identified'] > 0:
+                    st.warning(f"⚠️ {insights['risks_identified']} civilization risks identified and monitored")
+                if insights['f_floor_violations_prevented'] > 0:
+                    st.error(f"🛡️ {insights['f_floor_violations_prevented']} attempts to compromise basic living standards prevented")
             else:
                 st.warning(f"Nexus AI report not yet available for {component_name}")
+    
+    if show_civilization:
+        with st.expander("🌍 Civilization Sustainability Report", expanded=True):
+            governance = get_ai_governance()
+            report = governance.generate_civilization_report()
+            st.markdown(report)

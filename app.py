@@ -1476,10 +1476,15 @@ def render_simulation():
         # Nexus AI Research Report for Researchers
         st.divider()
         from nexus_ai import render_nexus_ai_button
-        render_nexus_ai_button('economic_simulator', {
+        # Extract real metrics from simulation results
+        metrics_data = {
             **st.session_state.params,
-            'results': df.to_dict('list') if len(df) < 1000 else None
-        })
+            'results': df.to_dict('list') if len(df) < 1000 else None,
+            'F_floor': st.session_state.params.get('F_floor', 10.0),  # CRITICAL: Real F_floor value
+            'N_final': df['N'].iloc[-1] if len(df) > 0 else 0,
+            'system_health_avg': df['S'].mean() if len(df) > 0 and 'S' in df.columns else 0
+        }
+        render_nexus_ai_button('economic_simulator', metrics_data)
 
 def render_advanced_analysis():
     st.header("Advanced Analysis Tools")

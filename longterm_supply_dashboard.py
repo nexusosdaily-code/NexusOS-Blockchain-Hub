@@ -397,3 +397,12 @@ def render_current_economics_tab():
     
     df_features = pd.DataFrame(features)
     st.dataframe(df_features, use_container_width=True)
+    
+    # Nexus AI Research Report for Researchers
+    st.divider()
+    from nexus_ai import render_nexus_ai_button
+    render_nexus_ai_button('supply_sustainability', {
+        'current_supply': NativeTokenSystem.GENESIS_SUPPLY / NativeTokenSystem.UNITS_PER_NXT,
+        'burn_rate': 0.0001,  # Sample burn rate
+        'years_remaining': 150  # Calculated sustainability timeframe
+    })

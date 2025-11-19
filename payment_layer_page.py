@@ -514,6 +514,17 @@ def render_analytics():
         st.metric("Validators Rewarded", token_system.format_balance(mining_stats['total_rewards_distributed']))
         
         st.success("✅ Economic loop active: Users pay → Tokens burn → Validators earn → Deflation")
+    
+    # Nexus AI Research Report for Researchers
+    st.divider()
+    from nexus_ai import render_nexus_ai_button
+    # Use unique component key for payment layer
+    render_nexus_ai_button('payment_layer', {
+        'current_supply': token_system.circulating_supply,
+        'burn_rate': msg_stats['total_burned_nxt'] / max(msg_stats['total_messages'], 1),
+        'total_burned': msg_stats['total_burned_nxt'],
+        'total_messages': msg_stats['total_messages']
+    })
 
 
 if __name__ == "__main__":

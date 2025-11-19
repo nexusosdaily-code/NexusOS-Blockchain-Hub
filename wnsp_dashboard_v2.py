@@ -563,6 +563,17 @@ def render_message_history_tab():
                 st.write("**Parent Messages**:")
                 for parent_id in msg.parent_message_ids:
                     st.code(parent_id, language="text")
+    
+    # Nexus AI Research Report for Researchers
+    st.divider()
+    from nexus_ai import render_nexus_ai_button
+    last_msg = st.session_state.wnsp_messages[-1] if st.session_state.wnsp_messages else None
+    render_nexus_ai_button('wnsp', {
+        'wavelength': last_msg.wavelength_nm if last_msg else 550,
+        'modulation': last_msg.modulation_type.value if last_msg else 'OOK',
+        'parents': len(last_msg.parent_message_ids) if last_msg else 1,
+        'cost': last_msg.cost_nxt if last_msg else 7500
+    })
 
 
 # Main entry point

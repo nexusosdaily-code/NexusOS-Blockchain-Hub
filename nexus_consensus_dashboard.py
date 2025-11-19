@@ -533,3 +533,12 @@ def render_simulation_results():
             height=350
         )
         st.plotly_chart(fig, use_container_width=True)
+    
+    # Nexus AI Research Report for Researchers
+    st.divider()
+    from nexus_ai import render_nexus_ai_button
+    render_nexus_ai_button('consensus', {
+        'mechanism': 'Nexus Consensus',
+        'validators': len(consensus.contributions),
+        'tps': consensus.metrics.avg_consensus_time if hasattr(consensus.metrics, 'avg_consensus_time') else 500
+    })
