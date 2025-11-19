@@ -763,8 +763,8 @@ def main():
         <div class="nexus-header">
             <img src="app/assets/nexus_logo.jpg" class="nexus-logo" alt="Nexus Logo" />
             <div>
-                <h1 class="nexus-title">NexusOS Advance Systems</h1>
-                <p class="nexus-subtitle">Research-Driven Economic Civilization Safetynet • All Lives Matter</p>
+                <h1 class="nexus-title">NexusOS Mobile-First Blockchain</h1>
+                <p class="nexus-subtitle">Wavelength mechanics Operating System guided by AI create new opportunities.</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
