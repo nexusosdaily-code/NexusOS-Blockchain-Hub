@@ -76,7 +76,7 @@ The platform features interactive dashboards built with Streamlit and Plotly for
 
 **15. ML-Based Adaptive Parameter Tuning:** Utilizes Bayesian Optimization with Gaussian Processes for multi-objective parameter tuning, including PID controller tuning, economic parameter calibration, and consensus parameter adjustment.
 
-**16. User Authentication & RBAC:** Secure user accounts with bcrypt password hashing, SHA-256 session tokens, and role-based permissions (admin, validator, user), alongside session management and audit logging.
+**16. User Authentication & RBAC:** Secure user accounts with bcrypt password hashing, SHA-256 session tokens, and role-based permissions (admin, researcher, viewer), alongside session management and audit logging. Features a tab-based navigation system with **Sign In** and **Sign Up** tabs when not authenticated, seamlessly transitioning to a **Login/Logout** interface once authenticated. Self-service account creation allows users to choose between viewer (read-only) and researcher (full simulation access) roles. Authentication is controlled via the `AUTH_ENABLED` environment variable.
 
 **17. Real-time Production Dashboard:** A live system monitoring dashboard with auto-refresh, displaying KPIs, system health with color-coded alerts, and performance metrics.
 

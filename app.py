@@ -650,15 +650,7 @@ def main():
     init_db()
     AuthManager.initialize()
     
-    if not AuthManager.is_authenticated():
-        AuthManager.render_login()
-        return
-    
-    init_session_state()
-    
-    AuthManager.render_logout()
-    
-    # Spectral gradient theme background and elegant styling
+    # Spectral gradient theme background and elegant styling (always visible)
     st.markdown("""
         <style>
         /* Spectral gradient background - Economic Loop Equation theme */
@@ -777,19 +769,56 @@ def main():
         </div>
     """, unsafe_allow_html=True)
     
-    # Clean dropdown-based navigation
     st.divider()
+    
+    # Show authentication tabs when not logged in
+    if not AuthManager.is_authenticated():
+        # Default to Sign In tab if user just signed up
+        default_tab = 0 if st.session_state.get('show_signin_after_signup', False) else 0
+        
+        auth_tabs = st.tabs(["🔑 Sign In", "✍️ Sign Up"])
+        
+        with auth_tabs[0]:
+            AuthManager.render_login()
+        
+        with auth_tabs[1]:
+            AuthManager.render_signup()
+        
+        return
+    
+    # User is authenticated - show main interface
+    init_session_state()
+    AuthManager.render_logout()
     
     # User info at top on mobile for better UX
     current_user = st.session_state.get('current_user')
     user_roles = st.session_state.get('user_roles', [])
     if current_user:
-        col_info1, col_info2 = st.columns(2)
+        col_info1, col_info2, col_info3 = st.columns([2, 2, 1])
         with col_info1:
             st.caption(f"👤 {current_user.email}")
         with col_info2:
             if user_roles:
                 st.caption(f"🎯 {user_roles[0].title()}")
+        with col_info3:
+            if st.button("🚪 Logout", key="main_logout"):
+                from database import get_engine
+                from sqlalchemy.orm import sessionmaker
+                engine = get_engine()
+                SessionLocal = sessionmaker(bind=engine)
+                db = SessionLocal()
+                
+                try:
+                    if st.session_state.session_token:
+                        from auth import logout_user
+                        logout_user(db, st.session_state.session_token)
+                finally:
+                    db.close()
+                
+                st.session_state.session_token = None
+                st.session_state.current_user = None
+                st.session_state.user_roles = []
+                st.rerun()
         st.divider()
     
     # Full-width module selector for better mobile experience

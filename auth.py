@@ -313,6 +313,83 @@ class AuthManager:
             """)
     
     @staticmethod
+    def render_signup():
+        """Render the sign-up form."""
+        st.title("✍️ Create Your NexusOS Account")
+        st.markdown("### Join the Research-Driven Economic Civilization")
+        
+        st.divider()
+        
+        with st.form("signup_form"):
+            email = st.text_input("Email", placeholder="user@example.com")
+            password = st.text_input("Password", type="password", 
+                                    help="Minimum 8 characters recommended")
+            password_confirm = st.text_input("Confirm Password", type="password")
+            
+            role_selection = st.selectbox(
+                "Account Type",
+                ["viewer", "researcher"],
+                format_func=lambda x: {
+                    "viewer": "👀 Viewer - Read-only access",
+                    "researcher": "🔬 Researcher - Full simulation access"
+                }[x]
+            )
+            
+            submit = st.form_submit_button("🚀 Create Account", use_container_width=True)
+            
+            if submit:
+                if not email or not password:
+                    st.error("❌ Missing information\nPlease fill in all required fields.")
+                    return
+                
+                if len(password) < 8:
+                    st.warning("⚠️ Password should be at least 8 characters for security.")
+                
+                if password != password_confirm:
+                    st.error("❌ Passwords don't match\nPlease ensure both password fields are identical.")
+                    return
+                
+                engine = get_engine()
+                SessionLocal = sessionmaker(bind=engine)
+                db = SessionLocal()
+                
+                try:
+                    user = create_user(db, email, password, [role_selection])
+                    if user:
+                        st.success(f"✅ Account created successfully!\nWelcome to NexusOS, {email}")
+                        st.info("Please proceed to Sign In to access the system.")
+                        
+                        if 'show_signin_after_signup' not in st.session_state:
+                            st.session_state.show_signin_after_signup = True
+                    else:
+                        st.error("❌ Account already exists\nThis email is already registered. Please use Sign In instead.")
+                except (DatabaseError, ConstraintViolationError, ConnectionError) as e:
+                    st.error(e.get_user_message())
+                except Exception as e:
+                    st.error(f"❌ Sign-up failed: {str(e)}\n💡 Please try again or contact support.")
+                finally:
+                    db.close()
+        
+        st.divider()
+        
+        with st.expander("ℹ️ About Account Types"):
+            st.markdown("""
+            **👀 Viewer**
+            - View simulations and results
+            - Access dashboards and analytics
+            - Read-only access to all features
+            
+            **🔬 Researcher**
+            - Create and run simulations
+            - Perform scenario analysis
+            - ML-based parameter optimization
+            - Generate smart contracts
+            - Full access to all research tools
+            
+            Contact an administrator to upgrade to admin role.
+            """)
+    
+    @staticmethod
     def render_logout():
         """Render logout button in sidebar."""
         if not AuthManager.is_auth_enabled():
