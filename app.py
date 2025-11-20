@@ -654,9 +654,20 @@ def main():
     st.markdown("""
         <style>
         /* Grey background for mobile app */
+        .stApp {
+            background: #2d2d2d !important;
+        }
+        
+        [data-testid="stAppViewContainer"] {
+            background: #2d2d2d !important;
+        }
+        
         .main {
-            background: #2d2d2d;
-            background-attachment: fixed;
+            background: #2d2d2d !important;
+        }
+        
+        section[data-testid="stSidebar"] {
+            background: #1a1a1a !important;
         }
         
         /* Clean header design */
