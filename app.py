@@ -670,17 +670,60 @@ def main():
             background: #1a1a1a !important;
         }
         
+        /* Wavelength spectrum animation for all text */
+        @keyframes wavelength-flow {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+        
+        /* Make all text bright and readable */
+        * {
+            color: #ffffff !important;
+        }
+        
+        /* Headings with animated wavelength gradient */
+        h1, h2, h3, .nexus-title {
+            font-weight: 700 !important;
+            background: linear-gradient(90deg, 
+                #ff0000,  /* Red (700nm) */
+                #ff7f00,  /* Orange (620nm) */
+                #ffff00,  /* Yellow (580nm) */
+                #00ff00,  /* Green (550nm) */
+                #00ffff,  /* Cyan (490nm) */
+                #0000ff,  /* Blue (450nm) */
+                #8b00ff,  /* Violet (380nm) */
+                #ff0000   /* Back to Red */
+            ) !important;
+            background-size: 200% 200% !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            animation: wavelength-flow 8s ease infinite !important;
+        }
+        
+        .nexus-title {
+            font-size: 2.5rem;
+            margin: 0;
+        }
+        
         /* Clean header design */
         .nexus-header {
             display: flex;
             align-items: center;
             gap: 20px;
             padding: 20px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
             border-radius: 15px;
             margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .nexus-logo {
@@ -690,19 +733,20 @@ def main():
             box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
         }
         
-        .nexus-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, #9370DB, #00CED1, #32CD32, #FFD700);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-        }
-        
         .nexus-subtitle {
-            color: rgba(255, 255, 255, 0.7);
+            color: #e0e0e0 !important;
             font-size: 1rem;
             margin-top: 10px;
+        }
+        
+        /* Labels and regular text */
+        label, p, span, div {
+            color: #f0f0f0 !important;
+        }
+        
+        /* Sidebar text */
+        section[data-testid="stSidebar"] * {
+            color: #f0f0f0 !important;
         }
         
         /* Enhanced cursor pointer on interactive elements */
