@@ -12,6 +12,7 @@ import pandas as pd
 import time
 from dex_core import DEXEngine, Token, LiquidityPool, NativeTokenAdapter
 from native_token import NativeTokenSystem
+from pool_ecosystem import get_pool_ecosystem, PoolLayer, PoolType
 
 
 def initialize_dex():
@@ -347,6 +348,166 @@ def render_user_portfolio(dex: DEXEngine):
             st.info("No LP positions")
 
 
+def render_pool_ecosystem_tab(dex: DEXEngine):
+    """Render Pool Ecosystem hierarchy and DEX integration"""
+    st.subheader("🏛️ Pool Ecosystem Architecture")
+    st.info("💡 The DEX is supported by the F_floor foundation, which is backed by reserve pools. All DEX trading fees flow back to support the BHLS floor and validators.")
+    
+    # Get pool ecosystem
+    ecosystem = get_pool_ecosystem()
+    
+    # Show hierarchical structure
+    st.markdown("### 3-Layer Hierarchical Structure")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("#### 🔵 Layer 1: Reserve Pools")
+        st.markdown("**Supports F_floor foundation**")
+        reserve_pools = ecosystem.get_pools_by_layer(PoolLayer.RESERVE)
+        for pool in reserve_pools:
+            with st.expander(f"📦 {pool.name}"):
+                st.write(f"**Type**: {pool.pool_type.value}")
+                st.write(f"**Description**: {pool.description}")
+                st.metric("Balance", f"{pool.metrics.current_balance:.2f} NXT")
+                st.metric("Participants", pool.metrics.participant_count)
+                health = "✅ Healthy" if pool.is_healthy() else "⚠️ Needs Attention"
+                st.write(f"**Status**: {health}")
+    
+    with col2:
+        st.markdown("#### 🟢 Layer 2: F_floor Foundation")
+        st.markdown("**Enables all economic activities**")
+        f_floor = ecosystem.get_pool("F_FLOOR_POOL")
+        if f_floor:
+            with st.expander(f"💎 {f_floor.name}"):
+                st.write(f"**Description**: {f_floor.description}")
+                st.write(f"**Supported by**: {f_floor.supported_by}")
+                st.metric("Balance", f"{f_floor.metrics.current_balance:.2f} NXT")
+                st.metric("Participants", f_floor.metrics.participant_count)
+                st.write(f"**Supports {len(f_floor.supports)} service pools**:")
+                for supported in f_floor.supports[:3]:
+                    st.caption(f"• {supported}")
+                if len(f_floor.supports) > 3:
+                    st.caption(f"...and {len(f_floor.supports) - 3} more")
+    
+    with col3:
+        st.markdown("#### 🟡 Layer 3: Service Pools")
+        st.markdown("**All economic activities**")
+        service_pools = ecosystem.get_pools_by_layer(PoolLayer.SERVICE)
+        
+        # Highlight DEX pool
+        dex_pool = ecosystem.get_pool("DEX_POOL")
+        if dex_pool:
+            with st.expander(f"💱 {dex_pool.name} (YOU ARE HERE)", expanded=True):
+                st.write(f"**Description**: {dex_pool.description}")
+                st.write(f"**Supported by**: {dex_pool.supported_by}")
+                st.metric("Balance", f"{dex_pool.metrics.current_balance:.2f} NXT")
+                st.success("✅ DEX fees → F_floor → BHLS Support")
+        
+        st.caption(f"**{len(service_pools)} total service pools:**")
+        for pool in service_pools[:5]:
+            st.caption(f"• {pool.name}")
+        if len(service_pools) > 5:
+            st.caption(f"...and {len(service_pools) - 5} more")
+    
+    st.divider()
+    
+    # Flow diagram
+    st.markdown("### 💰 Economic Flow")
+    st.markdown("""
+    ```
+    Reserve Pools (VALIDATOR_POOL + TRANSITION_RESERVE + ECOSYSTEM_FUND)
+            ⬇️ Support
+    F_FLOOR_POOL (Basic Human Living Standards)
+            ⬇️ Enables
+    Service Pools (DEX + Investment + Staking + Environmental + 6 more)
+            ⬆️ Fees flow back
+    F_FLOOR_POOL (Strengthens foundation)
+            ⬆️ Support flows
+    Reserve Pools (Validator rewards + Ecosystem growth)
+    ```
+    """)
+    
+    st.divider()
+    
+    # All 10 Service Pools Dashboard
+    st.markdown("### 🎯 All Service Pools (Enabled by F_floor)")
+    
+    service_pool_data = []
+    for pool in service_pools:
+        service_pool_data.append({
+            'Pool Name': pool.name,
+            'Type': pool.pool_type.value.replace('_', ' ').title(),
+            'Balance': f"{pool.metrics.current_balance:.2f} NXT",
+            'Participants': pool.metrics.participant_count,
+            'Status': "✅ Healthy" if pool.is_healthy() else "⚠️ Attention",
+            'Utilization': f"{pool.metrics.calculate_utilization():.1f}%"
+        })
+    
+    if service_pool_data:
+        df = pd.DataFrame(service_pool_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        # Service pool distribution chart
+        st.markdown("### 📊 Service Pool Distribution")
+        pool_balances = [ecosystem.get_pool(pid).metrics.current_balance for pid in ecosystem.hierarchy[PoolLayer.SERVICE] if ecosystem.get_pool(pid)]
+        pool_names = [ecosystem.get_pool(pid).name for pid in ecosystem.hierarchy[PoolLayer.SERVICE] if ecosystem.get_pool(pid)]
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=pool_names,
+            values=pool_balances,
+            hole=0.4,
+            marker=dict(colors=px.colors.qualitative.Set3)
+        )])
+        fig.update_layout(
+            title="Distribution Across Service Pools",
+            height=400
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    st.divider()
+    
+    # Ecosystem Health Verification
+    st.markdown("### 🔍 Ecosystem Health Verification")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # F_floor support verification
+        support_report = ecosystem.verify_f_floor_support()
+        
+        st.metric("Reserve Total", f"{support_report.get('reserve_total', 0):.2f} NXT")
+        st.metric("F_floor Balance", f"{support_report.get('f_floor_balance', 0):.2f} NXT")
+        st.metric("Service Pools Total", f"{support_report.get('service_total', 0):.2f} NXT")
+        st.metric("Service Pool Count", support_report.get('service_pool_count', 0))
+        
+        hierarchy_valid = support_report.get('hierarchy_valid', False)
+        if hierarchy_valid:
+            st.success("✅ Hierarchy Valid: Reserves → F_floor → Services")
+        else:
+            st.error("❌ Hierarchy needs attention")
+    
+    with col2:
+        # Overall ecosystem health
+        health_report = ecosystem.get_ecosystem_health()
+        
+        for layer_name, layer_health in health_report['by_layer'].items():
+            st.markdown(f"**{layer_name.title()} Layer**")
+            health_pct = layer_health['health_percentage']
+            
+            if health_pct == 100:
+                st.success(f"✅ {layer_health['healthy_pools']}/{layer_health['total_pools']} pools healthy ({health_pct:.0f}%)")
+            elif health_pct >= 75:
+                st.info(f"ℹ️ {layer_health['healthy_pools']}/{layer_health['total_pools']} pools healthy ({health_pct:.0f}%)")
+            else:
+                st.warning(f"⚠️ {layer_health['healthy_pools']}/{layer_health['total_pools']} pools healthy ({health_pct:.0f}%)")
+        
+        st.divider()
+        overall = health_report['overall']
+        st.metric("Overall Ecosystem Health", f"{overall['health_percentage']:.1f}%")
+        st.caption(f"{overall['healthy_pools']}/{overall['total_pools']} pools healthy")
+
+
 def render_analytics(dex: DEXEngine):
     """Render DEX analytics and charts"""
     st.subheader("📊 Analytics")
@@ -413,12 +574,13 @@ def render_dex_page():
     dex = initialize_dex()
     
     # Navigation tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "💱 Swap",
         "💧 Liquidity",
         "🏊 Pools",
         "👛 Portfolio",
-        "📊 Analytics"
+        "📊 Analytics",
+        "🏛️ Pool Ecosystem"
     ])
     
     with tab1:
@@ -436,6 +598,9 @@ def render_dex_page():
     with tab5:
         render_analytics(dex)
     
+    with tab6:
+        render_pool_ecosystem_tab(dex)
+    
     # Nexus AI Research Report for Researchers
     st.divider()
     from nexus_ai import render_nexus_ai_button
@@ -444,9 +609,9 @@ def render_dex_page():
     pools = list(dex.pools.values())
     sample_pool = pools[0] if pools else None
     render_nexus_ai_button('dex', {
-        'pair': f"{sample_pool.token1}/{sample_pool.token2}" if sample_pool else 'NXT/TOKEN',
-        'liquidity': sample_pool.reserve1 + sample_pool.reserve2 if sample_pool else 0,
-        'volume': sample_pool.total_volume if sample_pool else 0,
+        'pair': f"{sample_pool.token_a}/{sample_pool.token_b}" if sample_pool else 'NXT/TOKEN',
+        'liquidity': sample_pool.reserve_a + sample_pool.reserve_b if sample_pool else 0,
+        'volume': sample_pool.total_volume_a + sample_pool.total_volume_b if sample_pool else 0,
         'price_impact': 0.5  # Sample value
     })
 
