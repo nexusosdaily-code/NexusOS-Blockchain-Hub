@@ -4,7 +4,44 @@
 
 ---
 
-## 1. Differential Equation Solver with Conservation Constraints
+## 1. Global Debt Backing for Cryptocurrency Tokens
+
+### Problem Statement
+Traditional cryptocurrencies derive value from speculation with no real-world backing. Required: A system where token value is backed by tangible assets (sovereign debt) and this value automatically flows to support guaranteed citizen living standards.
+
+### Technical Solution
+- **Economic Integration**: Track $300T+ global sovereign debt in civilization simulator
+- **Value Calculation**: debt_backing_per_nxt = global_debt_usd / nxt_supply
+- **Floor Distribution**: debt_backed_floor_credits = population × debt_per_NXT × conversion × rate
+- **Adaptive Precision**: Display formatting handles $0.0001 to $91.14 range correctly
+- **Real-Time Updates**: Debt and supply values update dynamically in mobile wallet
+
+### Implementation
+- **Files**: `civilization_simulator.py`, `civilization_dashboard.py` (Mobile Wallet tab)
+- **Key Classes**:
+  - `CivilizationState` (tracks global_debt_usd, nxt_debt_backing_ratio())
+  - `CivilizationSimulator` (debt growth model, floor credit distribution)
+- **Key Methods**:
+  - `CivilizationState.nxt_debt_backing_ratio()` - calculates debt/supply
+  - `render_mobile_wallet_tab()` - displays wallet interface with debt metrics
+
+### Specifications
+- Input: Global debt ($300T starting), NXT supply (dynamic), population
+- Output: Debt per NXT (USD), daily floor credits (NXT)
+- Formula: debt_per_NXT = global_debt / supply
+- Growth: 5% annual debt increase (tracks real-world trends)
+- Precision: Adaptive formatting (≥$1: 2 decimals, ≥$0.001: 4 decimals, else scientific)
+- Integration: Mobile wallet tab in 7-tab civilization dashboard
+
+### Economic Impact
+- **Token Value**: NXT backed by real USD (not speculation)
+- **Floor Support**: Debt value flows daily to BHLS guarantees
+- **Transparency**: Users see exact backing in real-time
+- **Self-Sustaining**: Debt→Value→Floor→Services→Loop
+
+---
+
+## 2. Differential Equation Solver with Conservation Constraints
 
 ### Problem Statement
 Solving coupled differential equations (dN/dt = α·C + β·D + γ·E - δ·N + PID) while enforcing conservation laws during numerical integration. Standard ODE solvers don't handle real-time constraint enforcement.
@@ -31,7 +68,7 @@ Solving coupled differential equations (dN/dt = α·C + β·D + γ·E - δ·N + 
 
 ---
 
-## 2. Wavelength-Based Cryptography System
+## 3. Wavelength-Based Cryptography System
 
 ### Problem Statement
 Traditional encryption relies on mathematical complexity (factoring, discrete logarithms). Required: A novel encryption approach based on electromagnetic wave properties and quantum principles.
