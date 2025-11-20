@@ -399,6 +399,185 @@ def render_supply_chain_tab():
         fig.update_layout(height=350, template="plotly_dark")
         st.plotly_chart(fig, use_container_width=True)
 
+def render_mobile_wallet_tab():
+    """Render mobile wallet with debt backing integration"""
+    st.header("📱 Mobile NXT Wallet")
+    st.markdown("### Your quantum-resistant wallet powered by global debt backing")
+    
+    # Get current state from simulator
+    simulator = st.session_state.simulator
+    current_state = simulator.current_state
+    
+    # Calculate debt backing metrics
+    debt_backing_ratio = current_state.nxt_debt_backing_ratio()
+    
+    # Demo wallet balance
+    if 'wallet_balance' not in st.session_state:
+        st.session_state.wallet_balance = 1000.0
+    
+    # Wallet Overview
+    st.markdown("### 💰 Wallet Overview")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Your Balance", f"{st.session_state.wallet_balance:,.2f} NXT")
+    
+    with col2:
+        # Debt backing value
+        if debt_backing_ratio >= 1:
+            backing_display = f"${debt_backing_ratio:,.2f}"
+        elif debt_backing_ratio >= 0.001:
+            backing_display = f"${debt_backing_ratio:.4f}"
+        else:
+            backing_display = f"${debt_backing_ratio:.2e}"
+        st.metric("Debt Backing per NXT", backing_display)
+    
+    with col3:
+        # Total value from debt backing
+        total_value = st.session_state.wallet_balance * debt_backing_ratio
+        st.metric("Your Backed Value", f"${total_value:,.2f} USD")
+    
+    with col4:
+        # Daily floor support
+        if current_state.debt_backed_floor_credits >= 1:
+            credits_display = f"{current_state.debt_backed_floor_credits:,.2f}"
+        else:
+            credits_display = f"{current_state.debt_backed_floor_credits:.4f}"
+        st.metric("Daily Floor Support", f"{credits_display} NXT")
+    
+    # Explanation
+    st.info(f"💡 **How Debt Backing Works**: ${current_state.global_debt_usd/1e12:.2f}T in global debt backs {current_state.nxt_supply:,.0f} NXT tokens, giving each token {backing_display} in real value. This backing flows {credits_display} NXT daily to the BHLS floor, ensuring guaranteed living standards for all citizens.")
+    
+    st.divider()
+    
+    # Messaging Section
+    st.markdown("### 📨 Send WNSP Message")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        message_content = st.text_area("Message", placeholder="Enter your quantum-encrypted message...", height=100)
+        recipient = st.text_input("Recipient Address (optional - leave blank for broadcast)", placeholder="0xABCD...")
+    
+    with col2:
+        st.markdown("#### Message Cost (E=hf)")
+        
+        # Calculate message cost based on wavelength
+        if message_content:
+            wavelength_nm = 550
+            frequency_hz = 3e8 / (wavelength_nm * 1e-9)
+            h = 6.62607015e-34
+            energy_j = h * frequency_hz
+            
+            # Cost scales with message length and energy
+            cost_nxt = len(message_content) * energy_j * 1e15
+            
+            st.metric("Wavelength", f"{wavelength_nm} nm")
+            st.metric("Energy", f"{energy_j:.2e} J")
+            st.metric("Cost", f"{cost_nxt:.6f} NXT")
+            
+            if st.button("🚀 Send Message", use_container_width=True):
+                if cost_nxt <= st.session_state.wallet_balance:
+                    st.session_state.wallet_balance -= cost_nxt
+                    st.success(f"✅ Message sent! Burned {cost_nxt:.6f} NXT for quantum encryption.")
+                    st.rerun()
+                else:
+                    st.error("❌ Insufficient balance")
+        else:
+            st.info("Enter a message to see cost calculation")
+    
+    st.divider()
+    
+    # Debt Backing Economics
+    st.markdown("### 📊 Global Debt Backing Economics")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### System Metrics")
+        metrics_data = {
+            "Metric": ["Global Debt", "NXT Supply", "Debt per NXT", "Population", "Daily Floor Credits"],
+            "Value": [
+                f"${current_state.global_debt_usd/1e12:.2f}T USD",
+                f"{current_state.nxt_supply:,.0f} NXT",
+                backing_display,
+                f"{current_state.population:,}",
+                f"{credits_display} NXT"
+            ]
+        }
+        df_metrics = pd.DataFrame(metrics_data)
+        st.dataframe(df_metrics, use_container_width=True, hide_index=True)
+    
+    with col2:
+        st.markdown("#### Your Economics")
+        your_data = {
+            "Item": ["Your Balance", "Backed Value", "% of Supply", "Share of Floor"],
+            "Value": [
+                f"{st.session_state.wallet_balance:,.2f} NXT",
+                f"${total_value:,.2f} USD",
+                f"{(st.session_state.wallet_balance/current_state.nxt_supply)*100:.6f}%",
+                f"{(st.session_state.wallet_balance/current_state.nxt_supply)*current_state.debt_backed_floor_credits:.6f} NXT/day"
+            ]
+        }
+        df_your = pd.DataFrame(your_data)
+        st.dataframe(df_your, use_container_width=True, hide_index=True)
+    
+    st.divider()
+    
+    # Transaction Demo
+    st.markdown("### 💸 Send NXT Transaction")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        send_to = st.text_input("Send to Address", placeholder="0x1234...")
+    
+    with col2:
+        send_amount = st.number_input("Amount (NXT)", min_value=0.0, max_value=float(st.session_state.wallet_balance), value=10.0, step=0.1)
+    
+    with col3:
+        st.markdown("&nbsp;")
+        st.markdown("&nbsp;")
+        if st.button("📤 Send NXT", use_container_width=True):
+            if send_to and send_amount > 0:
+                if send_amount <= st.session_state.wallet_balance:
+                    st.session_state.wallet_balance -= send_amount
+                    st.success(f"✅ Sent {send_amount} NXT to {send_to[:10]}...")
+                    st.rerun()
+                else:
+                    st.error("❌ Insufficient balance")
+            else:
+                st.warning("⚠️ Enter recipient address and amount")
+    
+    # How it works
+    with st.expander("🔍 How Mobile Wallet Integration Works"):
+        st.markdown(f"""
+        ### Complete Integration Flow
+        
+        **1. Debt Backing → NXT Value**
+        - ${current_state.global_debt_usd/1e12:.2f}T global debt ÷ {current_state.nxt_supply:,.0f} NXT supply = **{backing_display} per token**
+        - Your {st.session_state.wallet_balance:,.2f} NXT = **${total_value:,.2f} USD** in backed value
+        
+        **2. Messaging Burns → Energy Reserve**
+        - Send message → Pay E=hf cost → Burns NXT
+        - Burned energy → TRANSITION_RESERVE pool
+        - Reserve powers the BHLS floor
+        
+        **3. Floor Support → Guaranteed Living**
+        - Debt backing flows {credits_display} NXT/day to floor
+        - Messaging burns add more energy
+        - Every citizen gets {st.session_state.bhls.base_allocations[BHLSCategory.FOOD]:,.0f} NXT/month guaranteed
+        
+        **4. Mobile-First Design**
+        - Your phone = blockchain node
+        - Quantum-resistant encryption
+        - Wavelength-based validation
+        - Real-time economics visible
+        
+        This creates a **self-sustaining loop**: Use the system → Support the floor → Everyone benefits
+        """)
+
 def main():
     st.set_page_config(
         page_title="NexusOS Civilization",
@@ -420,7 +599,8 @@ def main():
         "♻️ Circular Economy",
         "🌍 Civilization Simulator",
         "🗳️ Governance",
-        "⚡ Supply Chain"
+        "⚡ Supply Chain",
+        "📱 Mobile Wallet"
     ])
     
     with tabs[0]:
@@ -440,6 +620,9 @@ def main():
     
     with tabs[5]:
         render_supply_chain_tab()
+    
+    with tabs[6]:
+        render_mobile_wallet_tab()
 
 if __name__ == "__main__":
     main()
