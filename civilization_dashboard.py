@@ -126,7 +126,7 @@ def render_wave_computation_tab():
             height=300,
             template="plotly_dark"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
     except Exception as e:
         st.error(f"Error creating wave state: {str(e)}")
@@ -165,7 +165,7 @@ def render_bhls_floor_tab():
         height=350,
         template="plotly_dark"
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Revenue sources pie chart
     st.markdown("### Floor Funding Sources")
@@ -176,7 +176,7 @@ def render_bhls_floor_tab():
         hole=0.4
     )])
     fig.update_layout(height=300, template="plotly_dark")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 def render_regenerative_economy_tab():
     """Render regenerative circular economy"""
@@ -212,7 +212,7 @@ def render_regenerative_economy_tab():
         height=350,
         template="plotly_dark"
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Liquidity flow
     st.markdown("### Liquidity Distribution")
@@ -315,7 +315,7 @@ def render_civilization_simulator_tab():
                 height=300,
                 template="plotly_dark"
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             # Debt backing chart
             fig2 = go.Figure()
@@ -330,7 +330,7 @@ def render_civilization_simulator_tab():
                 height=300,
                 template="plotly_dark"
             )
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(fig2, width='stretch')
 
 def render_governance_tab():
     """Render civic governance"""
@@ -367,7 +367,7 @@ def render_governance_tab():
         height=300,
         template="plotly_dark"
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 def render_supply_chain_tab():
     """Render supply chain and energy"""
@@ -397,7 +397,7 @@ def render_supply_chain_tab():
             hole=0.4
         )])
         fig.update_layout(height=350, template="plotly_dark")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 def render_mobile_wallet_tab():
     """Render mobile wallet with debt backing integration"""
@@ -477,7 +477,7 @@ def render_mobile_wallet_tab():
             st.metric("Energy", f"{energy_j:.2e} J")
             st.metric("Cost", f"{cost_nxt:.6f} NXT")
             
-            if st.button("🚀 Send Message", use_container_width=True):
+            if st.button("🚀 Send Message", width='stretch'):
                 if cost_nxt <= st.session_state.wallet_balance:
                     st.session_state.wallet_balance -= cost_nxt
                     st.success(f"✅ Message sent! Burned {cost_nxt:.6f} NXT for quantum encryption.")
@@ -507,7 +507,7 @@ def render_mobile_wallet_tab():
             ]
         }
         df_metrics = pd.DataFrame(metrics_data)
-        st.dataframe(df_metrics, use_container_width=True, hide_index=True)
+        st.dataframe(df_metrics, width='stretch', hide_index=True)
     
     with col2:
         st.markdown("#### Your Economics")
@@ -521,7 +521,7 @@ def render_mobile_wallet_tab():
             ]
         }
         df_your = pd.DataFrame(your_data)
-        st.dataframe(df_your, use_container_width=True, hide_index=True)
+        st.dataframe(df_your, width='stretch', hide_index=True)
     
     st.divider()
     
@@ -539,7 +539,7 @@ def render_mobile_wallet_tab():
     with col3:
         st.markdown("&nbsp;")
         st.markdown("&nbsp;")
-        if st.button("📤 Send NXT", use_container_width=True):
+        if st.button("📤 Send NXT", width='stretch'):
             if send_to and send_amount > 0:
                 if send_amount <= st.session_state.wallet_balance:
                     st.session_state.wallet_balance -= send_amount
