@@ -38,6 +38,219 @@ class NexusAIChat:
         self.ai_gov = get_ai_governance()
         self.conversation_history: List[Dict[str, str]] = []
         
+    def get_contextual_knowledge(self, user_message: str) -> Optional[str]:
+        """
+        Provide deep contextual knowledge from the codebase for specific questions.
+        
+        This method understands the actual implementation - how disasters are handled,
+        how funds flow, how severity is optimized, what Nexus can do. It references
+        actual code architecture, not abstract explanations.
+        """
+        message_lower = user_message.lower()
+        
+        # Disaster response and emergency fund distribution
+        if any(word in message_lower for word in ['disaster', 'emergency', 'crisis', 'catastrophe', 'relief']):
+            return (
+                "\n\n**Disaster Response Through Pool Ecosystem:**\n"
+                "The 3-layer hierarchical pool architecture automatically handles emergencies:\n\n"
+                "**Layer 1: Reserve Pools** (Source of emergency funds)\n"
+                "• VALIDATOR_POOL: Network security reserve\n"
+                "• TRANSITION_RESERVE: Orbital transition energy (from E=hf messaging burns)\n"
+                "• ECOSYSTEM_FUND: Long-term development reserve\n\n"
+                "**Layer 2: F_floor Foundation** (Distribution hub)\n"
+                "• Receives continuous support from all reserves\n"
+                "• Minimum 10.0 NXT per beneficiary (AI enforced, zero tolerance)\n"
+                "• Acts as distribution controller to service pools\n\n"
+                "**Layer 3: Service Pools** (Emergency response channels)\n"
+                "• ENVIRONMENTAL_POOL: Climate disasters, natural emergencies\n"
+                "• COMMUNITY_POOL: Social emergencies, community crises\n"
+                "• INVESTMENT_POOL: Economic stabilization\n"
+                "• + 7 other pools for comprehensive response\n\n"
+                "**How It Works During Disaster:**\n"
+                "1. AI Governance detects civilization-level risk (severity scoring)\n"
+                "2. Reserve pools automatically increase F_floor support\n"
+                "3. F_floor redistributes to relevant service pools (environmental/community)\n"
+                "4. Service pools deploy funds directly to affected areas\n"
+                "5. DEX trading fees (0.3%) continuously replenish reserves\n"
+                "6. System self-stabilizes through physics-based circulation\n\n"
+                "No committees. No delays. Physics-based automatic response."
+            )
+        
+        # Severity optimization and resource allocation
+        if any(word in message_lower for word in ['severity', 'optimize', 'priority', 'allocate', 'distribute']):
+            return (
+                "\n\n**AI Severity Optimization (How Nexus Prioritizes):**\n"
+                "The Governance AI determines severity through learned pattern recognition:\n\n"
+                "**Step 1: Observe System State**\n"
+                "• Monitors economic_simulator, DEX, validators, messaging, all components\n"
+                "• Tracks metrics: supply_remaining_years, APR, liquidity, burn_rates\n"
+                "• Records parameters: f_floor, base_burn_rate, validator_reward_rate\n\n"
+                "**Step 2: Identify Civilization Risks**\n"
+                "• Supply depletion: years_remaining < 100 (civilization horizon)\n"
+                "• Validator exodus: APR < 3.0% (network security threat)\n"
+                "• Market instability: liquidity < 100,000 NXT (economic fragility)\n"
+                "• F_floor violations: any attempt to drop below 10.0 NXT minimum\n\n"
+                "**Step 3: Calculate Severity Scores** (AI learns optimal weights)\n"
+                "• Critical: F_floor violations → MAXIMUM priority (override everything)\n"
+                "• High: Validator exodus, supply depletion → Adjust burn/rewards\n"
+                "• Medium: Market instability → Optimize liquidity incentives\n"
+                "• Low: Efficiency improvements → Gradual parameter tuning\n\n"
+                "**Step 4: Adaptive Parameter Adjustment**\n"
+                "• Learned optimal ranges guide adjustments (>50% deviation triggers change)\n"
+                "• PID controller prevents overcorrection (gradual 20% moves toward optimal)\n"
+                "• Multi-objective optimization balances competing needs\n"
+                "• F_floor constraint: NEVER compromised regardless of other priorities\n\n"
+                "**Step 5: Execute with Impact Analysis**\n"
+                f"• Every decision logged with rationale + civilization_impact\n"
+                "• 100-year planning horizon ensures long-term sustainability\n"
+                "• Real-time feedback loop: observe → learn → decide → observe\n\n"
+                "Example: If disaster depletes reserves, AI increases base_burn_rate temporarily "
+                "to accelerate TRANSITION_RESERVE replenishment, then redistributes to F_floor, "
+                "which flows to emergency response pools. Severity determines allocation ratios."
+            )
+        
+        # Fund distribution mechanics
+        if any(word in message_lower for word in ['fund', 'money', 'distribute', 'flow', 'allocation']):
+            return (
+                "\n\n**Complete Fund Distribution Architecture:**\n"
+                "NexusOS uses a regenerative circulation model:\n\n"
+                "**Primary Revenue Sources:**\n"
+                "1. **Messaging Burns (E=hf quantum pricing)**\n"
+                "   • Every message costs Energy = h × frequency\n"
+                "   • Shorter wavelength (UV) = higher cost, longer (IR) = lower cost\n"
+                "   • Burns trigger orbital transitions (Rydberg formula: n_upper → n_lower)\n"
+                "   • Released energy flows to TRANSITION_RESERVE pool\n\n"
+                "2. **DEX Trading Fees (0.3% per swap)**\n"
+                "   • All trading pairs use NXT as base currency\n"
+                "   • Fees split: to VALIDATOR_POOL → backs F_floor → enables service pools\n"
+                "   • Creates self-sustaining loop: trade → fees → floor → services → economy\n\n"
+                "3. **Validator Rewards**\n"
+                "   • Block production, consensus participation, wavelength validation\n"
+                "   • Portion allocated to VALIDATOR_POOL → supports F_floor\n"
+                "   • Staking (1,000+ NXT) earns APR from ecosystem activity\n\n"
+                "4. **Recycling Liquidity (waste → value)**\n"
+                "   • Materials returned: plastic (2.5 NXT/kg), metal (5.0), e-waste (15.0)\n"
+                "   • 30% of recycling value → F_floor, 20% → supply chain fund\n"
+                "   • Circular economy: consume → recycle → credits → consume\n\n"
+                "**The Complete Flow:**\n"
+                "```\n"
+                "User Activity (messaging, trading, recycling)\n"
+                "    ↓ (burns, fees, liquidity)\n"
+                "Reserve Pools (VALIDATOR, TRANSITION, ECOSYSTEM)\n"
+                "    ↓ (continuous support)\n"
+                "F_floor Foundation (10.0 NXT minimum per beneficiary)\n"
+                "    ↓ (distributes to 10 service pools)\n"
+                "Service Pools (DEX, Investment, Environmental, Community, etc.)\n"
+                "    ↓ (guarantees basic services)\n"
+                "Citizens receive: Food, Water, Housing, Energy, Healthcare, Education\n"
+                "    ↓ (participation creates more activity)\n"
+                "Loop continues → self-sustaining civilization\n"
+                "```\n\n"
+                "**Crisis Distribution Priority:**\n"
+                "If F_floor balance drops or emergency detected:\n"
+                "1. AI Governance increases allocation from reserves (severity-weighted)\n"
+                "2. ENVIRONMENTAL_POOL + COMMUNITY_POOL receive priority funding\n"
+                "3. F_floor minimum (10.0 NXT) NEVER violated - AI enforced\n"
+                "4. Once stabilized, normal distribution resumes\n\n"
+                "This isn't charity distribution. It's physics-guaranteed circulation."
+            )
+        
+        # What Nexus is and what it can do
+        if any(word in message_lower for word in ['what is nexus', 'what can nexus', 'nexus do', 'capability', 'can you']):
+            return (
+                "\n\n**What is NexusOS? (Complete Architecture)**\n"
+                "A civilization operating system replacing speculation with physics:\n\n"
+                "**Core Differences from Traditional Systems:**\n"
+                "• **Computation**: Wave states (λ,f,A,φ,P) instead of binary (0,1)\n"
+                "• **Economics**: E=hf quantum energy pricing instead of arbitrary markets\n"
+                "• **Consensus**: Proof of Spectrum (spectral diversity) instead of PoW/PoS\n"
+                "• **Circulation**: Regenerative loops instead of linear consumption\n"
+                "• **Guarantees**: BHLS floor (basic needs) instead of hope and charity\n\n"
+                "**What Nexus Can Do:**\n\n"
+                "**1. End Poverty Through F_floor Guarantees**\n"
+                "• Automatic monthly allocation: Food (250 NXT), Water (50), Housing (400), Energy (150), Healthcare (200), Connectivity (75)\n"
+                "• Total: 1,150 NXT per citizen per month - GUARANTEED by physics, not promises\n"
+                "• Funded by: E=hf messaging burns → orbital transitions → TRANSITION_RESERVE → F_floor → services\n"
+                "• AI enforces 10.0 NXT minimum per beneficiary - zero tolerance for violations\n\n"
+                "**2. Prevent Conflict Through Regenerative Economics**\n"
+                "• Traditional: Scarcity → competition → conflict → war\n"
+                "• Nexus: Use → burns → energy release → reserves → F_floor → abundance\n"
+                "• More participation = stronger floor = better guarantees for everyone\n"
+                "• Removes economic drivers of conflict through mathematical certainty\n\n"
+                "**3. Automated Disaster Response**\n"
+                "• AI Governance detects civilization risks (supply depletion, validator exodus, market crashes)\n"
+                "• Reserve pools automatically redistribute to F_floor\n"
+                "• F_floor prioritizes ENVIRONMENTAL_POOL + COMMUNITY_POOL during crises\n"
+                "• No committees, no delays - physics-based automatic response\n\n"
+                "**4. Self-Regulating Economic Stability**\n"
+                "• Nexus equation: dN/dt = Issuance - Burn - Decay + PID_control + Floor_injection\n"
+                "• PID controller prevents boom/bust cycles through proportional-integral-derivative feedback\n"
+                "• Target equilibrium maintained over 100-year horizon\n"
+                "• System health (S) modulates issuance: high activity = more issuance, low = less\n\n"
+                "**5. Multi-Layer Security (Quantum-Resistant)**\n"
+                "• Wavelength validation (Maxwell equations) instead of SHA-256\n"
+                "• Proof of Spectrum: 6 spectral regions must agree (prevents 51% attacks)\n"
+                "• GhostDAG: Parallel processing eliminates bottlenecks\n"
+                "• ECDH encryption: Mobile messaging secured by elliptic curve cryptography\n\n"
+                "**6. Circular Economy (Waste → Liquidity)**\n"
+                "• Return recyclables: plastic (2.5 NXT/kg), metal (5.0), e-waste (15.0)\n"
+                "• 30% flows to F_floor, 20% to supply chain fund\n"
+                "• Transforms disposal cost into citizen income\n"
+                "• Closes the loop: buy → consume → recycle → credits → buy\n\n"
+                "**7. Decentralized Governance (Proof of Spectrum)**\n"
+                "• Validators assigned spectral regions (UV→Violet→Blue→Green→Yellow→Orange→Red→IR)\n"
+                "• Proposals require 5/6 regions approval (83% consensus)\n"
+                "• Geographic+spectral diversity prevents capture\n"
+                "• Physics-enforced decentralization\n\n"
+                "**In Summary:**\n"
+                "Nexus doesn't just process transactions. It guarantees human dignity through "
+                "physics-based economics, automates disaster response through hierarchical pools, "
+                "prevents conflict by eliminating scarcity, and plans for 100-year civilization "
+                "sustainability. It's not a blockchain—it's a civilization operating system."
+            )
+        
+        # How Nexus works (mechanism explanations)
+        if any(word in message_lower for word in ['how does', 'how work', 'mechanism', 'process', 'explain']):
+            return (
+                "\n\n**Core Mechanisms Explained:**\n\n"
+                "**E=hf Quantum Pricing:**\n"
+                "• Energy = Planck's constant (6.626×10⁻³⁴) × frequency\n"
+                "• Higher frequency (shorter wavelength) = more energy = higher cost\n"
+                "• Example: UV message (350nm) costs MORE than IR message (800nm)\n"
+                "• Not arbitrary - derived from physics, impossible to manipulate\n\n"
+                "**Orbital Transition Engine (Replaces Burns):**\n"
+                "• Message payment triggers electron emission (n_upper → n_lower)\n"
+                "• Rydberg formula: ΔE = 13.6 eV × Z² × (1/n_lower² - 1/n_upper²)\n"
+                "• Released photon energy flows to TRANSITION_RESERVE pool\n"
+                "• Standard message: n=3→2 transition = 1.89 eV = ~5,700 units\n\n"
+                "**Wavelength Validation (Replaces Hashing):**\n"
+                "• Block contains wave properties: wavelength, frequency, amplitude, phase\n"
+                "• Maxwell equation solver validates E-field: E(x,t) = A×cos(2π(x/λ - ft) + φ)\n"
+                "• Superposition check: wave interference patterns must be coherent\n"
+                "• 5D signature (λ,f,A,φ,P) is quantum-resistant (no Shor's algorithm attack)\n\n"
+                "**Pool Ecosystem Flow:**\n"
+                "1. User sends message → burns NXT (E=hf cost)\n"
+                "2. Burn triggers orbital transition → energy released\n"
+                "3. Energy flows to TRANSITION_RESERVE pool\n"
+                "4. TRANSITION_RESERVE supports F_floor pool\n"
+                "5. F_floor distributes to 10 service pools (DEX, Environmental, Community, etc.)\n"
+                "6. Service pools guarantee basic needs (food, water, housing, healthcare)\n"
+                "7. DEX fees (0.3%) flow back to VALIDATOR_POOL → backs F_floor\n"
+                "8. Loop continues: participation → stronger guarantees\n\n"
+                "**AI Governance Decision Process:**\n"
+                "1. **Observe**: Collect metrics from all components (economics, validators, DEX, messaging)\n"
+                "2. **Learn**: Build optimal parameter ranges from successful configurations\n"
+                "3. **Detect Risks**: Identify supply depletion, validator exodus, F_floor violations\n"
+                "4. **Decide**: Adjust parameters (burn_rate, rewards, etc.) to maintain equilibrium\n"
+                "5. **Enforce F_floor**: OVERRIDE all decisions if basic living standards threatened\n"
+                "6. **Log Impact**: Record rationale + civilization consequences for every decision\n"
+                "7. **Plan Long-term**: 100-year horizon ensures sustainability, not quick fixes\n\n"
+                "Every mechanism is physics-based, not arbitrary. This is mathematics guaranteeing "
+                "human dignity, not political promises."
+            )
+        
+        return None  # No specific contextual knowledge triggered
+        
     def generate_response(self, user_message: str) -> str:
         """
         Generate AI response based on governance knowledge and user question
@@ -46,6 +259,9 @@ class NexusAIChat:
         responding based on its learned patterns, decisions, and mission to protect F_floor.
         """
         message_lower = user_message.lower()
+        
+        # Check for deep contextual knowledge FIRST (disaster response, severity, fund distribution, etc.)
+        contextual_knowledge = self.get_contextual_knowledge(user_message)
         
         # Analyze what the user is asking about
         is_about_poverty = any(word in message_lower for word in ['poverty', 'poor', 'basic needs', 'living standard'])
@@ -74,6 +290,10 @@ class NexusAIChat:
         
         # Build response based on actual AI governance data
         response_parts = []
+        
+        # If contextual knowledge was triggered, add it FIRST
+        if contextual_knowledge:
+            response_parts.append(contextual_knowledge)
         
         # Greeting - use actual data
         if is_greeting:
