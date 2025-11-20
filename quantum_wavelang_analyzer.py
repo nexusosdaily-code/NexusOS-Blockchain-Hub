@@ -167,7 +167,7 @@ class QuantumWaveLangAnalyzer:
         
         return {
             "wavelength_coherence": wavelength_coherence,
-            "phase_coherence": max(0, phase_coherence),
+            "phase_coherence": max(0.0, phase_coherence),
             "amplitude_coherence": amplitude_coherence,
             "overall_coherence_score": overall_coherence,
             "stability_percentage": stability_score,
