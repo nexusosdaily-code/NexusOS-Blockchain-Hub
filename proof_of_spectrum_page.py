@@ -124,7 +124,12 @@ def render_live_demo_tab():
     
     # Initialize or get consensus from session
     if 'pos_consensus' not in st.session_state:
-        st.session_state.pos_consensus = None
+        # Auto-initialize with default validator network for immediate use
+        default_consensus = create_diverse_validator_network(30)
+        default_consensus.required_coverage = 0.83
+        default_consensus.min_validators_per_region = 2
+        default_consensus.required_region_count = int(np.ceil(len(SpectralRegion) * 0.83))
+        st.session_state.pos_consensus = default_consensus
     
     # Configuration
     col1, col2 = st.columns(2)
