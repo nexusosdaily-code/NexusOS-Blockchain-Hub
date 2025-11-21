@@ -540,5 +540,5 @@ def render_simulation_results():
     render_nexus_ai_button('consensus', {
         'mechanism': 'Nexus Consensus',
         'validators': len(consensus.contributions),
-        'tps': consensus.metrics.avg_consensus_time if hasattr(consensus.metrics, 'avg_consensus_time') else 500
+        'tps': getattr(getattr(consensus, 'metrics', None), 'avg_consensus_time', 500)
     })
