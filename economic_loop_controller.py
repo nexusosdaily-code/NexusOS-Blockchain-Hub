@@ -20,7 +20,7 @@ from orbital_transition_engine import (
     orbital_engine, OrbitalTransition, TransitionType
 )
 from native_token import NativeTokenSystem
-from dex_core import NativeTokenAdapter, DEXCore
+from dex_core import NativeTokenAdapter
 from wavelength_validator import SpectralRegion
 
 
