@@ -344,9 +344,10 @@ def render_profitability_calculator(economy: StakingEconomy):
         delegated_stake = st.number_input(
             "Expected Delegated Stake",
             min_value=0.0,
-            max_value=10000000.0,
+            max_value=100000000.0,
             value=100000.0,
-            step=10000.0
+            step=100000.0,
+            help="1 full Nexus coin = 100M NXT units"
         )
         
         blocks_per_day = st.number_input(

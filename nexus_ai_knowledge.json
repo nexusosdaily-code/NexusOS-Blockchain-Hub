@@ -44,6 +44,21 @@
         "uptime": 98.5
       },
       "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T08:59:00.836437",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 125000.0,
+        "rewards": 0.0,
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "researcher_email": null
     }
   ],
   "patterns": {
@@ -55,30 +70,30 @@
           "min": 125000.0,
           "max": 125000.0,
           "successful_mean": 125000.0,
-          "sample_count": 3
+          "sample_count": 4
         },
         "rewards": {
           "min": 0.0,
           "max": 0.0,
           "successful_mean": 0.0,
-          "sample_count": 3
+          "sample_count": 4
         },
         "apr": {
           "min": 25228.800000000003,
           "max": 25228.800000000003,
           "successful_mean": 25228.800000000003,
-          "sample_count": 3
+          "sample_count": 4
         },
         "uptime": {
           "min": 98.5,
           "max": 98.5,
           "successful_mean": 98.5,
-          "sample_count": 3
+          "sample_count": 4
         }
       },
       "civilization_risks": [],
       "f_floor_violations": []
     }
   },
-  "last_updated": "2025-11-21T04:22:29.776562"
+  "last_updated": "2025-11-21T08:59:00.836989"
 }
