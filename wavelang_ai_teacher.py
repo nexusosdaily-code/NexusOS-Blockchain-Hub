@@ -375,14 +375,41 @@ class WaveLangPipeline:
             })
         
         # MULTIPLY instruction
-        if "multiply" in description_lower or "scale" in description_lower or "factor" in description_lower or "*" in description_lower:
-            # Don't require numbers for multiplication
+        if "multiply" in description_lower or "scale" in description_lower or "factor" in description_lower or "*" in description_lower or "times" in description_lower:
+            numbers = re.findall(r'\d+', user_description)
+            
+            # Check if we need to add LOAD instructions first
+            needs_loads = not any(i["opcode"] == "LOAD" for i in instructions)
+            
+            if len(numbers) >= 2 and needs_loads:
+                # Explicit numbers provided (e.g., "multiply 7 and 9" or "7 times 9")
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 495.0,
+                    "operand": numbers[0],
+                    "explanation": f"Load first number: {numbers[0]}"
+                })
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 508.0,
+                    "operand": numbers[1],
+                    "explanation": f"Load second number: {numbers[1]}"
+                })
+            elif needs_loads and "factor" in description_lower:
+                # Generic multiplication by factor (no explicit numbers)
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 495.0,
+                    "operand": "input",
+                    "explanation": "Load input data"
+                })
+            
             if not any(i["opcode"] == "MULTIPLY" for i in instructions):
                 instructions.append({
                     "opcode": "MULTIPLY",
                     "wavelength": 392.0,
                     "operand": None,
-                    "explanation": "Multiply by frequency factor"
+                    "explanation": "Multiply values together"
                 })
         
         # PRINT/OUTPUT instruction
