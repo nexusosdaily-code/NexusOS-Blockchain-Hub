@@ -2,7 +2,7 @@
 NexusOS AI Teacher for WaveLang
 ================================
 Revolutionary AI-powered assistant for learning and writing wavelength code
-Unified Pipeline: Text → WaveLang → Optimize → Bytecode → English
+Unified Pipeline: Text → WaveLang → Optimize → Bytecode → English → Visual Output
 - Text-to-Wavelength Encoder: Convert English descriptions to WaveLang
 - Auto-Optimizer: Improve code efficiency automatically
 - Binary Compiler: Generate executable bytecode/assembly
@@ -101,6 +101,10 @@ class WaveLangPipeline:
         english_result = self.wavelength_to_text(opcodes)
         pipeline_result["stages"]["6_english_explanation"] = english_result
         
+        # Stage 8: Execute and visualize output
+        execution_result = self._execute_program(optimized_instructions)
+        pipeline_result["stages"]["7_execution"] = execution_result
+        
         # Set success based on critical stage outcomes
         bytecode_success = pipeline_result["stages"]["4_bytecode"].get("success", False)
         pipeline_result["success"] = bytecode_success
@@ -136,6 +140,98 @@ class WaveLangPipeline:
                         inst["explanation"] += " (optimized: QAM64→OOK)"
         
         return optimized
+    
+    def _execute_program(self, instructions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Execute WaveLang program and return visual output
+        Simulates program execution with a simple stack-based interpreter
+        """
+        stack = []
+        output = []
+        memory = {}
+        
+        try:
+            for inst in instructions:
+                opcode = inst["opcode"]
+                operand = inst.get("operand")
+                
+                if opcode == "LOAD":
+                    # Load value onto stack
+                    try:
+                        value = float(operand) if operand and str(operand).replace('.','').replace('-','').isdigit() else operand
+                    except:
+                        value = operand
+                    stack.append(value)
+                
+                elif opcode == "ADD":
+                    if len(stack) >= 2:
+                        b = stack.pop()
+                        a = stack.pop()
+                        try:
+                            result = float(a) + float(b)
+                            stack.append(result)
+                        except:
+                            stack.append(f"{a} + {b}")
+                
+                elif opcode == "SUBTRACT":
+                    if len(stack) >= 2:
+                        b = stack.pop()
+                        a = stack.pop()
+                        try:
+                            result = float(a) - float(b)
+                            stack.append(result)
+                        except:
+                            stack.append(f"{a} - {b}")
+                
+                elif opcode == "MULTIPLY":
+                    if len(stack) >= 2:
+                        b = stack.pop()
+                        a = stack.pop()
+                        try:
+                            result = float(a) * float(b)
+                            stack.append(result)
+                        except:
+                            stack.append(f"{a} × {b}")
+                
+                elif opcode == "DIVIDE":
+                    if len(stack) >= 2:
+                        b = stack.pop()
+                        a = stack.pop()
+                        try:
+                            if float(b) != 0:
+                                result = float(a) / float(b)
+                                stack.append(result)
+                            else:
+                                stack.append("Error: Division by zero")
+                        except:
+                            stack.append(f"{a} ÷ {b}")
+                
+                elif opcode == "PRINT" or opcode == "OUTPUT":
+                    if stack:
+                        output.append(stack[-1])  # Print top of stack
+                    else:
+                        output.append("(empty stack)")
+                
+                elif opcode == "STORE":
+                    if stack:
+                        value = stack.pop()
+                        memory[operand or "result"] = value
+            
+            return {
+                "success": True,
+                "output": output,
+                "final_stack": stack,
+                "memory": memory,
+                "has_output": len(output) > 0
+            }
+        
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "output": output,
+                "has_output": False
+            }
     
     def _convert_to_wavelength_instructions(self, instructions: List[Dict[str, Any]]) -> List[WavelengthInstruction]:
         """Convert instruction dicts to WavelengthInstruction objects"""
@@ -658,7 +754,7 @@ def render_wavelang_ai_teacher():
     
     st.markdown("### 🤖 NexusOS AI Teacher for WaveLang")
     st.markdown("""
-    **Unified Pipeline**: Text → WaveLang → Optimize → Bytecode → English
+    **Unified Pipeline**: Text → WaveLang → Optimize → Bytecode → English → Visual Output
     
     Write code in everyday language, watch it transform into physics-based wavelengths,
     get automatic optimization, compile to binary, and see everything explained!
@@ -683,7 +779,7 @@ def render_unified_pipeline_mode(pipeline: WaveLangPipeline):
     
     st.markdown("""
     Enter your program description below. Watch it flow through the complete pipeline:
-    **Text** → **WaveLang Instructions** → **Auto-Optimize** → **Bytecode Compilation** → **English Explanation**
+    **Text** → **WaveLang Instructions** → **Auto-Optimize** → **Bytecode Compilation** → **English Explanation** → **Visual Execution**
     """)
     
     # Input section
@@ -807,6 +903,36 @@ def render_unified_pipeline_mode(pipeline: WaveLangPipeline):
             st.markdown("**Detailed breakdown:**")
             for item in english["english_explanation"]:
                 st.markdown(f"- **{item['opcode']}**: {item['english']} ({item['use_case']})")
+        
+        # Stage 7: Execution & Visual Output
+        with st.expander("▶️ **Stage 7**: Execution & Visual Output", expanded=True):
+            execution = result["stages"].get("7_execution", {})
+            
+            if execution.get("success"):
+                if execution.get("has_output"):
+                    st.success("✅ Program executed successfully!")
+                    
+                    # Display output in a highlighted box
+                    st.markdown("### 📺 Program Output:")
+                    for i, value in enumerate(execution["output"], 1):
+                        # Format the output nicely
+                        if isinstance(value, float):
+                            if value.is_integer():
+                                st.code(f">> {int(value)}", language="python")
+                            else:
+                                st.code(f">> {value:.2f}", language="python")
+                        else:
+                            st.code(f">> {value}", language="python")
+                    
+                    # Show memory state if any
+                    if execution.get("memory"):
+                        st.markdown("### 💾 Memory State:")
+                        for key, value in execution["memory"].items():
+                            st.caption(f"`{key}` = {value}")
+                else:
+                    st.warning("⚠️ Program executed but produced no output. Add a PRINT instruction to see results.")
+            else:
+                st.error(f"❌ Execution failed: {execution.get('error', 'Unknown error')}")
         
         # Final stats
         st.divider()
