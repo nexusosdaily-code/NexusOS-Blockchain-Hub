@@ -2,10 +2,11 @@
 NexusOS AI Teacher for WaveLang
 ================================
 Revolutionary AI-powered assistant for learning and writing wavelength code
+Unified Pipeline: Text → WaveLang → Optimize → Bytecode → English
 - Text-to-Wavelength Encoder: Convert English descriptions to WaveLang
-- Wavelength Decoder: Explain WaveLang code in plain English
-- Code Advisor: Optimize wavelength programs
-- Error Prevention: Catch logical errors before compilation
+- Auto-Optimizer: Improve code efficiency automatically
+- Binary Compiler: Generate executable bytecode/assembly
+- Wavelength Decoder: Explain everything in plain English
 """
 
 import streamlit as st
@@ -14,17 +15,179 @@ from wavelength_code_generator import (
     ControlFlowMode, DataType
 )
 from wavelength_validator import SpectralRegion, ModulationType
+from wavelang_compiler import WaveLangCompiler
 import math
 import json
 from typing import List, Dict, Any, Optional
 
-class WaveLangAITeacher:
-    """AI-powered assistant for WaveLang programming"""
+class WaveLangPipeline:
+    """
+    Unified pipeline for WaveLang processing
+    Text → WaveLang → Optimize → Bytecode → Explanation
+    """
     
     def __init__(self):
         self.code_gen = WavelengthCodeGenerator()
+        self.compiler = WaveLangCompiler()
         self.instruction_descriptions = self._load_instruction_descriptions()
         self.examples = self._load_examples()
+        
+    def execute_full_pipeline(self, user_text: str, auto_optimize: bool = True) -> Dict[str, Any]:
+        """
+        Execute the complete pipeline from text to bytecode
+        Returns all intermediate results for display
+        """
+        
+        pipeline_result = {
+            "success": False,
+            "stages": {}
+        }
+        
+        # Stage 1: Text → WaveLang Instructions
+        text_result = self.text_to_wavelength(user_text)
+        pipeline_result["stages"]["1_text_to_wavelength"] = text_result
+        
+        if text_result["status"] != "success":
+            return pipeline_result
+        
+        instructions = text_result["instructions"]
+        
+        # Stage 2: Initial Validation (pre-optimization)
+        validation = self.validate_program(instructions)
+        pipeline_result["stages"]["2_validation_initial"] = validation
+        
+        # Stage 3: Optimization (if enabled)
+        if auto_optimize:
+            optimization = self.optimize_program(instructions)
+            pipeline_result["stages"]["3_optimization"] = optimization
+            # Apply optimization transformations
+            optimized_instructions = self._apply_optimizations(instructions, optimization)
+            pipeline_result["stages"]["3_optimization"]["applied"] = (len(optimized_instructions) != len(instructions))
+            
+            # Stage 2b: Re-validate after optimization
+            final_validation = self.validate_program(optimized_instructions)
+            pipeline_result["stages"]["2_validation_final"] = final_validation
+        else:
+            optimized_instructions = instructions
+            pipeline_result["stages"]["3_optimization"] = {"status": "skipped", "applied": False}
+            pipeline_result["stages"]["2_validation_final"] = validation  # Same as initial
+        
+        # Stage 4: Convert to WavelengthInstruction objects for compilation
+        wavelength_insts = self._convert_to_wavelength_instructions(optimized_instructions)
+        
+        # Stage 5: Compile to Bytecode
+        try:
+            bytecode = self.compiler.wavelength_to_bytecode(wavelength_insts)
+            pipeline_result["stages"]["4_bytecode"] = {
+                "success": True,
+                "bytecode": bytecode.hex(),
+                "size_bytes": len(bytecode)
+            }
+            
+            # Stage 6: Generate Assembly
+            assembly = self.compiler.bytecode_to_assembly(bytecode)
+            pipeline_result["stages"]["5_assembly"] = {
+                "success": True,
+                "assembly": assembly
+            }
+        except Exception as e:
+            pipeline_result["stages"]["4_bytecode"] = {
+                "success": False,
+                "error": str(e)
+            }
+        
+        # Stage 7: English Explanation (use OPTIMIZED instructions)
+        opcodes = [inst["opcode"] for inst in optimized_instructions]
+        english_result = self.wavelength_to_text(opcodes)
+        pipeline_result["stages"]["6_english_explanation"] = english_result
+        
+        # Set success based on critical stage outcomes
+        bytecode_success = pipeline_result["stages"]["4_bytecode"].get("success", False)
+        pipeline_result["success"] = bytecode_success
+        pipeline_result["final_instructions"] = optimized_instructions
+        
+        return pipeline_result
+    
+    def _apply_optimizations(self, instructions: List[Dict[str, Any]], optimization: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Apply optimization transformations to instruction list
+        For now: Remove redundant operations based on suggestions
+        """
+        import copy
+        optimized = copy.deepcopy(instructions)  # Deep copy to avoid mutations
+        
+        # Check optimization suggestions and apply transformations
+        for suggestion in optimization.get("suggestions", []):
+            # Example: If missing PRINT, add it
+            if "No PRINT instruction" in suggestion.get("message", ""):
+                has_print = any(i["opcode"] == "PRINT" for i in optimized)
+                if not has_print:
+                    optimized.append({
+                        "opcode": "PRINT",
+                        "wavelength": 650.0,
+                        "explanation": "Output result (auto-added by optimizer)"
+                    })
+            
+            # Example: Downgrade QAM64 to OOK for efficiency
+            if "Using QAM64 modulation" in suggestion.get("message", ""):
+                for inst in optimized:
+                    if inst.get("modulation") == "QAM64":
+                        inst["modulation"] = "OOK"
+                        inst["explanation"] += " (optimized: QAM64→OOK)"
+        
+        return optimized
+    
+    def _convert_to_wavelength_instructions(self, instructions: List[Dict[str, Any]]) -> List[WavelengthInstruction]:
+        """Convert instruction dicts to WavelengthInstruction objects"""
+        wavelength_insts = []
+        
+        for inst in instructions:
+            opcode_name = inst["opcode"]
+            wavelength = inst["wavelength"]
+            
+            # Map opcode name to enum
+            try:
+                opcode_enum = WavelengthOpcodes[opcode_name]
+            except KeyError:
+                continue
+            
+            # Determine spectral region from wavelength
+            if wavelength < 450:
+                region = SpectralRegion.VIOLET
+            elif wavelength < 495:
+                region = SpectralRegion.BLUE
+            elif wavelength < 570:
+                region = SpectralRegion.GREEN
+            elif wavelength < 590:
+                region = SpectralRegion.YELLOW
+            elif wavelength < 620:
+                region = SpectralRegion.ORANGE
+            else:
+                region = SpectralRegion.RED
+            
+            # Get modulation (default to OOK)
+            modulation = ModulationType.OOK
+            if "modulation" in inst:
+                if inst["modulation"] == "QAM64":
+                    modulation = ModulationType.QAM64
+                elif inst["modulation"] == "QAM16":
+                    modulation = ModulationType.QAM16
+                elif inst["modulation"] == "PSK":
+                    modulation = ModulationType.PSK
+            
+            wavelength_inst = WavelengthInstruction(
+                opcode=opcode_enum,
+                wavelength_nm=wavelength,
+                spectral_region=region,
+                modulation=modulation,
+                amplitude=0.5,
+                phase=0.0,
+                operand1=inst.get("operand")
+            )
+            
+            wavelength_insts.append(wavelength_inst)
+        
+        return wavelength_insts
     
     def _load_instruction_descriptions(self) -> Dict[str, Dict[str, Any]]:
         """Load descriptions for all opcodes"""
@@ -366,51 +529,178 @@ class WaveLangAITeacher:
 
 
 def render_wavelang_ai_teacher():
-    """Render interactive AI teacher interface for WaveLang"""
+    """Render unified pipeline interface for WaveLang"""
     
     st.markdown("### 🤖 NexusOS AI Teacher for WaveLang")
     st.markdown("""
-    Let AI help you learn and write wavelength code. The AI acts as your:
-    - **Teacher**: Explains what each wavelength does
-    - **Translator**: Converts English to WaveLang and vice versa
-    - **Advisor**: Optimizes your programs
-    - **Validator**: Catches errors before compilation
+    **Unified Pipeline**: Text → WaveLang → Optimize → Bytecode → English
+    
+    Write code in everyday language, watch it transform into physics-based wavelengths,
+    get automatic optimization, compile to binary, and see everything explained!
     """)
     
-    teacher = WaveLangAITeacher()
+    pipeline = WaveLangPipeline()
     
-    # Three modes
-    col1, col2, col3 = st.columns(3)
+    # Tabs for different modes
+    tab1, tab2 = st.tabs(["🚀 Unified Pipeline", "🔍 Decode Existing Code"])
     
+    with tab1:
+        render_unified_pipeline_mode(pipeline)
+    
+    with tab2:
+        render_wavelength_to_text_mode(pipeline)
+
+
+def render_unified_pipeline_mode(pipeline: WaveLangPipeline):
+    """Unified pipeline: Text → WaveLang → Optimize → Bytecode → Explanation"""
+    
+    st.subheader("🚀 Unified WaveLang Pipeline")
+    
+    st.markdown("""
+    Enter your program description below. Watch it flow through the complete pipeline:
+    **Text** → **WaveLang Instructions** → **Auto-Optimize** → **Bytecode Compilation** → **English Explanation**
+    """)
+    
+    # Input section
+    user_input = st.text_area(
+        "📝 Describe your program in English:",
+        placeholder="Example: Load input, multiply by frequency factor, output encoded signal",
+        height=100,
+        key="unified_pipeline_input"
+    )
+    
+    col1, col2 = st.columns([3, 1])
     with col1:
-        if st.button("📝 Text → WaveLang", use_container_width=True):
-            st.session_state.ai_mode = "text_to_wavelength"
-    
+        auto_optimize = st.checkbox("🔧 Auto-optimize code", value=True, 
+                                    help="Automatically optimize instructions before compilation")
     with col2:
-        if st.button("🔍 WaveLang → English", use_container_width=True):
-            st.session_state.ai_mode = "wavelength_to_text"
+        run_pipeline = st.button("▶️ Run Pipeline", type="primary", use_container_width=True)
     
-    with col3:
-        if st.button("✨ Optimize Program", use_container_width=True):
-            st.session_state.ai_mode = "optimize"
-    
-    st.divider()
-    
-    # Mode-specific interfaces
-    if "ai_mode" not in st.session_state:
-        st.session_state.ai_mode = "text_to_wavelength"
-    
-    if st.session_state.ai_mode == "text_to_wavelength":
-        render_text_to_wavelength_mode(teacher)
-    
-    elif st.session_state.ai_mode == "wavelength_to_text":
-        render_wavelength_to_text_mode(teacher)
-    
-    elif st.session_state.ai_mode == "optimize":
-        render_optimize_mode(teacher)
+    if run_pipeline and user_input:
+        with st.spinner("⚡ Running unified pipeline..."):
+            result = pipeline.execute_full_pipeline(user_input, auto_optimize=auto_optimize)
+        
+        # Check if text parsing failed
+        first_stage = result["stages"].get("1_text_to_wavelength", {})
+        if first_stage.get("status") == "goal_recognized":
+            st.info("✨ I recognize you want to build something!")
+            st.markdown(first_stage.get("explanation", ""))
+            if "suggestions" in first_stage:
+                st.markdown("**Try these examples:**")
+                for sugg in first_stage["suggestions"]:
+                    st.markdown(f"- {sugg}")
+            return
+        elif first_stage.get("status") == "no_match":
+            st.error("❌ Could not parse your description.")
+            return
+        
+        # Show success or partial success
+        if result["success"]:
+            st.success("✅ Pipeline completed successfully!")
+        else:
+            st.warning("⚠️ Pipeline completed with errors - see details below")
+        st.divider()
+        
+        # Stage 1: WaveLang Instructions
+        with st.expander("📝 **Stage 1**: WaveLang Instructions", expanded=True):
+            stage1 = result["stages"]["1_text_to_wavelength"]
+            instructions = stage1["instructions"]
+            
+            st.markdown(f"**Generated {len(instructions)} instructions:**")
+            for i, inst in enumerate(instructions, 1):
+                col1, col2, col3 = st.columns([1, 2, 3])
+                with col1:
+                    st.code(inst["opcode"])
+                with col2:
+                    st.code(f"{inst['wavelength']}nm")
+                with col3:
+                    st.text(inst["explanation"])
+        
+        # Stage 2: Validation
+        with st.expander("✅ **Stage 2**: Validation", expanded=False):
+            # Show final validation (post-optimization)
+            final_validation = result["stages"].get("2_validation_final", result["stages"].get("2_validation_initial", {}))
+            
+            if final_validation.get("valid"):
+                st.success("✓ Program is logically valid!")
+            else:
+                for error in final_validation.get("errors", []):
+                    st.error(f"❌ {error}")
+            for warning in final_validation.get("warnings", []):
+                st.warning(f"⚠️ {warning}")
+            
+            # Show optimization impact on validation if applicable
+            if "2_validation_initial" in result["stages"] and "2_validation_final" in result["stages"]:
+                initial_issues = len(result["stages"]["2_validation_initial"].get("warnings", [])) + len(result["stages"]["2_validation_initial"].get("errors", []))
+                final_issues = len(final_validation.get("warnings", [])) + len(final_validation.get("errors", []))
+                if initial_issues > final_issues:
+                    st.info(f"✨ Optimizer fixed {initial_issues - final_issues} issue(s)!")
+        
+        # Stage 3: Optimization
+        with st.expander("🔧 **Stage 3**: Optimization", expanded=False):
+            optimization = result["stages"]["3_optimization"]
+            if optimization.get("status") == "skipped":
+                st.info("⏭️ Optimization skipped (auto-optimize disabled)")
+            elif optimization.get("suggestions"):
+                st.markdown("**💡 Optimization Suggestions:**")
+                for suggestion in optimization["suggestions"]:
+                    if suggestion["type"] == "optimization":
+                        st.info(f"💡 {suggestion['message']}\n\n**Impact:** {suggestion['impact']}")
+                    else:
+                        st.warning(f"⚠️ {suggestion['message']}\n\n{suggestion['impact']}")
+            else:
+                st.success("✨ Your program is already optimized!")
+        
+        # Stage 4 & 5: Bytecode & Assembly
+        compilation_expanded = not result["success"]  # Expand if there's an error
+        with st.expander("🔢 **Stage 4 & 5**: Binary Compilation", expanded=compilation_expanded):
+            bytecode_stage = result["stages"]["4_bytecode"]
+            assembly_stage = result["stages"].get("5_assembly", {})
+            
+            if bytecode_stage.get("success"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("**Bytecode (Hex):**")
+                    st.code(bytecode_stage["bytecode"], language="text")
+                    st.caption(f"Size: {bytecode_stage['size_bytes']} bytes")
+                
+                with col2:
+                    if assembly_stage.get("success"):
+                        st.markdown("**Assembly (x86-64):**")
+                        st.code(assembly_stage["assembly"], language="asm")
+            else:
+                st.error("❌ **Compilation Failed**")
+                st.error(f"**Error:** {bytecode_stage.get('error', 'Unknown error')}")
+                st.info("💡 This usually means an instruction couldn't be converted to bytecode. Check your instruction set.")
+        
+        # Stage 6: English Explanation
+        with st.expander("📖 **Stage 6**: English Explanation", expanded=False):
+            english = result["stages"]["6_english_explanation"]
+            st.markdown("**What your program does:**")
+            st.info(english["summary"])
+            
+            st.markdown("**Detailed breakdown:**")
+            for item in english["english_explanation"]:
+                st.markdown(f"- **{item['opcode']}**: {item['english']} ({item['use_case']})")
+        
+        # Final stats
+        st.divider()
+        st.markdown("### 📊 Pipeline Statistics")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Instructions", len(result["final_instructions"]))
+        with col2:
+            avg_wl = sum(i["wavelength"] for i in result["final_instructions"]) / len(result["final_instructions"])
+            st.metric("Avg Wavelength", f"{avg_wl:.1f}nm")
+        with col3:
+            if bytecode_stage.get("success"):
+                st.metric("Binary Size", f"{bytecode_stage['size_bytes']} bytes")
+        with col4:
+            stages_completed = len([s for s in result["stages"].values() if s.get("success") or s.get("valid")])
+            st.metric("Stages Completed", stages_completed)
 
 
-def render_text_to_wavelength_mode(teacher: WaveLangAITeacher):
+def render_text_to_wavelength_mode(teacher: WaveLangPipeline):
     """Convert English to WaveLang"""
     
     st.subheader("📝 English to WaveLang Converter")
@@ -475,7 +765,7 @@ def render_text_to_wavelength_mode(teacher: WaveLangAITeacher):
             st.warning("Please enter a description")
 
 
-def render_wavelength_to_text_mode(teacher: WaveLangAITeacher):
+def render_wavelength_to_text_mode(teacher: WaveLangPipeline):
     """Convert WaveLang to English"""
     
     st.subheader("🔍 WaveLang to English Decoder")
@@ -511,7 +801,7 @@ def render_wavelength_to_text_mode(teacher: WaveLangAITeacher):
             st.warning("Please enter opcodes")
 
 
-def render_optimize_mode(teacher: WaveLangAITeacher):
+def render_optimize_mode(teacher: WaveLangPipeline):
     """Optimize program suggestions"""
     
     st.subheader("✨ Program Optimizer & Validator")
