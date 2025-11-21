@@ -214,8 +214,9 @@ class WaveLangPipeline:
                 
                 elif opcode == "STORE":
                     if stack:
-                        value = stack.pop()
+                        value = stack[-1]  # Peek at top of stack (don't pop)
                         memory[operand or "result"] = value
+                        # Keep value on stack for potential PRINT after STORE
             
             return {
                 "success": True,
@@ -643,6 +644,24 @@ class WaveLangPipeline:
                     "wavelength": 392.0,
                     "operand": None,
                     "explanation": "Multiply values together"
+                })
+        
+        # STORE instruction (before PRINT)
+        if "result" in description_lower or "outcome" in description_lower or "store" in description_lower:
+            # Check if user specified a result variable (like "result C" or "outcome X")
+            result_vars = re.findall(r'(?:result|outcome|store)\s+(?:in\s+)?([A-Z])\b', user_description, re.IGNORECASE)
+            if result_vars:
+                target_var = result_vars[0].upper()
+            else:
+                # Default to 'C' for results
+                target_var = 'C'
+            
+            if not any(i["opcode"] == "STORE" for i in instructions):
+                instructions.append({
+                    "opcode": "STORE",
+                    "wavelength": 508.0,
+                    "operand": target_var,
+                    "explanation": f"Store result in variable {target_var}"
                 })
         
         # PRINT/OUTPUT instruction
