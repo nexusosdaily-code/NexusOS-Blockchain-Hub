@@ -136,26 +136,51 @@ class NexusAIGovernance:
         
         # Learn parameter ranges that work
         for param, value in obs.parameters.items():
+            # Convert to float for numeric operations, skip non-numeric
+            try:
+                numeric_value = float(value)
+            except (ValueError, TypeError):
+                # Skip non-numeric parameters (e.g., strings, objects)
+                continue
+            
             if param not in self.learned_patterns[comp]['optimal_ranges']:
                 self.learned_patterns[comp]['optimal_ranges'][param] = {
-                    'min': value,
-                    'max': value,
-                    'successful_mean': value,
+                    'min': numeric_value,
+                    'max': numeric_value,
+                    'successful_mean': numeric_value,
                     'sample_count': 1
                 }
             else:
                 ranges = self.learned_patterns[comp]['optimal_ranges'][param]
-                ranges['min'] = min(ranges['min'], value)
-                ranges['max'] = max(ranges['max'], value)
+                # Ensure existing values are also numeric
+                try:
+                    current_min = float(ranges['min'])
+                    current_max = float(ranges['max'])
+                    current_mean = float(ranges['successful_mean'])
+                except (ValueError, TypeError):
+                    # Reset to current value if stored values are invalid
+                    ranges['min'] = numeric_value
+                    ranges['max'] = numeric_value
+                    ranges['successful_mean'] = numeric_value
+                    ranges['sample_count'] = 1
+                    continue
+                
+                ranges['min'] = min(current_min, numeric_value)
+                ranges['max'] = max(current_max, numeric_value)
                 
                 # Update running mean
                 count = ranges['sample_count']
-                ranges['successful_mean'] = (ranges['successful_mean'] * count + value) / (count + 1)
+                ranges['successful_mean'] = (current_mean * count + numeric_value) / (count + 1)
                 ranges['sample_count'] = count + 1
         
         # Detect F_floor violations (critical for civilization)
         if 'f_floor' in obs.parameters:
-            if obs.parameters['f_floor'] < self.f_floor_minimum:
+            try:
+                floor_value = float(obs.parameters['f_floor'])
+            except (ValueError, TypeError):
+                floor_value = self.f_floor_minimum
+            
+            if floor_value < self.f_floor_minimum:
                 self.learned_patterns[comp]['f_floor_violations'].append({
                     'timestamp': obs.timestamp,
                     'attempted_floor': obs.parameters['f_floor'],
