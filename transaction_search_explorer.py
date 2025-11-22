@@ -105,13 +105,14 @@ def display_address_details(wallet_system: NexusNativeWallet, address: str):
         balance_info = wallet_system.get_balance(address)
         
         # Display balance card - ATOMIC ECONOMICS (units as primary)
-        units = balance_info['balance_units']
+        # Convert to true atomic scale: DB stores at 100 units/NXT, atomic scale is 100M units/NXT
+        atomic_units = balance_info['balance_units'] * 1_000_000
         nxt = balance_info['balance_nxt']
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
              padding: 25px; border-radius: 12px; color: white; margin: 20px 0;">
             <h2 style="margin: 0 0 10px 0;">💰 {address[:20]}...</h2>
-            <h1 style="margin: 0; font-size: 48px;">{units:,.0f} units</h1>
+            <h1 style="margin: 0; font-size: 48px;">{atomic_units:,.0f} units</h1>
             <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.85;">
                 ≈ {nxt:.8f} NXT • Nonce: {balance_info['nonce']}
             </p>
