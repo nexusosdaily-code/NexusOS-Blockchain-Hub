@@ -109,7 +109,7 @@ def render_ghostdag_consensus():
     
     dag_structure = ghostdag.get_dag_structure()
     fig_dag = create_dag_network_graph(dag_structure)
-    st.plotly_chart(fig_dag, use_container_width=True)
+    st.plotly_chart(fig_dag, width="stretch")
     
     # Consensus Chain
     st.subheader("🔗 Canonical Consensus Chain")
@@ -127,7 +127,7 @@ def render_ghostdag_consensus():
             })
         
         import pandas as pd
-        st.dataframe(pd.DataFrame(chain_df), use_container_width=True)
+        st.dataframe(pd.DataFrame(chain_df), width="stretch")
         
         if len(ordered_chain) > 20:
             st.caption(f"Showing first 20 of {len(ordered_chain)} blocks")
@@ -205,13 +205,13 @@ def render_dag_optimizer():
                 create_parallelization_comparison(
                     optimizer.calculate_parallelization_gain()
                 ),
-                use_container_width=True
+                width="stretch"
             )
         
         # Timeline
         st.subheader("📅 Parallel Execution Timeline")
         fig_timeline = create_execution_timeline(execution_plan)
-        st.plotly_chart(fig_timeline, use_container_width=True)
+        st.plotly_chart(fig_timeline, width="stretch")
         
         # Execution stages
         with st.expander("View Execution Stages"):
@@ -260,7 +260,7 @@ def render_bottleneck_detection():
         # Bottleneck visualization
         st.plotly_chart(
             create_bottleneck_analysis(bottlenecks),
-            use_container_width=True
+            width="stretch"
         )
         
         # Bottleneck details
@@ -304,7 +304,7 @@ def render_performance_overview():
         })
         
         fig_perf = create_performance_dashboard(metrics)
-        st.plotly_chart(fig_perf, use_container_width=True)
+        st.plotly_chart(fig_perf, width="stretch")
     else:
         st.info("Run simulation to see GhostDAG performance metrics")
     
@@ -334,7 +334,7 @@ def render_performance_overview():
         
         st.plotly_chart(
             create_parallelization_comparison(gains),
-            use_container_width=True
+            width="stretch"
         )
     else:
         st.info("Add tasks to DAG Optimizer to see optimization metrics")
@@ -410,12 +410,12 @@ def render_live_simulation():
                 st.subheader("DAG Structure")
                 dag_structure = ghostdag.get_dag_structure()
                 fig_dag = create_dag_network_graph(dag_structure)
-                st.plotly_chart(fig_dag, use_container_width=True)
+                st.plotly_chart(fig_dag, width="stretch")
             
             with col2:
                 st.subheader("Performance Metrics")
                 fig_perf = create_performance_dashboard(metrics)
-                st.plotly_chart(fig_perf, use_container_width=True)
+                st.plotly_chart(fig_perf, width="stretch")
     
     # Show current state
     if ghostdag.total_blocks > 0:
@@ -424,7 +424,7 @@ def render_live_simulation():
         
         dag_structure = ghostdag.get_dag_structure()
         fig_dag = create_dag_network_graph(dag_structure)
-        st.plotly_chart(fig_dag, use_container_width=True)
+        st.plotly_chart(fig_dag, width="stretch")
 
 
 if __name__ == "__main__":

@@ -145,7 +145,7 @@ def show_mobile_connectivity_dashboard():
             'last_active': 'Last Active'
         })
         
-        st.dataframe(display_df, use_container_width=True, height=300)
+        st.dataframe(display_df, width="stretch", height=300)
             
         # Spectral region distribution
         st.subheader("🌈 Spectral Diversity Distribution")
@@ -167,7 +167,7 @@ def show_mobile_connectivity_dashboard():
             height=300
         )
         
-        st.plotly_chart(fig_regions, use_container_width=True)
+        st.plotly_chart(fig_regions, width="stretch")
             
         # Validator vs Non-validator
         col1, col2 = st.columns(2)
@@ -191,7 +191,7 @@ def show_mobile_connectivity_dashboard():
                 height=300
             )
             
-            st.plotly_chart(fig_validators, use_container_width=True)
+            st.plotly_chart(fig_validators, width="stretch")
         
         with col2:
             # Total stake by region
@@ -213,7 +213,7 @@ def show_mobile_connectivity_dashboard():
                     height=300
                 )
                 
-                st.plotly_chart(fig_stake, use_container_width=True)
+                st.plotly_chart(fig_stake, width="stretch")
             else:
                 st.info("No validators staked yet")
         
@@ -233,7 +233,7 @@ def show_mobile_connectivity_dashboard():
             labels={'connection_duration_minutes': 'Duration (minutes)'}
         )
         
-        st.plotly_chart(fig_duration, use_container_width=True)
+        st.plotly_chart(fig_duration, width="stretch")
         
         # Average stats
         col1, col2, col3 = st.columns(3)
@@ -339,7 +339,7 @@ def show_mobile_connectivity_dashboard():
     
     # Refresh button
     st.divider()
-    if st.button("🔄 Refresh Dashboard", use_container_width=True):
+    if st.button("🔄 Refresh Dashboard", width="stretch"):
         st.rerun()
 
 

@@ -155,7 +155,7 @@ def render_live_demo_tab():
             help="Minimum validators needed in each spectral region"
         )
     
-    if st.button("🌐 Create Validator Network", type="primary", use_container_width=True):
+    if st.button("🌐 Create Validator Network", type="primary", width="stretch"):
         with st.spinner("Deploying spectral validators..."):
             consensus = create_diverse_validator_network(num_validators)
             consensus.required_coverage = required_coverage
@@ -175,15 +175,15 @@ def render_live_demo_tab():
         
         # Spectrum coverage
         fig_spectrum = visualize_spectrum_coverage(consensus)
-        st.plotly_chart(fig_spectrum, use_container_width=True)
+        st.plotly_chart(fig_spectrum, width="stretch")
         
         # Distribution charts
         fig_distribution = visualize_spectral_distribution(consensus)
-        st.plotly_chart(fig_distribution, use_container_width=True)
+        st.plotly_chart(fig_distribution, width="stretch")
         
         # Validator wavelengths
         fig_wavelengths = visualize_validator_wavelengths(consensus.validators)
-        st.plotly_chart(fig_wavelengths, use_container_width=True)
+        st.plotly_chart(fig_wavelengths, width="stretch")
         
         st.divider()
         
@@ -197,7 +197,7 @@ def render_live_demo_tab():
                 height=100
             )
             
-            create_block_btn = st.form_submit_button("🔮 Generate Block with Spectral Consensus", use_container_width=True)
+            create_block_btn = st.form_submit_button("🔮 Generate Block with Spectral Consensus", width="stretch")
             
             if create_block_btn:
                 with st.spinner("Generating spectral signatures..."):
@@ -238,7 +238,7 @@ def render_live_demo_tab():
                             # Visualize interference pattern
                             st.subheader("Wave Interference Pattern")
                             fig_interference = visualize_interference_pattern(interference)
-                            st.plotly_chart(fig_interference, use_container_width=True)
+                            st.plotly_chart(fig_interference, width="stretch")
                             
                             # Show validator details
                             with st.expander("🔍 View Selected Validators"):
@@ -270,7 +270,7 @@ def render_attack_resistance_tab():
     """)
     
     # Create test network
-    if st.button("🧪 Run Attack Simulation", type="primary", use_container_width=True):
+    if st.button("🧪 Run Attack Simulation", type="primary", width="stretch"):
         with st.spinner("Simulating attacks across control percentages..."):
             # Create network
             consensus = create_diverse_validator_network(60)
@@ -292,12 +292,12 @@ def render_attack_resistance_tab():
         
         # Visualization
         fig_attack = visualize_attack_resistance(results)
-        st.plotly_chart(fig_attack, use_container_width=True)
+        st.plotly_chart(fig_attack, width="stretch")
         
         # Detailed table
         st.subheader("Detailed Results")
         table_df = create_attack_resistance_table(results)
-        st.dataframe(table_df, use_container_width=True, hide_index=True)
+        st.dataframe(table_df, width="stretch", hide_index=True)
         
         # Key findings
         st.info("""

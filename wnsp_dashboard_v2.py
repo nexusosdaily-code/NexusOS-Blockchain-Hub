@@ -184,7 +184,7 @@ def render_compose_tab():
     # Send button
     st.divider()
     
-    if st.button("📤 Send WNSP v2.0 Message", type="primary", use_container_width=True, disabled=not message_content):
+    if st.button("📤 Send WNSP v2.0 Message", type="primary", width="stretch", disabled=not message_content):
         with st.spinner("🌊 Encoding with quantum cryptography..."):
             try:
                 # Create message
@@ -308,7 +308,7 @@ def render_encoding_map_tab():
         yaxis=dict(showticklabels=False)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # Table view
     with st.expander("📋 Full Encoding Table"):
@@ -467,7 +467,7 @@ def render_dag_network_tab():
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # Network stats
     col1, col2, col3 = st.columns(3)
@@ -522,7 +522,7 @@ def render_economics_tab():
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # Stats
     total_cost = sum(m.cost_nxt for m in st.session_state.wnsp_messages)

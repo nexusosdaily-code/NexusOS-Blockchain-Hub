@@ -352,7 +352,7 @@ def render_completed_campaigns_tab(gov: CivicGovernance):
                 height=300,
                 template="plotly_dark"
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
             
             # AI Analysis Report Button
             st.divider()
@@ -418,7 +418,7 @@ def render_governance_analytics_tab(gov: CivicGovernance):
             height=400,
             template="plotly_dark"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     # NXT burn over time
     st.divider()
@@ -440,7 +440,7 @@ def render_governance_analytics_tab(gov: CivicGovernance):
             height=300,
             template="plotly_dark"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         
         st.metric("Total NXT Burned (All Campaigns)", f"{stats['total_nxt_burned']:,.0f} NXT")
         st.caption("💡 Higher burn amounts signal stronger validator commitment to innovation")

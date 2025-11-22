@@ -242,12 +242,12 @@ def render_predictive_analytics_dashboard():
     # Data capture simulation
     st.sidebar.subheader("📥 Data Capture")
     
-    if st.sidebar.button("Simulate Year of Data", use_container_width=True):
+    if st.sidebar.button("Simulate Year of Data", width="stretch"):
         engine.repository.simulate_historical_data(years=1)
         st.session_state.data_capture_message = "✅ Year of data added!"
         st.rerun()
     
-    if st.sidebar.button("Simulate Decade of Data", use_container_width=True):
+    if st.sidebar.button("Simulate Decade of Data", width="stretch"):
         engine.repository.simulate_historical_data(years=10)
         st.session_state.data_capture_message = "✅ Decade of data added!"
         st.rerun()
@@ -296,12 +296,12 @@ def render_predictive_analytics_dashboard():
             
             with col1:
                 trend_chart = create_trend_summary_chart(summary)
-                st.plotly_chart(trend_chart, use_container_width=True)
+                st.plotly_chart(trend_chart, width="stretch")
             
             with col2:
                 growth_chart = create_growth_rate_chart(summary)
                 if growth_chart:
-                    st.plotly_chart(growth_chart, use_container_width=True)
+                    st.plotly_chart(growth_chart, width="stretch")
             
             st.divider()
             
@@ -330,7 +330,7 @@ def render_predictive_analytics_dashboard():
             default=all_metrics[:3] if len(all_metrics) >= 3 else all_metrics
         )
         
-        if selected_metrics and st.button("Generate Forecasts", use_container_width=True):
+        if selected_metrics and st.button("Generate Forecasts", width="stretch"):
             with st.spinner("Generating predictions..."):
                 predictions = engine.generate_multi_metric_forecast(selected_metrics, horizon)
             
@@ -342,7 +342,7 @@ def render_predictive_analytics_dashboard():
                     with st.expander(f"📈 {metric_name}", expanded=True):
                         # Prediction chart
                         fig = create_prediction_chart(prediction)
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width="stretch")
                         
                         # Statistics
                         col1, col2, col3, col4 = st.columns(4)
@@ -423,11 +423,11 @@ def render_predictive_analytics_dashboard():
                     height=500
                 )
                 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
                 
                 # Data table
                 st.subheader("Recent Data Points")
-                st.dataframe(df.tail(20), use_container_width=True)
+                st.dataframe(df.tail(20), width="stretch")
             else:
                 st.info("No historical data available for this metric")
     
@@ -446,7 +446,7 @@ def render_predictive_analytics_dashboard():
             analyze_long = st.checkbox("Long-Term (20-50 years)", value=True)
             analyze_ultra = st.checkbox("Ultra Long-Term (50-100 years)", value=False)
         
-        if st.button("Run Deep Dive Analysis", use_container_width=True):
+        if st.button("Run Deep Dive Analysis", width="stretch"):
             horizons = []
             if analyze_short:
                 horizons.append(PredictionHorizon.SHORT_TERM)
@@ -496,7 +496,7 @@ def render_predictive_analytics_dashboard():
                         height=600
                     )
                     
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
                     
                     # Comparison table
                     st.subheader("Forecast Comparison")

@@ -135,7 +135,7 @@ def render_mobile_blockchain_hub():
         
         col1, col2 = st.columns([3, 1])
         with col2:
-            if st.button("🔒 Lock Wallet", use_container_width=True):
+            if st.button("🔒 Lock Wallet", width="stretch"):
                 st.session_state.wallet_unlocked = None
                 st.session_state.active_address = None
                 st.rerun()
@@ -241,7 +241,7 @@ def render_blockchain_tab():
             <p>Blockchain-powered quantum messaging with E=hf physics pricing. Send wavelength-encrypted messages across the DAG network.</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Open Mobile DAG Messaging", use_container_width=True, key="btn_dag"):
+        if st.button("🚀 Open Mobile DAG Messaging", width="stretch", key="btn_dag"):
             st.session_state.module_selector = "💬 Mobile DAG Messaging"
             st.rerun()
         
@@ -251,7 +251,7 @@ def render_blockchain_tab():
             <p>Live block and transaction visualization. Track network activity, validator performance, and transaction history.</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Open Blockchain Explorer", use_container_width=True, key="btn_explorer"):
+        if st.button("🚀 Open Blockchain Explorer", width="stretch", key="btn_explorer"):
             st.session_state.module_selector = "🔗 Blockchain Explorer"
             st.rerun()
     
@@ -262,7 +262,7 @@ def render_blockchain_tab():
             <p>Wavelength-inspired consensus eliminating 51% attacks through spectral diversity requirements.</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Open Proof of Spectrum", use_container_width=True, key="btn_pos"):
+        if st.button("🚀 Open Proof of Spectrum", width="stretch", key="btn_pos"):
             st.session_state.module_selector = "🌈 Proof of Spectrum"
             st.rerun()
         
@@ -272,7 +272,7 @@ def render_blockchain_tab():
             <p>Parallel block processing and DAG optimization for maximum throughput without bottlenecks.</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Open GhostDAG System", use_container_width=True, key="btn_ghostdag"):
+        if st.button("🚀 Open GhostDAG System", width="stretch", key="btn_ghostdag"):
             st.session_state.module_selector = "⚡ GhostDAG System"
             st.rerun()
 
@@ -296,7 +296,7 @@ def render_trading_tab():
     </div>
     """, unsafe_allow_html=True)
     
-    if st.button("🚀 Open DEX Trading Platform", use_container_width=True, key="btn_dex", type="primary"):
+    if st.button("🚀 Open DEX Trading Platform", width="stretch", key="btn_dex", type="primary"):
         st.session_state.module_selector = "💱 DEX (Token Exchange)"
         st.rerun()
     
@@ -334,7 +334,7 @@ def render_staking_tab():
             </ul>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Open Validator Economics", use_container_width=True, key="btn_validator"):
+        if st.button("🚀 Open Validator Economics", width="stretch", key="btn_validator"):
             st.session_state.module_selector = "🏛️ Validator Economics"
             st.rerun()
     
@@ -351,7 +351,7 @@ def render_staking_tab():
             </ul>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Open Wavelength Economics", use_container_width=True, key="btn_wavelength"):
+        if st.button("🚀 Open Wavelength Economics", width="stretch", key="btn_wavelength"):
             st.session_state.module_selector = "💵 Wavelength Economics"
             st.rerun()
     

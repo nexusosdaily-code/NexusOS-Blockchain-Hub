@@ -242,17 +242,17 @@ def render_blockchain_dashboard():
     col1, col2 = st.sidebar.columns(2)
     
     with col1:
-        if st.button("▶️ Run Simulation", use_container_width=True):
+        if st.button("▶️ Run Simulation", width="stretch"):
             st.session_state.simulation_running = True
     
     with col2:
-        if st.button("⏸️ Pause", use_container_width=True):
+        if st.button("⏸️ Pause", width="stretch"):
             st.session_state.simulation_running = False
     
     num_blocks = st.sidebar.slider("Blocks to Mine", 1, 50, 10)
     txs_per_block = st.sidebar.slider("TXs per Block", 10, 200, 50)
     
-    if st.sidebar.button("⛏️ Mine Blocks", use_container_width=True):
+    if st.sidebar.button("⛏️ Mine Blocks", width="stretch"):
         with st.spinner(f"Mining {num_blocks} blocks..."):
             blockchain.run_simulation(num_blocks=num_blocks, transactions_per_block=txs_per_block)
         st.success(f"✅ Mined {num_blocks} blocks!")
@@ -282,13 +282,13 @@ def render_blockchain_dashboard():
     col1, col2 = st.sidebar.columns(2)
     
     with col1:
-        if st.button("🔥 Apply Stress", use_container_width=True):
+        if st.button("🔥 Apply Stress", width="stretch"):
             blockchain.apply_stress_test(scenario)
             st.session_state.stress_test_active = True
             st.rerun()
     
     with col2:
-        if st.button("🛡️ Recover", use_container_width=True):
+        if st.button("🛡️ Recover", width="stretch"):
             blockchain.recover_from_stress()
             st.session_state.stress_test_active = False
             st.rerun()
@@ -352,13 +352,13 @@ def render_blockchain_dashboard():
         
         with col2:
             # Validator status chart
-            st.plotly_chart(create_validator_status_chart(blockchain), use_container_width=True)
+            st.plotly_chart(create_validator_status_chart(blockchain), width="stretch")
     
     with tabs[1]:  # Network
         st.header("Network Topology")
         
         # Show network graph
-        st.plotly_chart(create_network_graph(blockchain), use_container_width=True)
+        st.plotly_chart(create_network_graph(blockchain), width="stretch")
         
         # Network events
         st.subheader("Network Events")
@@ -372,7 +372,7 @@ def render_blockchain_dashboard():
         st.header("Performance Metrics")
         
         # Performance charts
-        st.plotly_chart(create_performance_charts(blockchain), use_container_width=True)
+        st.plotly_chart(create_performance_charts(blockchain), width="stretch")
         
         # Statistics table
         st.subheader("Performance Statistics")
@@ -402,7 +402,7 @@ def render_blockchain_dashboard():
         
         if block_data:
             df = pd.DataFrame(block_data)
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, width="stretch")
         else:
             st.info("No blocks mined yet")
     
@@ -415,7 +415,7 @@ def render_blockchain_dashboard():
             validator_data.append(validator.to_dict())
         
         df = pd.DataFrame(validator_data)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
         
         # Top validators by stake
         st.subheader("Top Validators by Stake")

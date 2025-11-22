@@ -131,7 +131,7 @@ def render_nearby_peers_tab(transport: OfflineMeshTransport):
         st.markdown("**Discover peers without internet connection**")
     
     with col2:
-        if st.button("🔍 Scan for Peers", type="primary", use_container_width=True):
+        if st.button("🔍 Scan for Peers", type="primary", width="stretch"):
             with st.spinner("Scanning for nearby devices..."):
                 discovered = transport.discover_nearby_peers()
                 st.success(f"✅ Found {len(discovered)} devices nearby!")
@@ -198,7 +198,7 @@ def render_network_topology_tab(transport: OfflineMeshTransport):
     
     # Create network graph using Plotly
     fig = create_network_graph(topology)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # Topology statistics
     col1, col2, col3 = st.columns(3)
@@ -314,7 +314,7 @@ def render_offline_messaging_tab(transport: OfflineMeshTransport):
         
         broadcast = recipient == "📢 Broadcast"
     
-    if st.button("📤 Send Offline", type="primary", use_container_width=True):
+    if st.button("📤 Send Offline", type="primary", width="stretch"):
         if message_content:
             # Create WNSP message
             from wnsp_protocol_v2 import WnspEncoderV2

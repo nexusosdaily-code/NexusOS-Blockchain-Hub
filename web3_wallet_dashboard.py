@@ -228,7 +228,7 @@ def render_create_wallet_tab(wallet):
             help="Starting NXT balance (for testing)"
         )
         
-        submit = st.form_submit_button("🚀 Create Wallet", type="primary", use_container_width=True)
+        submit = st.form_submit_button("🚀 Create Wallet", type="primary", width="stretch")
         
         if submit:
             if len(password) < 8:
@@ -300,7 +300,7 @@ def render_unlock_wallet_tab(wallet):
         help="Enter your wallet password"
     )
     
-    if st.button("🔓 Unlock Wallet", type="primary", use_container_width=True):
+    if st.button("🔓 Unlock Wallet", type="primary", width="stretch"):
         if not password:
             st.error("Please enter your password")
         else:
@@ -361,7 +361,7 @@ def render_send_nxt_tab(wallet):
         
         st.caption("💡 **Fee:** 0.01 NXT (auto-deducted)")
         
-        submit = st.form_submit_button("📤 Send Transaction", type="primary", use_container_width=True)
+        submit = st.form_submit_button("📤 Send Transaction", type="primary", width="stretch")
         
         if submit:
             if not to_address:
@@ -461,7 +461,7 @@ def render_send_message_tab(wallet):
         
         st.caption("💡 **Cost:** Based on E=hf (quantum energy)")
         
-        submit = st.form_submit_button("📡 Send Message", type="primary", use_container_width=True)
+        submit = st.form_submit_button("📡 Send Message", type="primary", width="stretch")
         
         if submit:
             if not content:

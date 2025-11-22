@@ -265,7 +265,7 @@ class AuthManager:
         with st.form("login_form"):
             email = st.text_input("Email", placeholder="user@example.com")
             password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Login", use_container_width=True)
+            submit = st.form_submit_button("Login", width="stretch")
             
             if submit:
                 if not email or not password:
@@ -335,7 +335,7 @@ class AuthManager:
                 }[x]
             )
             
-            submit = st.form_submit_button("🚀 Create Account", use_container_width=True)
+            submit = st.form_submit_button("🚀 Create Account", width="stretch")
             
             if submit:
                 if not email or not password:
@@ -401,7 +401,7 @@ class AuthManager:
                 st.write(f"👤 **{st.session_state.current_user.email}**")
                 st.write(f"🎭 Roles: {', '.join(st.session_state.user_roles)}")
                 
-                if st.button("🚪 Logout", use_container_width=True):
+                if st.button("🚪 Logout", width="stretch"):
                     engine = get_engine()
                     SessionLocal = sessionmaker(bind=engine)
                     db = SessionLocal()

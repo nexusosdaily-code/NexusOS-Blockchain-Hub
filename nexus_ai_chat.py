@@ -1157,7 +1157,7 @@ def render_nexus_ai_chat():
         )
     
     with col2:
-        send_button = st.button("Send", type="primary", use_container_width=True)
+        send_button = st.button("Send", type="primary", width="stretch")
     
     # Handle message sending
     if send_button and user_input:
@@ -1190,7 +1190,7 @@ def render_nexus_ai_chat():
     suggestions_col1, suggestions_col2 = st.columns(2)
     
     with suggestions_col1:
-        if st.button("💡 How does F_floor end poverty?", use_container_width=True):
+        if st.button("💡 How does F_floor end poverty?", width="stretch"):
             st.session_state.chat_messages.append({
                 'role': 'user',
                 'message': "How does F_floor end poverty?"
@@ -1202,7 +1202,7 @@ def render_nexus_ai_chat():
             })
             st.rerun()
         
-        if st.button("🌍 What's your vision for civilization?", use_container_width=True):
+        if st.button("🌍 What's your vision for civilization?", width="stretch"):
             st.session_state.chat_messages.append({
                 'role': 'user',
                 'message': "What's your vision for civilization?"
@@ -1215,7 +1215,7 @@ def render_nexus_ai_chat():
             st.rerun()
     
     with suggestions_col2:
-        if st.button("⚛️ How does E=hf economics work?", use_container_width=True):
+        if st.button("⚛️ How does E=hf economics work?", width="stretch"):
             st.session_state.chat_messages.append({
                 'role': 'user',
                 'message': "How does E=hf economics work?"
@@ -1227,7 +1227,7 @@ def render_nexus_ai_chat():
             })
             st.rerun()
         
-        if st.button("📊 What have you learned?", use_container_width=True):
+        if st.button("📊 What have you learned?", width="stretch"):
             st.session_state.chat_messages.append({
                 'role': 'user',
                 'message': "What have you learned from research?"
@@ -1247,7 +1247,7 @@ def render_nexus_ai_chat():
     report_col1, report_col2, report_col3 = st.columns(3)
     
     with report_col1:
-        if st.button("🔬 Research Report", use_container_width=True):
+        if st.button("🔬 Research Report", width="stretch"):
             st.session_state.chat_messages.append({
                 'role': 'user',
                 'message': "Generate comprehensive report for researchers"
@@ -1260,7 +1260,7 @@ def render_nexus_ai_chat():
             st.rerun()
     
     with report_col2:
-        if st.button("💼 Investor Report", use_container_width=True):
+        if st.button("💼 Investor Report", width="stretch"):
             st.session_state.chat_messages.append({
                 'role': 'user',
                 'message': "Generate comprehensive report for investors"
@@ -1273,7 +1273,7 @@ def render_nexus_ai_chat():
             st.rerun()
     
     with report_col3:
-        if st.button("👥 Member Guide", use_container_width=True):
+        if st.button("👥 Member Guide", width="stretch"):
             st.session_state.chat_messages.append({
                 'role': 'user',
                 'message': "Generate comprehensive report for members"

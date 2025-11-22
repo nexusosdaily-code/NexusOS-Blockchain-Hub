@@ -74,7 +74,7 @@ def render_validator_list(economy: StakingEconomy):
         })
     
     df = pd.DataFrame(validator_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def render_delegate_interface(economy: StakingEconomy):
@@ -135,7 +135,7 @@ def render_delegate_interface(economy: StakingEconomy):
             - Annual: ~{estimated_annual:,.2f}
             """)
         
-        if st.button("✅ Delegate", type="primary", use_container_width=True):
+        if st.button("✅ Delegate", type="primary", width="stretch"):
             if delegate_amount <= 0:
                 st.error("Please enter a valid amount")
             elif delegate_amount > user_balance:
@@ -204,7 +204,7 @@ def render_my_delegations(economy: StakingEconomy):
     if stats['delegations']:
         st.markdown("**Delegation Details**")
         df = pd.DataFrame(stats['delegations'])
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
         
         # Undelegate interface
         st.markdown("---")
@@ -235,7 +235,7 @@ def render_my_delegations(economy: StakingEconomy):
             
             with col3:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("🔓 Undelegate", use_container_width=True):
+                if st.button("🔓 Undelegate", width="stretch"):
                     if undelegate_amount > 0:
                         # Get full validator address
                         full_addr = None
@@ -288,7 +288,7 @@ def render_validator_performance(economy: StakingEconomy):
         color='Total Stake',
         color_continuous_scale='Blues'
     )
-    st.plotly_chart(fig1, use_container_width=True)
+    st.plotly_chart(fig1, width="stretch")
     
     # Reputation vs Performance
     fig2 = go.Figure()
@@ -312,7 +312,7 @@ def render_validator_performance(economy: StakingEconomy):
         barmode='group',
         yaxis_title='Score'
     )
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width="stretch")
 
 
 def render_profitability_calculator(economy: StakingEconomy):
@@ -399,14 +399,14 @@ def render_profitability_calculator(economy: StakingEconomy):
         color='Earnings',
         color_continuous_scale='Greens'
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # AI Delegation Performance Report Generation
     st.divider()
     st.markdown("**🤖 AI Delegation Performance Analysis**")
     st.markdown("Generate a comprehensive personalized report using these calculator values. The report will appear in your **My Delegations** tab.")
     
-    if st.button("🤖 Generate AI Performance Report", type="primary", use_container_width=True):
+    if st.button("🤖 Generate AI Performance Report", type="primary", width="stretch"):
         # Prepare data with all calculator values
         calc_report_data = {
             'self_stake': self_stake,

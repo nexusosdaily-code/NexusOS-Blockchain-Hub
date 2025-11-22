@@ -107,7 +107,7 @@ def render_token_economics():
         )])
         
         fig.update_layout(height=350, margin=dict(t=30, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     with col2:
         st.subheader("Token Allocation")
@@ -122,7 +122,7 @@ def render_token_economics():
             ]
         }
         
-        st.dataframe(data, use_container_width=True, hide_index=True)
+        st.dataframe(data, width="stretch", hide_index=True)
         
         st.info("""
         **Economic Model:**
@@ -192,7 +192,7 @@ def render_pow_mining():
         col_a, col_b = st.columns(2)
         
         with col_a:
-            if st.button("⛏️ Mine Block", type="primary", use_container_width=True):
+            if st.button("⛏️ Mine Block", type="primary", width="stretch"):
                 with st.spinner("Mining block..."):
                     # Ensure account exists
                     token_system.get_or_create_account(miner_address)
@@ -211,7 +211,7 @@ def render_pow_mining():
         
         with col_b:
             num_blocks = st.number_input("Mine Multiple", min_value=1, max_value=10, value=1)
-            if st.button("⛏️ Mine Multiple", use_container_width=True):
+            if st.button("⛏️ Mine Multiple", width="stretch"):
                 with st.spinner(f"Mining {num_blocks} blocks..."):
                     token_system.get_or_create_account(miner_address)
                     
@@ -250,7 +250,7 @@ def render_pow_mining():
                 "Hash": block.hash[:16] + "...",
             })
         
-        st.dataframe(blocks_data, use_container_width=True, hide_index=True)
+        st.dataframe(blocks_data, width="stretch", hide_index=True)
 
 
 def render_messaging_payments():
@@ -438,7 +438,7 @@ def render_account_management():
                 "TX ID": tx.tx_id
             })
         
-        st.dataframe(tx_data, use_container_width=True, hide_index=True)
+        st.dataframe(tx_data, width="stretch", hide_index=True)
     else:
         st.info("No transactions yet")
 
@@ -503,7 +503,7 @@ def render_analytics():
         )])
         
         fig.update_layout(height=300, margin=dict(t=30, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     with col2:
         st.subheader("Economic Loop Health")

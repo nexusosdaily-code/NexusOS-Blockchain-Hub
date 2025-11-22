@@ -123,7 +123,7 @@ def render_swap_interface(dex: DEXEngine):
     slippage = st.slider("Slippage Tolerance (%)", 0.1, 5.0, 1.0, 0.1) / 100
     
     # Swap button
-    if st.button("🔄 Swap", type="primary", use_container_width=True):
+    if st.button("🔄 Swap", type="primary", width="stretch"):
         if input_amount <= 0:
             st.error("Please enter an amount")
         else:
@@ -190,7 +190,7 @@ def render_liquidity_interface(dex: DEXEngine):
             current_price = pool.get_price(token_a)
             st.info(f"Current pool price: 1 {token_a} = {current_price:.6f} {token_b}")
         
-        if st.button("💧 Add Liquidity", type="primary", use_container_width=True):
+        if st.button("💧 Add Liquidity", type="primary", width="stretch"):
             if amount_a <= 0 or amount_b <= 0:
                 st.error("Please enter valid amounts")
             else:
@@ -239,7 +239,7 @@ def render_liquidity_interface(dex: DEXEngine):
         
         if user_pools:
             df = pd.DataFrame(user_pools)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
             
             selected_pool = st.selectbox("Select Pool", [p['Pool'] for p in user_pools], key="remove_liq_pool")
             if selected_pool:
@@ -261,7 +261,7 @@ def render_liquidity_interface(dex: DEXEngine):
                     
                     st.info(f"You will receive: {expected_a:.4f} {pool.token_a} + {expected_b:.4f} {pool.token_b}")
                 
-                if st.button("💧 Remove Liquidity", type="primary", use_container_width=True):
+                if st.button("💧 Remove Liquidity", type="primary", width="stretch"):
                     if lp_amount <= 0:
                         st.error("Please enter amount")
                     else:
@@ -300,7 +300,7 @@ def render_pools_overview(dex: DEXEngine):
     
     if pools_data:
         df = pd.DataFrame(pools_data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
     else:
         st.info("No liquidity pools created yet")
 
@@ -324,7 +324,7 @@ def render_user_portfolio(dex: DEXEngine):
                 for symbol, amount in balances.items()
             ]
             df = pd.DataFrame(balance_data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
         else:
             st.info("No token balances")
     
@@ -343,7 +343,7 @@ def render_user_portfolio(dex: DEXEngine):
         
         if lp_positions:
             df = pd.DataFrame(lp_positions)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
         else:
             st.info("No LP positions")
 
@@ -446,7 +446,7 @@ def render_pool_ecosystem_tab(dex: DEXEngine):
     
     if service_pool_data:
         df = pd.DataFrame(service_pool_data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
         
         # Service pool distribution chart
         st.markdown("### 📊 Service Pool Distribution")
@@ -463,7 +463,7 @@ def render_pool_ecosystem_tab(dex: DEXEngine):
             title="Distribution Across Service Pools",
             height=400
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     st.divider()
     
@@ -550,7 +550,7 @@ def render_analytics(dex: DEXEngine):
             color='TVL',
             color_continuous_scale='Blues'
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         
         # Volume comparison
         fig2 = px.bar(
@@ -562,7 +562,7 @@ def render_analytics(dex: DEXEngine):
             color='Volume',
             color_continuous_scale='Greens'
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width="stretch")
 
 
 def render_dex_page():

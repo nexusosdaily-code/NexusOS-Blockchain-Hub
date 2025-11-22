@@ -182,7 +182,7 @@ def render_spectral_distribution(consensus: NexusConsensusEngine):
     )
     
     fig.update_layout(height=400, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_top_contributors(consensus: NexusConsensusEngine):
@@ -208,7 +208,7 @@ def render_top_contributors(consensus: NexusConsensusEngine):
         for validator_id, score in sorted_contributors
     ])
     
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def render_validator_details(consensus: NexusConsensusEngine):
@@ -231,7 +231,7 @@ def render_validator_details(consensus: NexusConsensusEngine):
         })
     
     df = pd.DataFrame(validator_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def render_economic_metrics():
@@ -301,7 +301,7 @@ def render_reward_distribution(consensus: NexusConsensusEngine):
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_system_health_breakdown(consensus: NexusConsensusEngine):
@@ -334,7 +334,7 @@ def render_system_health_breakdown(consensus: NexusConsensusEngine):
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_governance():
@@ -372,7 +372,7 @@ def render_governance():
         })
     
     df = pd.DataFrame(governance_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
     
     st.info("💡 **Note**: Governance proposal voting system coming soon. Current implementation shows validator voting weights based on contribution scores with anti-centralization (10% max).")
 
@@ -395,7 +395,7 @@ def render_live_simulation():
         base_reward = st.slider("Base Block Reward (NXT units)", 100, 1000, 500)
         enable_transfers = st.checkbox("Enable value transfers", value=True)
     
-    if st.button("🚀 Run Simulation", use_container_width=True, type="primary"):
+    if st.button("🚀 Run Simulation", width="stretch", type="primary"):
         with st.spinner("Running Nexus Consensus simulation..."):
             run_nexus_consensus_simulation(num_validators, num_blocks, base_reward, enable_transfers)
     
@@ -511,7 +511,7 @@ def render_simulation_results():
             )
         ])
         fig.update_layout(title="Network Contribution Mix", height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     with col2:
         st.subheader("Reward Concentration")
@@ -532,7 +532,7 @@ def render_simulation_results():
             yaxis_title="Rewards Earned",
             height=350
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     # Nexus AI Research Report for Researchers
     st.divider()

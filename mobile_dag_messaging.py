@@ -245,7 +245,7 @@ def render_send_message(messaging_system: WavelengthMessagingSystem, token_syste
     # Send button
     st.divider()
     
-    if st.button("📤 Send Message", type="primary", disabled=not can_send, use_container_width=True):
+    if st.button("📤 Send Message", type="primary", disabled=not can_send, width="stretch"):
         with st.spinner("🌊 Generating wave signature and validating..."):
             success, msg_obj, status = messaging_system.send_message(
                 sender_account=sender,
@@ -461,7 +461,7 @@ def render_dag_visualization(messaging_system: WavelengthMessagingSystem):
             plot_bgcolor='rgba(0,0,0,0.05)'
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         
         # Statistics
         col1, col2, col3, col4 = st.columns(4)
@@ -530,7 +530,7 @@ def render_analytics(messaging_system: WavelengthMessagingSystem, token_system: 
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # Cost distribution
     st.subheader("💰 Cost Distribution")
@@ -551,7 +551,7 @@ def render_analytics(messaging_system: WavelengthMessagingSystem, token_system: 
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # Validator earnings
     st.subheader("👥 Validator Earnings")
@@ -571,7 +571,7 @@ def render_analytics(messaging_system: WavelengthMessagingSystem, token_system: 
         for v_id, earnings in validator_earnings.items()
     ])
     
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 if __name__ == "__main__":

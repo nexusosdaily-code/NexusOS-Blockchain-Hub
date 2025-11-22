@@ -871,7 +871,7 @@ def render_unified_pipeline_mode(pipeline: WaveLangPipeline):
         auto_optimize = st.checkbox("🔧 Auto-optimize code", value=True, 
                                     help="Automatically optimize instructions before compilation")
     with col2:
-        run_pipeline = st.button("▶️ Run Pipeline", type="primary", use_container_width=True)
+        run_pipeline = st.button("▶️ Run Pipeline", type="primary", width="stretch")
     
     if run_pipeline and user_input:
         with st.spinner("⚡ Running unified pipeline..."):

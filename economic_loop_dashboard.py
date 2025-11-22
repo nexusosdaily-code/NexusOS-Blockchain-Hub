@@ -175,7 +175,7 @@ def render_loop_overview(economic_loop, loop_status: Dict[str, Any]):
                 yaxis_title="NXT Energy",
                 height=300
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.info("No spectral data yet - send messages to generate energy distribution")
 
@@ -198,7 +198,7 @@ def render_messaging_flow_tab(economic_loop):
         burn_amount = st.number_input("NXT to Burn", min_value=0.000001, max_value=1.0, value=0.000057, step=0.000001, format="%.6f")
         wavelength = st.number_input("Wavelength (nm)", min_value=380.0, max_value=750.0, value=490.0, step=1.0)
     
-    if st.button("🔥 Send Message & Burn NXT", use_container_width=True):
+    if st.button("🔥 Send Message & Burn NXT", width="stretch"):
         message_id = f"MSG_{int(time.time() * 1000)}"
         
         success, msg, event = economic_loop.flow_controller.process_message_burn(
@@ -252,7 +252,7 @@ def render_reserve_dex_tab(economic_loop):
         step=10.0
     )
     
-    if st.button("💧 Allocate to DEX Pools", use_container_width=True):
+    if st.button("💧 Allocate to DEX Pools", width="stretch"):
         success, msg, details = economic_loop.liquidity_allocator.allocate_reserve_to_pools(
             reserve_amount_nxt=allocation_amount
         )
@@ -296,7 +296,7 @@ def render_reserve_dex_tab(economic_loop):
             )
         ])
         fig.update_layout(title="Pool Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 def render_supply_chain_tab(economic_loop):
@@ -317,7 +317,7 @@ def render_supply_chain_tab(economic_loop):
         output_tonnage = st.number_input("Output (Tonnage)", min_value=0.0, max_value=100000.0, value=500.0, step=50.0)
         participants = st.number_input("Participants", min_value=1, max_value=10000, value=50, step=10)
     
-    if st.button("📊 Calculate NXT Value", use_container_width=True):
+    if st.button("📊 Calculate NXT Value", width="stretch"):
         productivity = IndustryProductivity(
             industry_type=industry,
             energy_usage_kwh=energy_kwh,
@@ -366,7 +366,7 @@ def render_community_ownership_tab(economic_loop):
         nxt_invested = st.number_input("NXT Invested", min_value=0.1, max_value=100000.0, value=100.0, step=10.0)
         spectral = st.selectbox("Spectral Region", [r.name for r in SpectralRegion])
     
-    if st.button("📝 Record Ownership", use_container_width=True):
+    if st.button("📝 Record Ownership", width="stretch"):
         spectral_region = SpectralRegion[spectral]
         lp_tokens = nxt_invested * 0.95  # 95% conversion (5% fee)
         
@@ -430,7 +430,7 @@ def render_crisis_protection_tab(economic_loop):
         step=100.0
     )
     
-    if st.button("🚨 Execute Crisis Drain", use_container_width=True):
+    if st.button("🚨 Execute Crisis Drain", width="stretch"):
         success, msg = economic_loop.crisis_controller.execute_crisis_drain(drain_amount)
         
         if success:

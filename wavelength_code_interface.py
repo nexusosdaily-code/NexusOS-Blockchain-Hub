@@ -85,6 +85,32 @@ def render_visual_builder_tab(gen):
     
     st.subheader("🎨 Build Your Wavelength Program Visually")
     
+    with st.expander("ℹ️ What is Visual Wavelength Programming?"):
+        st.markdown("""
+        ### 🌊 Revolutionary Zero-Syntax-Error Programming
+        
+        **Traditional Programming:**
+        - Type wrong bracket → Syntax Error
+        - Misspell variable → Error
+        - Forget semicolon → Error
+        - Hours debugging syntax issues
+        
+        **WaveLang Visual Builder:**
+        - 🎨 Drag & drop operations - no typing errors possible
+        - 🌈 Visual spectrum selector - wavelengths are physics constants
+        - ⚡ Real-time validation - errors prevented before they happen
+        - 💰 Live energy cost calculator - see E=hf costs instantly
+        
+        **How It Works:**
+        1. Select an operation type (Arithmetic, Logic, Memory, etc.)
+        2. Choose specific operation (ADD, LOAD, IF, etc.)
+        3. Set parameters using validated inputs
+        4. Click "Add Instruction" - guaranteed valid!
+        5. View your program with live energy cost
+        
+        **380nm is ALWAYS 380nm** - wavelengths don't have typos!
+        """)
+    
     col1, col2 = st.columns([1, 2])
     
     with col1:
@@ -157,7 +183,7 @@ def render_visual_builder_tab(gen):
         
         st.markdown("### 3️⃣ Add Instruction")
         
-        if st.button("✅ Add to Program", use_container_width=True, type="primary"):
+        if st.button("✅ Add to Program", width="stretch", type="primary"):
             spectral_region = get_spectral_region(selected_opcode.value)
             
             instruction = WavelengthInstruction(
@@ -230,7 +256,7 @@ def render_visual_builder_tab(gen):
             height=400
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         
         st.divider()
         
@@ -255,7 +281,7 @@ def render_visual_builder_tab(gen):
         
         program_name = st.text_input("Program name:", value="my_program")
         
-        if st.button("💾 Save Program", use_container_width=True):
+        if st.button("💾 Save Program", width="stretch"):
             if st.session_state.instructions:
                 from wavelength_code_generator import WaveLangFunction
                 
@@ -312,7 +338,7 @@ def render_energy_calculator_tab(gen):
                 'Energy (J)': inst.get_quantum_energy()
             })
         
-        df_costs = st.dataframe(costs_data, use_container_width=True)
+        df_costs = st.dataframe(costs_data, width="stretch")
         
         # Visualization
         fig = px.bar(
@@ -323,7 +349,7 @@ def render_energy_calculator_tab(gen):
             title="Instruction Costs (OOK Modulation, Amplitude=0.8)",
             color_continuous_scale='Reds'
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     with col2:
         st.markdown("### Modulation Complexity Premium")
@@ -344,7 +370,7 @@ def render_energy_calculator_tab(gen):
                 'Cost (NXT)': inst.get_execution_cost_nxt()
             })
         
-        st.dataframe(modulation_comparison, use_container_width=True)
+        st.dataframe(modulation_comparison, width="stretch")
         
         # Show impact
         ook_cost = modulation_comparison[0]['Cost (NXT)']
@@ -530,7 +556,7 @@ def render_comparison_tab():
         ]
     }
     
-    df = st.dataframe(comparison, use_container_width=True)
+    df = st.dataframe(comparison, width="stretch")
     
     st.divider()
     
@@ -630,7 +656,7 @@ def render_my_programs_tab(gen):
                     'Region': inst['spectral_region'],
                     'Cost': f"{inst['execution_cost_nxt']:.6f} NXT"
                 })
-            st.dataframe(insts, use_container_width=True)
+            st.dataframe(insts, width="stretch")
 
 
 def get_spectral_region(wavelength_nm):
