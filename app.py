@@ -100,35 +100,37 @@ def main():
             100% { background-position: 1000px 0; }
         }
         
-        /* Main app background with quantum gradient */
+        /* Main app background with BRIGHTER quantum gradient */
         .stApp {
-            background: linear-gradient(-45deg, #1a1a2e, #16213e, #0f3460, #1a1a2e);
+            background: linear-gradient(-45deg, #2d2d4a, #2a3f5f, #1e5a8e, #2d2d4a);
             background-size: 400% 400%;
             animation: quantumWaves 15s ease infinite;
-            color: rgba(255, 255, 255, 0.95) !important;
+            color: #ffffff !important;
         }
         
-        /* Global typography for readability */
+        /* Global typography - BRIGHTER for better visibility */
         body, p, span, div, label, li, td, th {
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: #ffffff !important;
+            text-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
         }
         
-        /* Ensure all text elements are light colored */
+        /* Ensure all text elements are bright white */
         .stMarkdown, .stText {
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: #ffffff !important;
         }
         
-        /* Table text */
+        /* Table text - BRIGHT */
         .dataframe, .dataframe td, .dataframe th {
-            color: rgba(255, 255, 255, 0.95) !important;
+            color: #ffffff !important;
+            background: rgba(30, 90, 142, 0.3) !important;
         }
         
-        /* Sidebar text */
+        /* Sidebar text - BRIGHT */
         [data-testid="stSidebar"] p, 
         [data-testid="stSidebar"] span,
         [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] div {
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: #ffffff !important;
         }
         
         /* Code blocks */
@@ -148,32 +150,33 @@ def main():
             color: #aaccff !important;
         }
         
-        /* Sidebar quantum styling */
+        /* Sidebar quantum styling - BRIGHTER */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(26, 26, 46, 0.95), rgba(15, 52, 96, 0.95));
-            border-right: 2px solid rgba(102, 126, 234, 0.3);
-            box-shadow: 5px 0 30px rgba(102, 126, 234, 0.2);
+            background: linear-gradient(180deg, rgba(45, 45, 74, 0.95), rgba(30, 90, 142, 0.95));
+            border-right: 3px solid rgba(102, 126, 234, 0.6);
+            box-shadow: 5px 0 40px rgba(102, 126, 234, 0.5);
         }
         
         [data-testid="stSidebar"] h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #88aaff 0%, #aa88ff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             animation: shimmer 3s infinite linear;
             background-size: 2000px 100%;
+            filter: brightness(1.3);
         }
         
-        /* Enhanced buttons with glow effect */
+        /* Enhanced buttons with BRIGHT glow effect */
         .stButton > button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: linear-gradient(135deg, #88aaff 0%, #aa88ff 100%) !important;
             color: white !important;
             border: none !important;
             border-radius: 12px !important;
             padding: 12px 24px !important;
             font-weight: 600 !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+            box-shadow: 0 4px 20px rgba(136, 170, 255, 0.7) !important;
             position: relative;
             overflow: hidden;
         }
@@ -218,10 +221,10 @@ def main():
             box-shadow: 0 0 20px rgba(102, 126, 234, 0.3) !important;
         }
         
-        /* Glowing metric cards */
+        /* BRIGHTER glowing metric cards */
         [data-testid="metric-container"] {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            border: 1px solid rgba(102, 126, 234, 0.3);
+            background: linear-gradient(135deg, rgba(136, 170, 255, 0.25), rgba(170, 136, 255, 0.25));
+            border: 2px solid rgba(136, 170, 255, 0.6);
             border-radius: 12px;
             padding: 16px;
             animation: pulseGlow 3s ease-in-out infinite;
@@ -297,14 +300,15 @@ def main():
             box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
         }
         
-        /* Headers with shimmer effect */
+        /* Headers with BRIGHT shimmer effect */
         h1, h2, h3 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background: linear-gradient(135deg, #aaccff 0%, #ccaaff 50%, #aaccff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             background-size: 200% auto;
             animation: shimmer 4s linear infinite;
+            filter: brightness(1.4);
         }
         
         /* Divider with quantum glow */
