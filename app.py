@@ -592,7 +592,7 @@ def main():
                     key=f"btn_{idx}",
                     use_container_width=True
                 ):
-                    st.session_state.module_selector = dashboard['name']
+                    st.session_state.nav_request = dashboard['name']
                     st.rerun()
         
         st.divider()
@@ -622,7 +622,7 @@ def main():
             for idx, dash_name in enumerate(more_dashboards):
                 with more_cols[idx % 3]:
                     if st.button(dash_name, key=f"more_btn_{idx}", use_container_width=True):
-                        st.session_state.module_selector = dash_name
+                        st.session_state.nav_request = dash_name
                         st.rerun()
     
     elif module == "📱 Mobile Blockchain Hub":
