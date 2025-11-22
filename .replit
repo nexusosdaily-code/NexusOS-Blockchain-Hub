@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]
 
 [agent]
-integrations = ["streamlit_database:1.0.0"]
+integrations = ["streamlit_database:1.0.0", "github:1.0.0"]
 
 [workflows]
 runButton = "Project"
@@ -74,6 +74,10 @@ externalPort = 4200
 [[ports]]
 localPort = 40573
 externalPort = 8000
+
+[[ports]]
+localPort = 41269
+externalPort = 8099
 
 [[ports]]
 localPort = 42997
