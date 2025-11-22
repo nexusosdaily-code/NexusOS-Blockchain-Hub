@@ -161,6 +161,72 @@
       },
       "metrics": {},
       "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T17:53:01.290986",
+      "component": "dex",
+      "parameters": {
+        "pair": "NXT/TOKEN",
+        "liquidity": 0,
+        "volume": 0,
+        "price_impact": 0.5
+      },
+      "metrics": {
+        "liquidity": 0,
+        "volume": 0
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T17:57:32.991184",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 125000.0,
+        "rewards": 0.0,
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T17:59:04.306478",
+      "component": "wavelength_economics",
+      "parameters": {
+        "wavelength": 550,
+        "region": "Green",
+        "cost": 7500,
+        "modulation": "OOK"
+      },
+      "metrics": {},
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T17:59:15.870302",
+      "component": "wavelength_economics",
+      "parameters": {
+        "wavelength": 550,
+        "region": "Green",
+        "cost": 7500,
+        "modulation": "OOK"
+      },
+      "metrics": {},
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T18:00:23.140161",
+      "component": "wavelength_economics",
+      "parameters": {
+        "wavelength": 550,
+        "region": "Green",
+        "cost": 7500,
+        "modulation": "OOK"
+      },
+      "metrics": {},
+      "researcher_email": null
     }
   ],
   "patterns": {
@@ -171,26 +237,26 @@
         "stake": {
           "min": 125000.0,
           "max": 225000.0,
-          "successful_mean": 140000.0,
-          "sample_count": 10
+          "successful_mean": 138636.36363636365,
+          "sample_count": 11
         },
         "rewards": {
           "min": 0.0,
           "max": 0.0,
           "successful_mean": 0.0,
-          "sample_count": 10
+          "sample_count": 11
         },
         "apr": {
           "min": 14016.0,
           "max": 25228.800000000003,
-          "successful_mean": 23173.120000000003,
-          "sample_count": 10
+          "successful_mean": 23360.0,
+          "sample_count": 11
         },
         "uptime": {
           "min": 98.5,
           "max": 98.5,
           "successful_mean": 98.5,
-          "sample_count": 10
+          "sample_count": 11
         }
       },
       "civilization_risks": [],
@@ -201,10 +267,10 @@
       "failed_configs": [],
       "optimal_ranges": {
         "wavelength": {
-          "min": 550,
-          "max": 550,
-          "successful_mean": 550,
-          "sample_count": 1
+          "min": 550.0,
+          "max": 550.0,
+          "successful_mean": 550.0,
+          "sample_count": 4
         },
         "region": {
           "min": "Green",
@@ -213,10 +279,10 @@
           "sample_count": 1
         },
         "cost": {
-          "min": 7500,
-          "max": 7500,
-          "successful_mean": 7500,
-          "sample_count": 1
+          "min": 7500.0,
+          "max": 7500.0,
+          "successful_mean": 7500.0,
+          "sample_count": 4
         },
         "modulation": {
           "min": "OOK",
@@ -227,7 +293,39 @@
       },
       "civilization_risks": [],
       "f_floor_violations": []
+    },
+    "dex": {
+      "successful_configs": [],
+      "failed_configs": [],
+      "optimal_ranges": {
+        "liquidity": {
+          "min": 0.0,
+          "max": 0.0,
+          "successful_mean": 0.0,
+          "sample_count": 1
+        },
+        "volume": {
+          "min": 0.0,
+          "max": 0.0,
+          "successful_mean": 0.0,
+          "sample_count": 1
+        },
+        "price_impact": {
+          "min": 0.5,
+          "max": 0.5,
+          "successful_mean": 0.5,
+          "sample_count": 1
+        }
+      },
+      "civilization_risks": [
+        {
+          "risk": "market_instability",
+          "liquidity": 0,
+          "minimum_stable": 100000
+        }
+      ],
+      "f_floor_violations": []
     }
   },
-  "last_updated": "2025-11-21T16:31:41.931222"
+  "last_updated": "2025-11-21T18:00:23.143912"
 }
