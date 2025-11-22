@@ -241,7 +241,9 @@ def render_blockchain_tab():
             <p>Blockchain-powered quantum messaging with E=hf physics pricing. Send wavelength-encrypted messages across the DAG network.</p>
         </div>
         """, unsafe_allow_html=True)
-        st.info("💡 Access via: **Main Menu** → **💬 Mobile DAG Messaging**")
+        if st.button("🚀 Open Mobile DAG Messaging", use_container_width=True, key="btn_dag"):
+            st.session_state.module_selector = "💬 Mobile DAG Messaging"
+            st.rerun()
         
         st.markdown("""
         <div class="module-card">
@@ -249,7 +251,9 @@ def render_blockchain_tab():
             <p>Live block and transaction visualization. Track network activity, validator performance, and transaction history.</p>
         </div>
         """, unsafe_allow_html=True)
-        st.info("💡 Access via: **Main Menu** → **🔗 Blockchain Explorer**")
+        if st.button("🚀 Open Blockchain Explorer", use_container_width=True, key="btn_explorer"):
+            st.session_state.module_selector = "🔗 Blockchain Explorer"
+            st.rerun()
     
     with col2:
         st.markdown("""
@@ -258,7 +262,9 @@ def render_blockchain_tab():
             <p>Wavelength-inspired consensus eliminating 51% attacks through spectral diversity requirements.</p>
         </div>
         """, unsafe_allow_html=True)
-        st.info("💡 Access via: **Main Menu** → **🌈 Proof of Spectrum**")
+        if st.button("🚀 Open Proof of Spectrum", use_container_width=True, key="btn_pos"):
+            st.session_state.module_selector = "🌈 Proof of Spectrum"
+            st.rerun()
         
         st.markdown("""
         <div class="module-card">
@@ -266,7 +272,9 @@ def render_blockchain_tab():
             <p>Parallel block processing and DAG optimization for maximum throughput without bottlenecks.</p>
         </div>
         """, unsafe_allow_html=True)
-        st.info("💡 Access via: **Main Menu** → **⚡ GhostDAG System**")
+        if st.button("🚀 Open GhostDAG System", use_container_width=True, key="btn_ghostdag"):
+            st.session_state.module_selector = "⚡ GhostDAG System"
+            st.rerun()
 
 
 def render_trading_tab():
@@ -288,7 +296,9 @@ def render_trading_tab():
     </div>
     """, unsafe_allow_html=True)
     
-    st.info("💡 **Access Full DEX:** Main Menu → **💱 DEX (Token Exchange)**")
+    if st.button("🚀 Open DEX Trading Platform", use_container_width=True, key="btn_dex", type="primary"):
+        st.session_state.module_selector = "💱 DEX (Token Exchange)"
+        st.rerun()
     
     st.divider()
     
@@ -324,7 +334,9 @@ def render_staking_tab():
             </ul>
         </div>
         """, unsafe_allow_html=True)
-        st.info("💡 Access via: **Main Menu** → **🏛️ Validator Economics**")
+        if st.button("🚀 Open Validator Economics", use_container_width=True, key="btn_validator"):
+            st.session_state.module_selector = "🏛️ Validator Economics"
+            st.rerun()
     
     with col2:
         st.markdown("""
@@ -339,7 +351,9 @@ def render_staking_tab():
             </ul>
         </div>
         """, unsafe_allow_html=True)
-        st.info("💡 Access via: **Main Menu** → **💵 Wavelength Economics**")
+        if st.button("🚀 Open Wavelength Economics", use_container_width=True, key="btn_wavelength"):
+            st.session_state.module_selector = "💵 Wavelength Economics"
+            st.rerun()
     
     st.divider()
     
