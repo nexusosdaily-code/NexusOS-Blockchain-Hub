@@ -66,6 +66,300 @@ def main():
         initial_sidebar_state="expanded"
     )
     
+    # Quantum-Themed CSS with Wave Animations & Glowing Effects
+    st.markdown("""
+        <style>
+        /* ============================================
+           QUANTUM WAVE BACKGROUND ANIMATION
+           ============================================ */
+        @keyframes quantumWaves {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); }
+            50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8), 0 0 60px rgba(118, 75, 162, 0.6); }
+        }
+        
+        @keyframes ripple {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        
+        @keyframes particleFloat {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            25% { transform: translateY(-10px) translateX(5px); }
+            50% { transform: translateY(0px) translateX(10px); }
+            75% { transform: translateY(10px) translateX(5px); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        
+        /* Main app background with quantum gradient */
+        .stApp {
+            background: linear-gradient(-45deg, #1a1a2e, #16213e, #0f3460, #1a1a2e);
+            background-size: 400% 400%;
+            animation: quantumWaves 15s ease infinite;
+            color: rgba(255, 255, 255, 0.95) !important;
+        }
+        
+        /* Global typography for readability */
+        body, p, span, div, label, li, td, th {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+        
+        /* Ensure all text elements are light colored */
+        .stMarkdown, .stText {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+        
+        /* Table text */
+        .dataframe, .dataframe td, .dataframe th {
+            color: rgba(255, 255, 255, 0.95) !important;
+        }
+        
+        /* Sidebar text */
+        [data-testid="stSidebar"] p, 
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] div {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+        
+        /* Code blocks */
+        code {
+            background: rgba(15, 52, 96, 0.6) !important;
+            color: #a8d8ff !important;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        /* Link colors */
+        a {
+            color: #88aaff !important;
+        }
+        
+        a:hover {
+            color: #aaccff !important;
+        }
+        
+        /* Sidebar quantum styling */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, rgba(26, 26, 46, 0.95), rgba(15, 52, 96, 0.95));
+            border-right: 2px solid rgba(102, 126, 234, 0.3);
+            box-shadow: 5px 0 30px rgba(102, 126, 234, 0.2);
+        }
+        
+        [data-testid="stSidebar"] h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s infinite linear;
+            background-size: 2000px 100%;
+        }
+        
+        /* Enhanced buttons with glow effect */
+        .stButton > button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stButton > button:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .stButton > button:hover:before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .stButton > button:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6), 0 0 40px rgba(118, 75, 162, 0.4) !important;
+        }
+        
+        .stButton > button:active {
+            transform: translateY(-1px) !important;
+        }
+        
+        /* Animated selectbox */
+        .stSelectbox > div > div {
+            background: rgba(15, 52, 96, 0.6) !important;
+            border: 2px solid rgba(102, 126, 234, 0.4) !important;
+            border-radius: 10px !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .stSelectbox > div > div:hover {
+            border-color: rgba(102, 126, 234, 0.8) !important;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3) !important;
+        }
+        
+        /* Glowing metric cards */
+        [data-testid="metric-container"] {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            animation: pulseGlow 3s ease-in-out infinite;
+            transition: transform 0.3s ease;
+        }
+        
+        [data-testid="metric-container"]:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: rgba(102, 126, 234, 0.6);
+        }
+        
+        /* Enhanced tabs with quantum glow */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background: rgba(15, 52, 96, 0.3);
+            border-radius: 12px;
+            padding: 8px;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            background: transparent;
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        
+        .stTabs [data-baseweb="tab"]:hover {
+            background: rgba(102, 126, 234, 0.2);
+            color: white;
+            border-color: rgba(102, 126, 234, 0.4);
+        }
+        
+        .stTabs [data-baseweb="tab"][aria-selected="true"] {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            color: white;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+            border-color: rgba(102, 126, 234, 0.6);
+        }
+        
+        /* Text input quantum styling */
+        .stTextInput > div > div > input {
+            background: rgba(15, 52, 96, 0.5) !important;
+            border: 2px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 10px !important;
+            color: white !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .stTextInput > div > div > input:focus {
+            border-color: rgba(102, 126, 234, 0.8) !important;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.4) !important;
+        }
+        
+        /* Expander with glow */
+        .streamlit-expanderHeader {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            border-radius: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .streamlit-expanderHeader:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Dataframe quantum styling */
+        .stDataFrame {
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+        }
+        
+        /* Headers with shimmer effect */
+        h1, h2, h3 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% auto;
+            animation: shimmer 4s linear infinite;
+        }
+        
+        /* Divider with quantum glow */
+        hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.6), transparent);
+            margin: 20px 0;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* Success/Info boxes with animation */
+        .stAlert {
+            border-radius: 12px;
+            border-left: 4px solid rgba(102, 126, 234, 0.8);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            animation: pulseGlow 4s ease-in-out infinite;
+        }
+        
+        /* Quantum particles decoration (subtle) */
+        .stApp::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(102, 126, 234, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            animation: particleFloat 10s ease-in-out infinite;
+        }
+        
+        /* Scrollbar quantum styling */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(26, 26, 46, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2, #667eea);
+        }
+        </style>
+    """, unsafe_allow_html=True)
     
     # Handle navigation requests from other modules (before widget instantiation)
     if "nav_request" in st.session_state and st.session_state.nav_request:
