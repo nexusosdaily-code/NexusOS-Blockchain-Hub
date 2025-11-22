@@ -102,11 +102,9 @@ def main():
             100% { background-position: 1000px 0; }
         }
         
-        /* Main app background with INTENSE quantum gradient waves */
+        /* Main app background - STATIC (no animation) */
         .stApp {
-            background: linear-gradient(-45deg, #1e3a5f, #2a5f8e, #3a7fbf, #1e5a8e, #2d4a7a, #1e3a5f);
-            background-size: 600% 600%;
-            animation: quantumWaves 8s ease-in-out infinite;
+            background: linear-gradient(-45deg, #1e3a5f, #2a5f8e, #3a7fbf, #1e5a8e);
             color: #ffffff !important;
         }
         
