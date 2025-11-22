@@ -73,9 +73,11 @@ def main():
            QUANTUM WAVE BACKGROUND ANIMATION
            ============================================ */
         @keyframes quantumWaves {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% { background-position: 0% 0%; }
+            25% { background-position: 100% 100%; }
+            50% { background-position: 0% 100%; }
+            75% { background-position: 100% 0%; }
+            100% { background-position: 0% 0%; }
         }
         
         @keyframes pulseGlow {
@@ -100,11 +102,11 @@ def main():
             100% { background-position: 1000px 0; }
         }
         
-        /* Main app background with BRIGHTER quantum gradient */
+        /* Main app background with INTENSE quantum gradient waves */
         .stApp {
-            background: linear-gradient(-45deg, #2d2d4a, #2a3f5f, #1e5a8e, #2d2d4a);
-            background-size: 400% 400%;
-            animation: quantumWaves 15s ease infinite;
+            background: linear-gradient(-45deg, #1e3a5f, #2a5f8e, #3a7fbf, #1e5a8e, #2d4a7a, #1e3a5f);
+            background-size: 600% 600%;
+            animation: quantumWaves 8s ease-in-out infinite;
             color: #ffffff !important;
         }
         
