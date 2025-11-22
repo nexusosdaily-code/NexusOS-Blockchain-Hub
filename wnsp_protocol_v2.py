@@ -30,13 +30,14 @@ class WnspEncodingScheme(Enum):
     ASCII_BASIC = "ascii_basic"      # A-Z only (26 chars) - legacy v1.0
     ASCII_EXTENDED = "ascii_extended"  # A-Z, 0-9 (36 chars)
     FULL_ALPHANUMERIC = "full_alphanumeric"  # A-Z, 0-9, symbols (64 chars)
+    SCIENTIFIC = "scientific"  # A-Z, 0-9, symbols + Greek letters + math operators (200+ chars)
     SPECTRAL_BINARY = "spectral_binary"  # Binary encoding via spectral regions
 
 
 # Extended character map for WNSP v2.0
 # Maps 64 characters to wavelengths across full visible + near-IR spectrum
 EXTENDED_CHAR_MAP = {
-    # Uppercase letters A-Z (380-520nm - Violet to Green)
+    # Uppercase letters A-Z (380-530nm - Violet to Green)
     'A': 380, 'B': 386, 'C': 392, 'D': 398, 'E': 404, 'F': 410,
     'G': 416, 'H': 422, 'I': 428, 'J': 434, 'K': 440, 'L': 446,
     'M': 452, 'N': 458, 'O': 464, 'P': 470, 'Q': 476, 'R': 482,
@@ -47,7 +48,7 @@ EXTENDED_CHAR_MAP = {
     '0': 536, '1': 542, '2': 548, '3': 554, '4': 560,
     '5': 566, '6': 572, '7': 578, '8': 584, '9': 590,
     
-    # Common symbols (596-740nm - Yellow to Red)
+    # Common symbols (596-758nm - Yellow to Red)
     ' ': 596, '.': 602, ',': 608, '!': 614, '?': 620,
     '-': 626, '_': 632, '+': 638, '=': 644, '*': 650,
     '/': 656, '\\': 662, '|': 668, '@': 674, '#': 680,
@@ -56,8 +57,53 @@ EXTENDED_CHAR_MAP = {
     '>': 746, ':': 752, ';': 758
 }
 
-# Reverse lookup
+# Scientific character map - Extended for physics, mathematics, and engineering
+# Maps 200+ characters including Greek letters, mathematical operators, and physics symbols
+# Uses finer 3nm wavelength spacing across extended spectrum (350-850nm)
+SCIENTIFIC_CHAR_MAP = {
+    # Base alphanumeric (preserve compatibility with EXTENDED_CHAR_MAP)
+    **EXTENDED_CHAR_MAP,
+    
+    # Lowercase Greek letters (760-820nm - Near-IR Region 1)
+    'α': 760, 'β': 763, 'γ': 766, 'δ': 769, 'ε': 772, 'ζ': 775,
+    'η': 778, 'θ': 781, 'ι': 784, 'κ': 787, 'λ': 790, 'μ': 793,
+    'ν': 796, 'ξ': 799, 'π': 802, 'ρ': 805, 'σ': 808, 'τ': 811,
+    'υ': 814, 'φ': 817, 'χ': 820, 'ψ': 823, 'ω': 826,
+    
+    # Uppercase Greek letters (830-880nm - Near-IR Region 2)
+    'Γ': 830, 'Δ': 833, 'Θ': 836, 'Λ': 839, 'Ξ': 842, 'Π': 845,
+    'Σ': 848, 'Φ': 851, 'Ψ': 854, 'Ω': 857,
+    
+    # Mathematical operators (350-376nm - Near-UV Region)
+    '∫': 350, '∂': 353, '∇': 356, '√': 359, '∞': 362, '≈': 365,
+    '≠': 368, '≤': 371, '≥': 374, '±': 377, '∓': 379,
+    '×': 382, '÷': 385, '∑': 388, '∏': 391, '∆': 394,
+    
+    # Physics symbols and special characters (860-900nm - Far-IR)
+    'ℏ': 860, 'Å': 863, '°': 866, '′': 869, '″': 872, '∝': 875,
+    '∈': 878, '∉': 881, '∅': 884, '∪': 887, '∩': 890, '⊂': 893,
+    '⊃': 896, '∀': 899, '∃': 902,
+    
+    # Subscripts (905-935nm - Extended IR)
+    '₀': 905, '₁': 908, '₂': 911, '₃': 914, '₄': 917, '₅': 920,
+    '₆': 923, '₇': 926, '₈': 929, '₉': 932,
+    
+    # Superscripts (938-968nm - Extended IR)
+    '⁰': 938, '¹': 941, '²': 944, '³': 947, '⁴': 950, '⁵': 953,
+    '⁶': 956, '⁷': 959, '⁸': 962, '⁹': 965,
+    
+    # Additional mathematical symbols (970-1000nm - Far-IR)
+    '→': 970, '←': 973, '↑': 976, '↓': 979, '↔': 982, '⇒': 985,
+    '⇐': 988, '⇔': 991, '∧': 994, '∨': 997, '¬': 1000,
+    
+    # Arrows and logic (1003-1030nm - Extended Far-IR)
+    '⊕': 1003, '⊗': 1006, '⊙': 1009, '⊥': 1012, '∥': 1015, '∠': 1018,
+    '∡': 1021, '∢': 1024, '⟂': 1027, '⟨': 1030, '⟩': 1033,
+}
+
+# Reverse lookups
 WAVELENGTH_TO_CHAR = {v: k for k, v in EXTENDED_CHAR_MAP.items()}
+SCIENTIFIC_WAVELENGTH_TO_CHAR = {v: k for k, v in SCIENTIFIC_CHAR_MAP.items()}
 
 
 @dataclass
@@ -214,9 +260,15 @@ class WnspEncoderV2:
         frames = []
         base_time = time.time() * 1000
         
+        # Select character map based on encoding scheme
+        if encoding_scheme == WnspEncodingScheme.SCIENTIFIC:
+            char_map = SCIENTIFIC_CHAR_MAP
+        else:
+            char_map = EXTENDED_CHAR_MAP
+        
         for i, char in enumerate(content):
             # Get wavelength for character
-            wavelength = EXTENDED_CHAR_MAP.get(char)
+            wavelength = char_map.get(char)
             
             if wavelength is None:
                 # Skip unsupported characters
@@ -335,11 +387,17 @@ class WnspDecoderV2:
         Returns:
             Tuple of (decoded_content, validation_success)
         """
+        # Select reverse lookup map based on encoding scheme
+        if message.encoding_scheme == WnspEncodingScheme.SCIENTIFIC:
+            wavelength_to_char_map = SCIENTIFIC_WAVELENGTH_TO_CHAR
+        else:
+            wavelength_to_char_map = WAVELENGTH_TO_CHAR
+        
         # Decode frames to text
         decoded_chars = []
         
         for frame in message.frames:
-            char = WAVELENGTH_TO_CHAR.get(int(frame.wavelength_nm))
+            char = wavelength_to_char_map.get(int(frame.wavelength_nm))
             if char:
                 decoded_chars.append(char)
         

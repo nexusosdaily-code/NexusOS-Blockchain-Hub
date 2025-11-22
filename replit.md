@@ -24,7 +24,7 @@ Key technical components and features include:
 -   **Civic Governance Campaign System**: Allows validators to promote innovation campaigns, facilitates community voting on proposals, and uses AI to generate comprehensive analysis reports.
 -   **AI Delegation Performance Reports**: Provides personalized validator performance analysis with 8-section reports.
 -   **Economic Simulation Engine**: Features a self-regulating issuance/burn mechanism, PID control, and conservation constraints.
--   **WNSP v2.0 Protocol (Optical Mesh Networking)**: Enables quantum cryptography-enabled optical communication with DAG messaging, 64-character encoding, and NXT payment integration.
+-   **WNSP v2.0 Protocol (Optical Mesh Networking)**: Enables quantum cryptography-enabled optical communication with DAG messaging, **170+ scientific character encoding** (64 base + 106 scientific symbols including Greek letters, mathematical operators, physics symbols, subscripts/superscripts), and NXT payment integration. **SCIENTIFIC encoding scheme** maps characters to unique wavelengths across 350-1033nm spectrum - enables direct transmission of Maxwell's equations, Schrödinger equation, quantum bra-ket notation, and complex mathematical formulas without ASCII conversion.
 -   **Wavelength-Economic Validation System**: A physics-based blockchain validation system utilizing Maxwell equation solvers, wave superposition, and 5D wave signature validation for quantum resistance.
 -   **Mobile DAG Messaging System**: Optimized with wavelength validation, E=hf cost estimation, interactive DAG visualization, and NXT payment integration. Includes an **AI Message Security Controller** for dynamic wavelength and encryption level selection.
 -   **Proof of Spectrum (PoS) Consensus**: A wavelength-inspired consensus mechanism using spectral regions and wave interference for validation.
@@ -81,3 +81,4 @@ Complete in-depth documentation for technical/scientific learners:
 -   **ATOMIC_TRANSFER_SPECIFICATIONS.md**: Production-grade transaction safety system
 -   **WAVELENGTH_CRYPTO_THEORY.md**: Electromagnetic theory-based encryption
 -   **TECHNICAL_SPECIFICATIONS.md**: Complete engineering solutions catalog
+-   **SCIENTIFIC_CHARACTER_ENCODING.md**: 170+ character wavelength mapping across 350-1033nm spectrum for scientific communication

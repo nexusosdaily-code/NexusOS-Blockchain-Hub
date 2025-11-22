@@ -22,14 +22,14 @@ JOULES_PER_NXT = 1e-18  # Conversion factor: 1 NXT = 10^18 Joules (for economic 
 
 class SpectralRegion(Enum):
     """Electromagnetic spectrum regions for message classification"""
-    UV = ("Ultraviolet", 100e-9, 400e-9)  # 100-400 nm
+    UV = ("Ultraviolet", 100e-9, 400e-9)  # 100-400 nm (extended for scientific characters)
     VIOLET = ("Violet", 380e-9, 450e-9)   # 380-450 nm
     BLUE = ("Blue", 450e-9, 495e-9)       # 450-495 nm
     GREEN = ("Green", 495e-9, 570e-9)     # 495-570 nm
     YELLOW = ("Yellow", 570e-9, 590e-9)   # 570-590 nm
     ORANGE = ("Orange", 590e-9, 620e-9)   # 590-620 nm
     RED = ("Red", 620e-9, 750e-9)         # 620-750 nm
-    IR = ("Infrared", 750e-9, 1000e-9)    # 750-1000 nm
+    IR = ("Infrared", 750e-9, 1100e-9)    # 750-1100 nm (extended for scientific characters)
     
     def __init__(self, display_name: str, min_wavelength: float, max_wavelength: float):
         self.display_name = display_name
