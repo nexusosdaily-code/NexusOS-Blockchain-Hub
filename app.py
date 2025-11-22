@@ -108,8 +108,13 @@ def main():
             color: #ffffff !important;
         }
         
-        /* Global typography - BRIGHTER for better visibility */
-        body, p, span, div, label, li, td, th {
+        /* Global typography - BRIGHTER for better visibility (exclude dropdown items) */
+        .stApp main p, 
+        .stApp main span:not([data-baseweb="option"] *),
+        .stApp main div:not([data-baseweb="option"] *),
+        .stApp main label,
+        .stApp main td, 
+        .stApp main th {
             color: #ffffff !important;
             text-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
         }
@@ -159,23 +164,28 @@ def main():
             font-size: 15px !important;
         }
         
-        /* Streamlit dropdown menu items - CRITICAL for visibility */
-        [data-testid="stSidebar"] ul[role="listbox"] li {
+        /* Streamlit dropdown popover - renders OUTSIDE sidebar in root DOM */
+        div[data-baseweb="popover"] {
+            background: rgba(245, 250, 255, 0.98) !important;
+        }
+        
+        /* Dropdown menu items - CRITICAL for visibility */
+        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] {
             color: #000000 !important;
             background: rgba(245, 250, 255, 0.98) !important;
             font-weight: 600 !important;
             font-size: 15px !important;
         }
         
-        /* Dropdown menu item hover */
-        [data-testid="stSidebar"] ul[role="listbox"] li:hover {
+        /* Dropdown menu item text */
+        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] span {
             color: #000000 !important;
-            background: rgba(200, 230, 255, 0.98) !important;
         }
         
-        /* Dropdown menu container */
-        [data-testid="stSidebar"] [data-baseweb="popover"] {
-            background: rgba(245, 250, 255, 0.98) !important;
+        /* Dropdown menu item hover */
+        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"]:hover {
+            color: #000000 !important;
+            background: rgba(200, 230, 255, 0.98) !important;
         }
         
         /* Sidebar selectbox options in dropdown - DARK text on light background */
