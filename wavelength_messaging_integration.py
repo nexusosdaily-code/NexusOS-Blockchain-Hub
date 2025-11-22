@@ -200,28 +200,18 @@ class WavelengthMessagingSystem:
         # Convert to smallest units (1 NXT = 100 units)
         total_cost_units = int(total_cost_nxt * 100)
         
-        # 3. Deduct payment from sender
+        # 3. VALIDATION FIRST - Check all requirements BEFORE payment (ATOMIC SAFETY)
+        # 3a. Validate sender account exists in token_system
         sender_acct = self.token_system.get_account(sender_account)
         if sender_acct is None:
             return False, None, f"Sender account '{sender_account}' not found"
         
-        if sender_acct.balance < total_cost_units:
+        # NOTE: Balance check happens in PaymentAdapter.authorize() for real wallets
+        # Only check token_system balance if NO payment adapter (demo accounts)
+        if not payment_adapter and sender_acct.balance < total_cost_units:
             return False, None, f"Insufficient balance. Need {total_cost_nxt:.6f} NXT, have {sender_acct.get_balance_nxt():.6f} NXT"
         
-        # Create transaction (transfer to validator pool)
-        tx = self.token_system.transfer(
-            sender_account,
-            "VALIDATOR_POOL",  # Fees go to validator pool
-            total_cost_units,
-            fee=0  # No additional fee for message payments
-        )
-        
-        if not tx:
-            return False, None, "Payment transaction failed"
-        
-        self.total_fees_collected += total_cost_nxt
-        
-        # 4. Validate via spectral diversity (ENFORCE 5/6 REGIONS EXPLICITLY)
+        # 4. Validate via spectral diversity (ENFORCE 5/6 REGIONS EXPLICITLY) - BEFORE PAYMENT!
         required_regions = 5
         
         # Group validators by spectral region
@@ -262,7 +252,9 @@ class WavelengthMessagingSystem:
             return False, None, f"SECURITY VIOLATION: Validator selection failed to span {required_regions} distinct regions. Only {distinct_regions_selected} regions represented."
         
         # 5. Generate interference hash (cryptographic fingerprint)
-        # CRITICAL: Validate parent messages exist and check interference consistency
+        # CRITICAL: Validate parent messages exist and check interference consistency - BEFORE PAYMENT!
+        is_valid_msg = True  # Track overall validation status
+        
         if parent_message_ids and len(parent_message_ids) > 0:
             # VALIDATE: All parents must exist
             missing_parents = []
@@ -284,19 +276,19 @@ class WavelengthMessagingSystem:
             # CRITICAL: Validate interference alignment with EVERY parent
             interference_validations = []
             for i, parent_msg in enumerate(parent_messages):
-                is_valid, interference, validation_msg = self.wavelength_validator.validate_message_chain(
+                chain_valid, interference, validation_msg = self.wavelength_validator.validate_message_chain(
                     parent_msg.wave_properties,
                     wave_props
                 )
                 
                 interference_validations.append({
                     'parent_id': parent_msg.message_id,
-                    'is_valid': is_valid,
+                    'is_valid': chain_valid,
                     'message': validation_msg,
                     'pattern_hash': interference.pattern_hash
                 })
                 
-                if not is_valid:
+                if not chain_valid:
                     return False, None, f"INTERFERENCE VALIDATION FAILED with parent {parent_msg.message_id}: {validation_msg}"
             
             # Use first parent's interference pattern as primary hash
@@ -306,48 +298,112 @@ class WavelengthMessagingSystem:
             # Create a self-interference pattern for genesis blocks
             interference = self.wavelength_validator.compute_interference(wave_props, wave_props)
             interference_hash = f"genesis_{interference.pattern_hash[:16]}"
-            is_valid = True
         
-        # 6. Distribute rewards to validators
-        reward_per_validator_nxt = (total_cost_nxt * 0.4) / len(selected_validators)  # 40% to validators
-        reward_per_validator_units = int(reward_per_validator_nxt * 100)
+        # ALL VALIDATIONS PASSED - Now execute payment atomically
+        # 6. Payment execution (AFTER all validations)
         
-        for validator_id in selected_validators:
-            # Transfer from VALIDATOR_POOL to individual validator
-            validator_acct_id = f"validator_{validator_id}"
+        # Generate transaction metadata for idempotency
+        import hashlib
+        tx_metadata = {
+            'content_hash': hashlib.sha256(content.encode()).hexdigest(),
+            'spectral_region': spectral_region.name,
+            'modulation_type': modulation_type.name
+        }
+        
+        if payment_adapter:
+            # NEW PATH: Atomic payment via PaymentAdapter (real wallet)
+            # 6a. Authorize payment (pre-flight check)
+            can_pay, error_msg = payment_adapter.authorize(sender_account, total_cost_nxt)
+            if not can_pay:
+                return False, None, f"Payment authorization failed: {error_msg}"
             
-            # Ensure validator account exists
-            if self.token_system.get_account(validator_acct_id) is None:
-                self.token_system.create_account(validator_acct_id, initial_balance=0)
-            
-            self.token_system.transfer(
+            # 6b. Commit payment atomically
+            try:
+                payment_result = payment_adapter.commit(
+                    sender_account,
+                    recipient_account,
+                    total_cost_nxt,
+                    tx_metadata
+                )
+                self.total_fees_collected += total_cost_nxt
+            except Exception as e:
+                return False, None, f"Payment failed: {str(e)}"
+        else:
+            # LEGACY PATH: In-memory payment (demo accounts)
+            tx = self.token_system.transfer(
+                sender_account,
                 "VALIDATOR_POOL",
-                validator_acct_id,
-                reward_per_validator_units,
+                total_cost_units,
                 fee=0
             )
             
-            self.total_validator_rewards += reward_per_validator_nxt
+            if not tx:
+                return False, None, "Payment transaction failed"
+            
+            self.total_fees_collected += total_cost_nxt
         
-        # 7. Create message object
-        message_id = f"msg_{len(self.messages):06d}_{interference_hash[:8]}"
-        
-        wavelength_msg = WavelengthMessage(
-            message_id=message_id,
-            sender_account=sender_account,
-            recipient_account=recipient_account,
-            content=content,
-            wave_properties=wave_props,
-            interference_hash=interference_hash,
-            cost_nxt=total_cost_nxt,
-            timestamp=datetime.now(),
-            spectral_validators=selected_validators,
-            is_valid=is_valid
-        )
-        
-        # 8. Add to DAG
-        self.messages.append(wavelength_msg)
-        self.message_dag[message_id] = parent_message_ids or []
+        # 7-9. CRITICAL ATOMIC BLOCK: Wrap rewards + DAG in try/except with rollback
+        try:
+            # 7. Distribute rewards to validators
+            reward_per_validator_nxt = (total_cost_nxt * 0.4) / len(selected_validators)  # 40% to validators
+            reward_per_validator_units = int(reward_per_validator_nxt * 100)
+            
+            for validator_id in selected_validators:
+                # Transfer from VALIDATOR_POOL to individual validator
+                validator_acct_id = f"validator_{validator_id}"
+                
+                # Ensure validator account exists
+                if self.token_system.get_account(validator_acct_id) is None:
+                    self.token_system.create_account(validator_acct_id, initial_balance=0)
+                
+                reward_tx = self.token_system.transfer(
+                    "VALIDATOR_POOL",
+                    validator_acct_id,
+                    reward_per_validator_units,
+                    fee=0
+                )
+                
+                if not reward_tx:
+                    raise Exception(f"Validator reward transfer failed for {validator_acct_id}")
+                
+                # CRITICAL: Record reward distribution for rollback protection
+                if payment_adapter and hasattr(payment_adapter, 'record_reward_distribution'):
+                    payment_adapter.record_reward_distribution(validator_acct_id, reward_per_validator_units)
+                
+                self.total_validator_rewards += reward_per_validator_nxt
+            
+            # 8. Create message object
+            message_id = f"msg_{len(self.messages):06d}_{interference_hash[:8]}"
+            
+            wavelength_msg = WavelengthMessage(
+                message_id=message_id,
+                sender_account=sender_account,
+                recipient_account=recipient_account,
+                content=content,
+                wave_properties=wave_props,
+                interference_hash=interference_hash,
+                cost_nxt=total_cost_nxt,
+                timestamp=datetime.now(),
+                spectral_validators=selected_validators,
+                is_valid=is_valid_msg
+            )
+            
+            # 9. Add to DAG
+            self.messages.append(wavelength_msg)
+            self.message_dag[message_id] = parent_message_ids or []
+            
+        except Exception as e:
+            # CRITICAL: Reward distribution or DAG append failed
+            # Attempt rollback to reverse payment
+            if payment_adapter:
+                rollback_success = payment_adapter.rollback()
+                if rollback_success:
+                    return False, None, f"Post-payment operation failed, payment rolled back (token_system): {str(e)}"
+                else:
+                    return False, None, f"CRITICAL: Operation failed AND rollback failed. Manual intervention required: {str(e)}"
+            else:
+                # Demo account - can't rollback easily, just fail
+                return False, None, f"Post-payment operation failed: {str(e)}"
         
         status_msg = f"""
 ✅ Message sent successfully!

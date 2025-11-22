@@ -31,6 +31,7 @@ from wavelength_messaging_integration import (
 from wavelength_validator import SpectralRegion, ModulationType
 from native_token import NativeTokenSystem
 from nexus_native_wallet import NexusNativeWallet
+from messaging_payment_adapter import WalletPaymentAdapter, DemoPaymentAdapter
 
 
 def render_mobile_dag_messaging():
@@ -339,90 +340,56 @@ def render_send_message(messaging_system: WavelengthMessagingSystem, token_syste
     st.divider()
     
     if st.button("📤 Send Message", type="primary", disabled=not can_send, width="stretch"):
-        with st.spinner("🌊 Validating accounts and processing payment..."):
-            payment_success = True
-            payment_error = None
-            
-            # PRE-FLIGHT: Validate everything BEFORE taking payment
+        with st.spinner("🌊 Processing atomic payment + message delivery..."):
+            # Create Payment Adapter based on account type
             if sender not in ["alice", "bob", "charlie"]:
-                try:
-                    # Get wallet instance
-                    if 'nexus_wallet' not in st.session_state:
-                        raise ValueError("Wallet not initialized")
-                    
+                # REAL WALLET: Use WalletPaymentAdapter for atomic safety
+                if 'nexus_wallet' not in st.session_state:
+                    st.error("❌ Wallet not initialized")
+                elif not wallet_password:
+                    st.error("❌ Wallet password required")
+                else:
                     wallet = st.session_state.nexus_wallet
+                    payment_adapter = WalletPaymentAdapter(wallet, token_system, wallet_password)
                     
-                    # Ensure VALIDATOR_POOL account exists in wallet
-                    try:
-                        wallet.get_balance("VALIDATOR_POOL")
-                    except:
-                        # Create VALIDATOR_POOL account if it doesn't exist
-                        try:
-                            wallet.create_account("VALIDATOR_POOL", "validator_pool_password")
-                            st.info("Created VALIDATOR_POOL account for messaging fees")
-                        except Exception as e:
-                            raise ValueError(f"Cannot create VALIDATOR_POOL account: {str(e)}")
-                    
-                    # CRITICAL: Ensure recipient has account in token_system BEFORE payment
-                    # This prevents payment without message delivery
-                    if token_system.get_account(recipient) is None:
-                        # Create recipient account in token_system
-                        token_system.create_account(recipient, initial_balance=0)
-                        st.info(f"Created messaging account for recipient {recipient[:10] if len(recipient) > 10 else recipient}")
-                    
-                    # Validate recipient account exists (if not demo)
-                    if recipient not in ["alice", "bob", "charlie"]:
-                        try:
-                            wallet.get_balance(recipient)
-                        except:
-                            st.warning(f"⚠️ Recipient {recipient[:10]}... not found in wallet. They must create an account to see this message.")
-                    
-                    # Generate deterministic idempotency key from message content
-                    # This ensures retries use the same key and don't double-charge
-                    idem_data = f"{sender}|{recipient}|{hashlib.sha256(message_text.encode()).hexdigest()}|{region.name}|{modulation.name}"
-                    idempotency_key = hashlib.sha256(idem_data.encode()).hexdigest()[:32]
-                    
-                    # CRITICAL: Pay BEFORE sending message (prevents free messages)
-                    payment_result = wallet.send_nxt(
-                        from_address=sender,
-                        to_address="VALIDATOR_POOL",
-                        amount=total_cost_nxt,
-                        password=wallet_password,
-                        idempotency_key=idempotency_key
+                    # Send message with atomic payment adapter
+                    success, msg_obj, status = messaging_system.send_message(
+                        sender_account=sender,
+                        recipient_account=recipient,
+                        content=message_text,
+                        spectral_region=region,
+                        modulation_type=modulation,
+                        parent_message_ids=parent_ids if len(parent_ids) > 0 else None,
+                        payment_adapter=payment_adapter  # ATOMIC SAFETY!
                     )
                     
-                    payment_success = True
-                    st.success(f"✅ Payment confirmed: {total_cost_nxt:.4f} NXT sent to VALIDATOR_POOL")
-                    
-                except Exception as e:
-                    payment_success = False
-                    payment_error = str(e)
-                    st.error(f"❌ Payment failed: {payment_error}")
-                    st.error("Message NOT sent. Please fix payment issues and try again.")
-            
-            # STEP 2: Only send message if payment succeeded (or if demo account)
-            if payment_success:
+                    if success:
+                        st.success(f"📨 {status}")
+                        st.info(f"💰 Atomic transaction: Payment + Message delivered together")
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {status}")
+            else:
+                # DEMO ACCOUNT: Use DemoPaymentAdapter (legacy behavior)
+                payment_adapter = DemoPaymentAdapter(token_system)
+                
                 success, msg_obj, status = messaging_system.send_message(
                     sender_account=sender,
                     recipient_account=recipient,
                     content=message_text,
                     spectral_region=region,
                     modulation_type=modulation,
-                    parent_message_ids=parent_ids if len(parent_ids) > 0 else None
+                    parent_message_ids=parent_ids if len(parent_ids) > 0 else None,
+                    payment_adapter=payment_adapter
                 )
                 
                 if success:
-                    if sender not in ["alice", "bob", "charlie"]:
-                        st.success(f"📨 {status}")
-                    else:
-                        st.success(status)
-                    
+                    st.success(status)
                     st.balloons()
                     st.rerun()
                 else:
-                    st.error(f"❌ Message validation failed: {status}")
-                    if sender not in ["alice", "bob", "charlie"]:
-                        st.warning(f"⚠️ Payment was already processed ({total_cost_nxt:.4f} NXT). Please contact support for refund.")
+                    st.error(f"❌ {status}")
 
 
 def render_inbox(messaging_system: WavelengthMessagingSystem, current_user: str):
