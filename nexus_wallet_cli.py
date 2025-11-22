@@ -73,14 +73,22 @@ def balance(address):
 @click.option('--amount', required=True, type=float, help='Amount in NXT')
 @click.option('--password', prompt=True, hide_input=True)
 @click.option('--fee', default=None, type=float, help='Custom fee (default: 0.01 NXT)')
-def send(from_address, to_address, amount, password, fee):
+@click.option('--idempotency-key', default=None, help='Unique key for retry safety (auto-generated if omitted)')
+def send(from_address, to_address, amount, password, fee, idempotency_key):
     """Send NXT tokens"""
     try:
+        import uuid
         wallet = NexusNativeWallet()
+        
+        # Generate idempotency key if not provided
+        if not idempotency_key:
+            idempotency_key = uuid.uuid4().hex
+            console.print(f"[dim]Generated idempotency key: {idempotency_key}[/dim]")
+            console.print(f"[dim]Tip: Use --idempotency-key={idempotency_key} to safely retry this exact transaction[/dim]\n")
         
         console.print(f"\n[yellow]Sending {amount} NXT to {to_address}...[/yellow]\n")
         
-        result = wallet.send_nxt(from_address, to_address, amount, password, fee)
+        result = wallet.send_nxt(from_address, to_address, amount, password, fee, idempotency_key)
         
         console.print("[green]✓[/green] Transaction sent!\n")
         

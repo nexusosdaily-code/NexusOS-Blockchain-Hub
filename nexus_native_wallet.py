@@ -255,6 +255,32 @@ class NexusNativeWallet:
             self.db.commit()
         return account
     
+    def _format_transaction_response(self, tx_record: WalletTransaction, status: str = 'new_commit') -> Dict[str, Any]:
+        """Format transaction response with normalized schema for backwards compatibility"""
+        # Parse spectral proof safely
+        try:
+            spectral_proof = json.loads(tx_record.spectral_proof) if tx_record.spectral_proof else {}
+            spectral_count = len(spectral_proof) if isinstance(spectral_proof, list) else 'cached'
+        except:
+            spectral_count = 'cached'
+        
+        return {
+            'tx_id': tx_record.tx_id,
+            'from_address': tx_record.from_address,
+            'to_address': tx_record.to_address,
+            'from': tx_record.from_address,  # Backwards compatibility alias
+            'to': tx_record.to_address,  # Backwards compatibility alias
+            'amount_nxt': tx_record.amount_nxt,
+            'fee_nxt': tx_record.fee_nxt,
+            'timestamp': tx_record.timestamp.isoformat() if hasattr(tx_record.timestamp, 'isoformat') else str(tx_record.timestamp),
+            'status': status,
+            'quantum_proof': {
+                'spectral_regions': spectral_count,
+                'interference_hash': tx_record.interference_hash[:16] + '...' if tx_record.interference_hash else 'N/A',
+                'energy_cost': tx_record.energy_cost or 0
+            }
+        }
+    
     # ========================================================================
     # Wallet Management
     # ========================================================================
@@ -392,10 +418,12 @@ class NexusNativeWallet:
         to_address: str,
         amount_nxt: float,
         password: str,
-        fee_nxt: Optional[float] = None
+        fee_nxt: Optional[float] = None,
+        idempotency_key: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Send NXT tokens with quantum-resistant signatures.
+        Uses DAG-based idempotency to prevent double-execution.
         
         Args:
             from_address: Sender wallet address
@@ -403,9 +431,15 @@ class NexusNativeWallet:
             amount_nxt: Amount in NXT
             password: Sender wallet password
             fee_nxt: Optional custom fee (uses default if None)
+            idempotency_key: REQUIRED client-provided key for retry safety.
+                            Use a UUID or any unique string. MUST be stable
+                            across retries to prevent double-execution.
         
         Returns:
             Transaction details with quantum proofs
+            
+        Raises:
+            ValueError: If idempotency_key is not provided
         """
         # Input validation - prevent negative amount exploit
         if amount_nxt <= 0:
@@ -415,12 +449,40 @@ class NexusNativeWallet:
         if amount_nxt > 1e12:  # Sanity check: max 1 trillion NXT
             raise ValueError(f"Amount too large: {amount_nxt}")
         
+        # ═══════════════════════════════════════════════════════════════
+        # DAG-BASED IDEMPOTENCY: REQUIRE client-provided key (Stripe-style)
+        # ═══════════════════════════════════════════════════════════════
+        # Industry best practice: Clients MUST provide an idempotency key
+        # Without it, we CANNOT prevent double-execution on post-commit retries
+        import time
+        import uuid
+        
+        if not idempotency_key:
+            # STRICT ENFORCEMENT: Idempotency key is REQUIRED for safety
+            # Without it, we CANNOT prevent double-execution on post-commit retries
+            raise ValueError(
+                "idempotency_key is REQUIRED to prevent double-execution. "
+                "Provide a stable unique string (e.g., UUID) that remains "
+                "the same across retries. Example: uuid.uuid4().hex"
+            )
+        
+        # Generate stable transaction ID from idempotency key
+        tx_id = hashlib.sha256(f"{from_address}:{idempotency_key}".encode()).hexdigest()[:32]
+        
+        # Check if this transaction DAG node already exists (idempotent check)
+        # Use FOR UPDATE lock to prevent concurrent race between SELECT and INSERT
+        # Note: Removed skip_locked for SQLite compatibility - we WANT to wait for lock
+        existing_tx = self.db.query(WalletTransaction).filter_by(tx_id=tx_id).with_for_update().first()
+        if existing_tx:
+            # Transaction already committed! Return cached result with FULL schema parity
+            return self._format_transaction_response(existing_tx, status='idempotent_cached')
+        
         # Get wallet
         wallet = self.db.query(NexusWallet).filter_by(address=from_address).first()
         if not wallet:
             raise ValueError("Wallet not found")
         
-        # Unlock wallet
+        # Unlock wallet (before transaction to avoid holding locks during crypto)
         private_key = self._decrypt_private_key(
             wallet.encrypted_private_key,
             password,
@@ -431,71 +493,130 @@ class NexusNativeWallet:
         amount_units = int(amount_nxt * 100)
         fee_units = int(fee_nxt * 100) if fee_nxt else 1  # Default 0.01 NXT fee
         
-        # Execute transfer on persistent accounts
-        from_account = self._get_token_account(from_address)
-        if not from_account or from_account.balance < (amount_units + fee_units):
-            raise ValueError("Transfer failed - insufficient balance")
+        # ═══════════════════════════════════════════════════════════════
+        # ATOMIC TRANSACTION: All changes in ONE commit with row locks
+        # ═══════════════════════════════════════════════════════════════
+        # Use row-level locking (SELECT ... FOR UPDATE) to prevent concurrent modifications
         
-        # Deduct from sender
-        from_account.balance -= (amount_units + fee_units)
-        from_account.nonce += 1
+        from sqlalchemy.exc import IntegrityError
         
-        # Add to receiver
-        to_account = self._get_or_create_token_account(to_address)
-        to_account.balance += amount_units
+        try:
+            # Lock sender account (prevents concurrent spends)
+            from_account = self.db.query(TokenAccount).filter_by(
+                address=from_address
+            ).with_for_update().first()
+            
+            if not from_account:
+                raise ValueError("Sender account not found")
+            
+            # Check sufficient balance
+            if from_account.balance < (amount_units + fee_units):
+                raise ValueError(f"Insufficient balance: have {from_account.balance}, need {amount_units + fee_units}")
+            
+            # Deduct from sender
+            from_account.balance -= (amount_units + fee_units)
+            from_account.nonce += 1
+            
+            # Lock receiver account
+            to_account = self.db.query(TokenAccount).filter_by(
+                address=to_address
+            ).with_for_update().first()
+            
+            if not to_account:
+                # Create new account if doesn't exist
+                to_account = TokenAccount(address=to_address, balance=0, nonce=0)
+                self.db.add(to_account)
+                self.db.flush()  # Flush to get the account in the session
+            
+            # Add to receiver
+            to_account.balance += amount_units
+            
+            # Lock validator pool
+            validator_pool = self.db.query(TokenAccount).filter_by(
+                address="VALIDATOR_POOL"
+            ).with_for_update().first()
+            
+            if validator_pool:
+                validator_pool.balance += fee_units
+            
+            # Create transaction record
+            from native_token import TokenTransaction, TransactionType
+            
+            tx = TokenTransaction(
+                tx_id=tx_id,
+                tx_type=TransactionType.TRANSFER,
+                from_address=from_address,
+                to_address=to_address,
+                amount=amount_units,
+                fee=fee_units
+            )
+            
+            # Add quantum security layer
+            quantum_proof = self._generate_quantum_proof(tx, private_key)
+            
+            # Save transaction record in same atomic transaction
+            db_tx = WalletTransaction(
+                tx_id=tx_id,  # DAG node ID with unique constraint
+                from_address=from_address,
+                to_address=to_address,
+                amount_nxt=amount_nxt,
+                fee_nxt=(tx.fee / 100.0),
+                status='confirmed',
+                wave_signature=json.dumps(quantum_proof['wave_signature']),
+                spectral_proof=json.dumps(quantum_proof['spectral_signatures']),
+                interference_hash=quantum_proof['interference_hash'],
+                energy_cost=quantum_proof['energy_cost']
+            )
+            self.db.add(db_tx)
+            
+            # SINGLE ATOMIC COMMIT: Balances + Transaction record + Nonce
+            # Either ALL succeed or ALL roll back (prevents partial states)
+            self.db.commit()
+            
+        except IntegrityError as e:
+            # Unique constraint violation on tx_id - transaction already exists!
+            # This happens when concurrent retries pass the SELECT check simultaneously
+            # Roll back and return cached result (idempotent)
+            self.db.rollback()
+            
+            # Refresh ALL accounts to clear any in-memory state changes
+            try:
+                if 'from_account' in locals():
+                    self.db.refresh(from_account)
+                if 'to_account' in locals():
+                    self.db.refresh(to_account)
+                if 'validator_pool' in locals() and validator_pool:
+                    self.db.refresh(validator_pool)
+            except:
+                pass  # Account might not be in session anymore
+            
+            # Fetch the existing transaction (it must exist now)
+            existing_tx = self.db.query(WalletTransaction).filter_by(tx_id=tx_id).first()
+            if existing_tx:
+                return self._format_transaction_response(existing_tx, status='idempotent_collision_detected')
+            else:
+                # This should never happen, but raise if it does
+                raise ValueError(f"IntegrityError on tx_id {tx_id} but no transaction found!") from e
         
-        # Fee to validator pool
-        validator_pool = self._get_token_account("VALIDATOR_POOL")
-        if validator_pool:
-            validator_pool.balance += fee_units
+        except Exception as e:
+            # Other errors: Roll back and refresh ALL account state
+            self.db.rollback()
+            
+            # Refresh ALL accounts to clear any in-memory state changes (including nonce)
+            try:
+                if 'from_account' in locals():
+                    self.db.refresh(from_account)
+                if 'to_account' in locals():
+                    self.db.refresh(to_account)
+                if 'validator_pool' in locals() and validator_pool:
+                    self.db.refresh(validator_pool)
+            except:
+                pass  # Account might not be in session anymore
+            
+            raise
         
-        self.db.commit()
-        
-        # Create transaction record
-        from native_token import TokenTransaction, TransactionType
-        import time
-        
-        tx = TokenTransaction(
-            tx_id=f"TX{int(time.time() * 1000):016d}",
-            tx_type=TransactionType.TRANSFER,
-            from_address=from_address,
-            to_address=to_address,
-            amount=amount_units,
-            fee=fee_units
-        )
-        
-        # Add quantum security layer
-        quantum_proof = self._generate_quantum_proof(tx, private_key)
-        
-        # Save to wallet database
-        db_tx = WalletTransaction(
-            tx_id=tx.tx_id,
-            from_address=from_address,
-            to_address=to_address,
-            amount_nxt=amount_nxt,
-            fee_nxt=(tx.fee / 100.0),
-            status='confirmed',
-            wave_signature=json.dumps(quantum_proof['wave_signature']),
-            spectral_proof=json.dumps(quantum_proof['spectral_signatures']),
-            interference_hash=quantum_proof['interference_hash'],
-            energy_cost=quantum_proof['energy_cost']
-        )
-        self.db.add(db_tx)
-        self.db.commit()
-        
-        return {
-            'tx_id': tx.tx_id,
-            'from_address': from_address,
-            'to_address': to_address,
-            'amount_nxt': amount_nxt,
-            'fee_nxt': tx.fee / 100.0,
-            'timestamp': tx.timestamp,
-            'quantum_proof': {
-                'spectral_regions': len(quantum_proof['spectral_signatures']),
-                'interference_hash': quantum_proof['interference_hash'][:16] + '...',
-                'energy_cost': quantum_proof['energy_cost']
-            }
-        }
+        # Success! Return normalized response
+        return self._format_transaction_response(db_tx, status='new_commit')
     
     # ========================================================================
     # WNSP Messaging

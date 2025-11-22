@@ -372,9 +372,26 @@ def render_send_nxt_tab(wallet):
                 st.error("Amount must be positive")
             else:
                 try:
+                    # Generate/retrieve stable idempotency key for retry safety
+                    # Key persists in session state across retries to prevent double-execution
+                    import uuid
+                    tx_key = f"tx_idempotency_{from_addr}_{to_address}_{amount}"
+                    
+                    if tx_key not in st.session_state:
+                        # First attempt: Generate new key
+                        st.session_state[tx_key] = uuid.uuid4().hex
+                    
+                    idempotency_key = st.session_state[tx_key]
+                    
                     with st.spinner("🔐 Creating quantum-signed transaction..."):
-                        tx = wallet.send_nxt(from_addr, to_address, amount, password)
+                        tx = wallet.send_nxt(
+                            from_addr, to_address, amount, password,
+                            idempotency_key=idempotency_key
+                        )
                         time.sleep(0.5)
+                        
+                        # Transaction succeeded! Clear the key for next transaction
+                        del st.session_state[tx_key]
                     
                     st.success("✅ Transaction sent!")
                     st.balloons()
