@@ -191,6 +191,186 @@ def create_wallet_distribution_chart(wallets):
     return fig
 
 
+def create_dag_graph(wallet_system, tx_id=None, msg_id=None, depth=3):
+    """Create DAG visualization showing parent-child relationships"""
+    from nexus_native_wallet import DagEdge
+    
+    try:
+        # Query DAG edges
+        if tx_id:
+            edges_query = wallet_system.db.query(DagEdge).filter(
+                (DagEdge.child_id == tx_id) | (DagEdge.parent_id == tx_id)
+            ).all()
+        elif msg_id:
+            edges_query = wallet_system.db.query(DagEdge).filter(
+                (DagEdge.child_id == msg_id) | (DagEdge.parent_id == msg_id)
+            ).all()
+        else:
+            # Get recent edges
+            edges_query = wallet_system.db.query(DagEdge).order_by(
+                DagEdge.timestamp.desc()
+            ).limit(50).all()
+        
+        if not edges_query:
+            fig = go.Figure()
+            fig.update_layout(
+                title="DAG Structure",
+                annotations=[{
+                    'text': 'No DAG edges found - send transactions to build the graph',
+                    'xref': 'paper',
+                    'yref': 'paper',
+                    'showarrow': False,
+                    'font': {'size': 16}
+                }]
+            )
+            return fig
+        
+        # Build node and edge lists
+        nodes = set()
+        edges = []
+        node_types = {}
+        node_depths = {}
+        
+        for edge in edges_query:
+            nodes.add(edge.child_id)
+            nodes.add(edge.parent_id)
+            edges.append((edge.parent_id, edge.child_id))
+            node_types[edge.child_id] = edge.edge_type
+            node_types[edge.parent_id] = edge.edge_type
+            node_depths[edge.child_id] = edge.depth
+        
+        # Create network graph layout
+        import networkx as nx
+        G = nx.DiGraph()
+        G.add_edges_from(edges)
+        
+        # Calculate positions
+        pos = nx.spring_layout(G, k=2, iterations=50)
+        
+        # Create edge traces
+        edge_x = []
+        edge_y = []
+        for edge in G.edges():
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+        
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=2, color='#888'),
+            hoverinfo='none',
+            mode='lines')
+        
+        # Create node traces
+        node_x = []
+        node_y = []
+        node_text = []
+        node_color = []
+        
+        color_map = {
+            'transaction': '#00CED1',
+            'message': '#FF6347',
+            'cross': '#FFD700'
+        }
+        
+        for node in G.nodes():
+            x, y = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+            node_type = node_types.get(node, 'unknown')
+            depth_info = node_depths.get(node, '?')
+            node_text.append(f"{node[:16]}...<br>Type: {node_type}<br>Depth: {depth_info}")
+            node_color.append(color_map.get(node_type, '#888'))
+        
+        node_trace = go.Scatter(
+            x=node_x, y=node_y,
+            mode='markers+text',
+            hoverinfo='text',
+            text=node_text,
+            marker=dict(
+                color=node_color,
+                size=15,
+                line_width=2))
+        
+        fig = go.Figure(data=[edge_trace, node_trace],
+                     layout=go.Layout(
+                        title='DAG Structure (Parent → Child)',
+                        showlegend=False,
+                        hovermode='closest',
+                        margin=dict(b=0,l=0,r=0,t=40),
+                        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                        height=600
+                        ))
+        
+        return fig
+    except Exception as e:
+        st.error(f"Error creating DAG graph: {str(e)}")
+        return go.Figure()
+
+
+def create_transaction_io_view(wallet_system, tx_id):
+    """Create Bitcoin-style input/output visualization"""
+    from nexus_native_wallet import TransactionIO
+    
+    try:
+        io_records = wallet_system.db.query(TransactionIO).filter_by(tx_id=tx_id).all()
+        
+        if not io_records:
+            return None
+        
+        inputs = [io for io in io_records if io.io_type == 'input']
+        outputs = [io for io in io_records if io.io_type == 'output']
+        
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=('Inputs', 'Outputs'),
+            specs=[[{'type': 'bar'}, {'type': 'bar'}]]
+        )
+        
+        # Inputs
+        if inputs:
+            fig.add_trace(
+                go.Bar(
+                    y=[f"{inp.address[:12]}..." for inp in inputs],
+                    x=[inp.amount_nxt for inp in inputs],
+                    orientation='h',
+                    name='Inputs',
+                    marker=dict(color='#FF6B6B'),
+                    text=[f"{inp.amount_nxt:.4f} NXT" for inp in inputs],
+                    textposition='auto'
+                ),
+                row=1, col=1
+            )
+        
+        # Outputs
+        if outputs:
+            fig.add_trace(
+                go.Bar(
+                    y=[f"{out.address[:12]}..." for out in outputs],
+                    x=[out.amount_nxt for out in outputs],
+                    orientation='h',
+                    name='Outputs',
+                    marker=dict(color='#4ECDC4'),
+                    text=[f"{out.amount_nxt:.4f} NXT" for out in outputs],
+                    textposition='auto'
+                ),
+                row=1, col=2
+            )
+        
+        fig.update_layout(
+            height=300,
+            showlegend=False,
+            title_text=f"Transaction IO: {tx_id[:16]}..."
+        )
+        
+        return fig
+    except Exception as e:
+        st.error(f"Error creating IO view: {str(e)}")
+        return None
+
+
 def render_blockchain_dashboard():
     """Render the REAL blockchain explorer dashboard"""
     st.title("⛓️ NexusOS Blockchain Explorer")
@@ -238,7 +418,7 @@ def render_blockchain_dashboard():
     st.sidebar.metric("Total Burned (Deflationary)", f"{total_fees + total_msg_burns:.6f} NXT")
     
     # Main dashboard tabs
-    tabs = st.tabs(["📊 Overview", "💸 Transactions", "📨 Messages", "👥 Wallets", "⚛️ Physics Metrics"])
+    tabs = st.tabs(["📊 Overview", "💸 Transactions", "📨 Messages", "👥 Wallets", "🕸️ DAG Graph", "⚛️ Physics Metrics"])
     
     with tabs[0]:  # Overview
         st.header("Network Activity")
@@ -321,30 +501,99 @@ def render_blockchain_dashboard():
             
             # Transaction details expander
             if filtered_txs:
-                st.subheader("Transaction Details")
-                selected_tx_id = st.selectbox("Select transaction to view quantum proof", 
+                st.divider()
+                st.subheader("🔍 Transaction Deep Dive")
+                selected_tx_id = st.selectbox("Select transaction to analyze", 
                                              [tx['tx_id'] for tx in filtered_txs[:20]])
                 
                 if selected_tx_id:
-                    try:
-                        proof = wallet_system.export_quantum_proof(selected_tx_id)
-                        
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.json({
-                                'transaction_id': proof['tx_id'],
-                                'interference_hash': proof['interference_hash'],
-                                'energy_cost': proof['energy_cost']
-                            })
-                        
-                        with col2:
-                            st.json({
-                                'wave_signature': proof['wave_signature'],
-                                'spectral_proof': proof['spectral_proof']
-                            })
-                    except Exception as e:
-                        st.error(f"Failed to load quantum proof: {str(e)}")
+                    detail_tabs = st.tabs(["💰 Inputs/Outputs", "⚛️ Quantum Proof", "✅ Verification Record"])
+                    
+                    # Tab 1: Bitcoin-style IO view
+                    with detail_tabs[0]:
+                        st.markdown("**Bitcoin-style UTXO Model**")
+                        io_fig = create_transaction_io_view(wallet_system, selected_tx_id)
+                        if io_fig:
+                            st.plotly_chart(io_fig, use_container_width=True)
+                        else:
+                            st.info("No IO records found for this transaction. This might be an older transaction before the DAG ledger system was activated.")
+                    
+                    # Tab 2: Quantum proof
+                    with detail_tabs[1]:
+                        st.markdown("**Wavelength-based Cryptographic Proof**")
+                        try:
+                            proof = wallet_system.export_quantum_proof(selected_tx_id)
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.json({
+                                    'transaction_id': proof['tx_id'],
+                                    'interference_hash': proof['interference_hash'],
+                                    'energy_cost': proof['energy_cost']
+                                })
+                            
+                            with col2:
+                                st.json({
+                                    'wave_signature': proof['wave_signature'],
+                                    'spectral_proof': proof['spectral_proof']
+                                })
+                            
+                            # Download proof
+                            st.download_button(
+                                "📥 Download Full Proof",
+                                data=json.dumps(proof, indent=2),
+                                file_name=f"quantum_proof_{selected_tx_id[:16]}.json",
+                                mime="application/json"
+                            )
+                        except Exception as e:
+                            st.error(f"Failed to load quantum proof: {str(e)}")
+                    
+                    # Tab 3: Verification record
+                    with detail_tabs[2]:
+                        st.markdown("**Wavelength Validation Record**")
+                        try:
+                            from nexus_native_wallet import VerificationRecord
+                            verification = wallet_system.db.query(VerificationRecord).filter_by(
+                                tx_id=selected_tx_id
+                            ).first()
+                            
+                            if verification:
+                                col1, col2, col3 = st.columns(3)
+                                
+                                with col1:
+                                    st.metric("Verifier Type", verification.verifier_type.upper())
+                                    st.metric("Validation Status", 
+                                             "✅ VALID" if verification.is_valid else "❌ INVALID")
+                                
+                                with col2:
+                                    if verification.wavelength_nm:
+                                        st.metric("Wavelength", f"{verification.wavelength_nm:.2f} nm")
+                                    if verification.spectral_region:
+                                        st.metric("Spectral Region", verification.spectral_region)
+                                
+                                with col3:
+                                    if verification.validator_address:
+                                        st.metric("Validator", f"{verification.validator_address[:12]}...")
+                                    st.metric("Validated At", verification.validation_timestamp.strftime("%Y-%m-%d %H:%M:%S"))
+                                
+                                st.divider()
+                                
+                                # Full verification data
+                                with st.expander("📜 Full Verification Data"):
+                                    full_proof = json.loads(verification.full_proof)
+                                    st.json(full_proof)
+                                    
+                                    st.download_button(
+                                        "📥 Download Verification Record",
+                                        data=json.dumps(full_proof, indent=2),
+                                        file_name=f"verification_{selected_tx_id[:16]}.json",
+                                        mime="application/json"
+                                    )
+                            else:
+                                st.info("No verification record found. This might be an older transaction before the DAG ledger system was activated.")
+                        except Exception as e:
+                            st.error(f"Failed to load verification record: {str(e)}")
         else:
             st.info("No transactions found. Send your first NXT transaction to see it here!")
     
@@ -412,7 +661,87 @@ def render_blockchain_dashboard():
         else:
             st.info("No wallets found. Create your first wallet to get started!")
     
-    with tabs[4]:  # Physics Metrics
+    with tabs[4]:  # DAG Graph
+        st.header("🕸️ DAG Network Structure")
+        
+        st.markdown("""
+        Visualize the Directed Acyclic Graph (DAG) structure showing parent-child relationships
+        between transactions and messages. Similar to Bitcoin's blockchain, but with parallel paths.
+        """)
+        
+        # DAG visualization
+        st.subheader("Network DAG")
+        dag_fig = create_dag_graph(wallet_system)
+        st.plotly_chart(dag_fig, use_container_width=True)
+        
+        st.divider()
+        
+        # DAG statistics
+        try:
+            from nexus_native_wallet import DagEdge
+            all_edges = wallet_system.db.query(DagEdge).all()
+            
+            if all_edges:
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Total DAG Edges", len(all_edges))
+                
+                with col2:
+                    tx_edges = [e for e in all_edges if e.edge_type == 'transaction']
+                    st.metric("Transaction Edges", len(tx_edges))
+                
+                with col3:
+                    msg_edges = [e for e in all_edges if e.edge_type == 'message']
+                    st.metric("Message Edges", len(msg_edges))
+                
+                with col4:
+                    max_depth = max([e.depth for e in all_edges]) if all_edges else 0
+                    st.metric("Max DAG Depth", max_depth)
+                
+                st.divider()
+                
+                # Depth distribution
+                st.subheader("DAG Depth Distribution")
+                depth_counts = {}
+                for edge in all_edges:
+                    depth_counts[edge.depth] = depth_counts.get(edge.depth, 0) + 1
+                
+                depth_fig = go.Figure(data=[go.Bar(
+                    x=list(depth_counts.keys()),
+                    y=list(depth_counts.values()),
+                    marker=dict(color='#4ECDC4')
+                )])
+                
+                depth_fig.update_layout(
+                    title="Nodes by Depth from Genesis",
+                    xaxis_title="Depth Level",
+                    yaxis_title="Number of Nodes",
+                    height=400
+                )
+                
+                st.plotly_chart(depth_fig, use_container_width=True)
+                
+                st.divider()
+                
+                # Recent edges table
+                st.subheader("Recent DAG Connections")
+                recent_edges = sorted(all_edges, key=lambda x: x.timestamp, reverse=True)[:50]
+                edge_data = [{
+                    'Child ID': e.child_id[:16] + '...',
+                    'Parent ID': e.parent_id[:16] + '...' if e.parent_id != 'GENESIS' else 'GENESIS',
+                    'Type': e.edge_type,
+                    'Depth': e.depth,
+                    'Timestamp': e.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                } for e in recent_edges]
+                
+                st.dataframe(pd.DataFrame(edge_data), use_container_width=True, height=400)
+            else:
+                st.info("No DAG edges found. Send transactions or messages to build the DAG structure.")
+        except Exception as e:
+            st.error(f"Error loading DAG statistics: {str(e)}")
+    
+    with tabs[5]:  # Physics Metrics
         st.header("⚛️ Quantum Physics Metrics")
         
         st.markdown("""

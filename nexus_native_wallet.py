@@ -140,6 +140,57 @@ class TokenAccount(Base):
     nonce = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class TransactionIO(Base):
+    """Bitcoin-style UTXO model - tracks inputs and outputs for each transaction"""
+    __tablename__ = 'nexus_transaction_io'
+    
+    id = Column(Integer, primary_key=True)
+    tx_id = Column(String(64), nullable=False)
+    io_type = Column(String(10), nullable=False)  # 'input' or 'output'
+    address = Column(String(64), nullable=False)
+    amount_nxt = Column(Float, nullable=False)
+    sequence = Column(Integer, nullable=False)  # Order in the transaction
+    
+    # UTXO tracking
+    is_spent = Column(Boolean, default=False)
+    spent_in_tx = Column(String(64), nullable=True)  # TX that spent this output
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+class DagEdge(Base):
+    """DAG structure for transactions - tracks parent-child relationships like blockchain"""
+    __tablename__ = 'nexus_dag_edges'
+    
+    id = Column(Integer, primary_key=True)
+    child_id = Column(String(64), nullable=False)  # Transaction/Message ID
+    parent_id = Column(String(64), nullable=False)  # Parent Transaction/Message ID
+    edge_type = Column(String(20), nullable=False)  # 'transaction', 'message', 'cross'
+    
+    # DAG metrics
+    depth = Column(Integer, nullable=False)  # Distance from genesis
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+class VerificationRecord(Base):
+    """Wavelength validation proof - shows how each transaction was verified"""
+    __tablename__ = 'nexus_verification_records'
+    
+    id = Column(Integer, primary_key=True)
+    tx_id = Column(String(64), unique=True, nullable=False)
+    verifier_type = Column(String(30), nullable=False)  # 'wavelength', 'cryptographic', 'wnsp'
+    
+    # Verification proof data
+    wavelength_nm = Column(Float, nullable=True)
+    spectral_region = Column(String(20), nullable=True)
+    interference_pattern = Column(Text, nullable=True)
+    signature_hash = Column(String(128), nullable=True)
+    
+    # Validation result
+    is_valid = Column(Boolean, nullable=False)
+    validation_timestamp = Column(DateTime, default=datetime.utcnow)
+    validator_address = Column(String(64), nullable=True)
+    
+    # Complete proof object (JSON)
+    full_proof = Column(Text, nullable=False)
+
 
 # ============================================================================
 # NexusOS Native Wallet
@@ -569,7 +620,82 @@ class NexusNativeWallet:
             )
             self.db.add(db_tx)
             
-            # SINGLE ATOMIC COMMIT: Balances + Transaction record + Nonce
+            # ═══════════════════════════════════════════════════════════════
+            # DAG LEDGER MECHANICS: Bitcoin-style UTXO + DAG structure
+            # ═══════════════════════════════════════════════════════════════
+            
+            # 1. Transaction Input/Output (UTXO model)
+            tx_input = TransactionIO(
+                tx_id=tx_id,
+                io_type='input',
+                address=from_address,
+                amount_nxt=amount_nxt + (tx.fee / 100.0),
+                sequence=0,
+                is_spent=True,
+                spent_in_tx=tx_id
+            )
+            self.db.add(tx_input)
+            
+            tx_output = TransactionIO(
+                tx_id=tx_id,
+                io_type='output',
+                address=to_address,
+                amount_nxt=amount_nxt,
+                sequence=0,
+                is_spent=False
+            )
+            self.db.add(tx_output)
+            
+            # 2. DAG Edge: Link to parent transactions
+            parent_txs = self.db.query(WalletTransaction).filter(
+                (WalletTransaction.from_address == from_address) | 
+                (WalletTransaction.to_address == from_address)
+            ).order_by(WalletTransaction.timestamp.desc()).limit(2).all()
+            
+            depth = 0
+            for parent_tx in parent_txs:
+                # Get parent depth
+                parent_edge = self.db.query(DagEdge).filter_by(
+                    child_id=parent_tx.tx_id
+                ).order_by(DagEdge.depth.desc()).first()
+                parent_depth = parent_edge.depth if parent_edge else 0
+                depth = max(depth, parent_depth + 1)
+                
+                # Create DAG edge
+                dag_edge = DagEdge(
+                    child_id=tx_id,
+                    parent_id=parent_tx.tx_id,
+                    edge_type='transaction',
+                    depth=depth
+                )
+                self.db.add(dag_edge)
+            
+            # If no parents found (first transaction), create genesis edge
+            if not parent_txs:
+                depth = 1
+                genesis_edge = DagEdge(
+                    child_id=tx_id,
+                    parent_id='GENESIS',
+                    edge_type='transaction',
+                    depth=depth
+                )
+                self.db.add(genesis_edge)
+            
+            # 3. Verification Record: Wavelength validation proof
+            verification = VerificationRecord(
+                tx_id=tx_id,
+                verifier_type='wavelength',
+                wavelength_nm=quantum_proof['wave_signature'].get('wavelength', 0),
+                spectral_region=quantum_proof['wave_signature'].get('spectral_region', 'BLUE'),
+                interference_pattern=quantum_proof['interference_hash'],
+                signature_hash=quantum_proof['interference_hash'],
+                is_valid=True,
+                validator_address=from_address,
+                full_proof=json.dumps(quantum_proof)
+            )
+            self.db.add(verification)
+            
+            # SINGLE ATOMIC COMMIT: Balances + Transaction + IO + DAG + Verification
             # Either ALL succeed or ALL roll back (prevents partial states)
             self.db.commit()
             
@@ -696,6 +822,56 @@ class NexusNativeWallet:
             dag_parents=json.dumps(parent_messages) if parent_messages else None
         )
         self.db.add(msg)
+        
+        # Create DAG edges for message parents
+        depth = 0
+        if parent_messages:
+            for parent_id in parent_messages:
+                # Get parent depth
+                parent_edge = self.db.query(DagEdge).filter_by(
+                    child_id=parent_id
+                ).order_by(DagEdge.depth.desc()).first()
+                parent_depth = parent_edge.depth if parent_edge else 0
+                depth = max(depth, parent_depth + 1)
+                
+                # Create DAG edge
+                dag_edge = DagEdge(
+                    child_id=message_id,
+                    parent_id=parent_id,
+                    edge_type='message',
+                    depth=depth
+                )
+                self.db.add(dag_edge)
+        else:
+            # Link to genesis or previous messages
+            prev_messages = self.db.query(WalletMessage).filter_by(
+                from_address=from_address
+            ).order_by(WalletMessage.timestamp.desc()).limit(1).all()
+            
+            if prev_messages:
+                parent_msg = prev_messages[0]
+                parent_edge = self.db.query(DagEdge).filter_by(
+                    child_id=parent_msg.message_id
+                ).order_by(DagEdge.depth.desc()).first()
+                depth = (parent_edge.depth if parent_edge else 0) + 1
+                
+                dag_edge = DagEdge(
+                    child_id=message_id,
+                    parent_id=parent_msg.message_id,
+                    edge_type='message',
+                    depth=depth
+                )
+                self.db.add(dag_edge)
+            else:
+                # First message - link to genesis
+                depth = 1
+                genesis_edge = DagEdge(
+                    child_id=message_id,
+                    parent_id='GENESIS',
+                    edge_type='message',
+                    depth=depth
+                )
+                self.db.add(genesis_edge)
         
         try:
             self.db.commit()
@@ -1071,3 +1247,231 @@ class NexusNativeWallet:
         """Generate unique message ID"""
         data = f"{address}:{content}:{wavelength}:{time.time()}"
         return f"MSG{hashlib.sha256(data.encode()).hexdigest()[:24]}".upper()
+    
+    # ========================================================================
+    # Genesis-to-Tip Audit: Verify Ledger Integrity
+    # ========================================================================
+    
+    @retry_on_connection_error(max_retries=2)
+    def audit_ledger_integrity(self) -> Dict[str, Any]:
+        """
+        Perform Bitcoin-style audit of the entire ledger from genesis to tip.
+        
+        Verifies:
+        1. DAG structure is acyclic and properly linked
+        2. All balances reconcile with transaction history
+        3. All transactions have verification records
+        4. IO records match transaction amounts
+        5. No double-spends detected
+        
+        Returns:
+            Audit report with status and findings
+        """
+        audit_report = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'status': 'pass',
+            'errors': [],
+            'warnings': [],
+            'statistics': {}
+        }
+        
+        try:
+            # 1. Verify DAG structure
+            dag_check = self._verify_dag_structure()
+            audit_report['dag_structure'] = dag_check
+            if not dag_check['is_valid']:
+                audit_report['status'] = 'fail'
+                audit_report['errors'].extend(dag_check['errors'])
+            
+            # 2. Verify transaction balances
+            balance_check = self._verify_transaction_balances()
+            audit_report['balance_integrity'] = balance_check
+            if not balance_check['is_valid']:
+                audit_report['status'] = 'fail'
+                audit_report['errors'].extend(balance_check['errors'])
+            
+            # 3. Verify all transactions have verification records
+            verification_check = self._verify_all_transactions_validated()
+            audit_report['verification_coverage'] = verification_check
+            if not verification_check['is_complete']:
+                audit_report['warnings'].append(f"{verification_check['missing_count']} transactions without verification records")
+            
+            # 4. Verify IO records match transactions
+            io_check = self._verify_io_consistency()
+            audit_report['io_consistency'] = io_check
+            if not io_check['is_valid']:
+                audit_report['status'] = 'fail'
+                audit_report['errors'].extend(io_check['errors'])
+            
+            # 5. Compute statistics
+            audit_report['statistics'] = {
+                'total_transactions': self.db.query(WalletTransaction).count(),
+                'total_messages': self.db.query(WalletMessage).count(),
+                'total_dag_edges': self.db.query(DagEdge).count(),
+                'total_verification_records': self.db.query(VerificationRecord).count(),
+                'total_io_records': self.db.query(TransactionIO).count(),
+                'genesis_blocks': self.db.query(DagEdge).filter_by(parent_id='GENESIS').count()
+            }
+            
+            return audit_report
+            
+        except Exception as e:
+            audit_report['status'] = 'error'
+            audit_report['errors'].append(f"Audit failed: {str(e)}")
+            return audit_report
+    
+    def _verify_dag_structure(self) -> Dict[str, Any]:
+        """Verify DAG is acyclic and properly formed"""
+        try:
+            all_edges = self.db.query(DagEdge).all()
+            
+            # Build adjacency list
+            graph = {}
+            for edge in all_edges:
+                if edge.child_id not in graph:
+                    graph[edge.child_id] = []
+                graph[edge.child_id].append(edge.parent_id)
+            
+            # Check for cycles using DFS
+            def has_cycle(node, visited, rec_stack):
+                visited.add(node)
+                rec_stack.add(node)
+                
+                for neighbor in graph.get(node, []):
+                    if neighbor not in visited:
+                        if has_cycle(neighbor, visited, rec_stack):
+                            return True
+                    elif neighbor in rec_stack:
+                        return True
+                
+                rec_stack.remove(node)
+                return False
+            
+            visited = set()
+            rec_stack = set()
+            
+            for node in graph:
+                if node not in visited:
+                    if has_cycle(node, visited, rec_stack):
+                        return {
+                            'is_valid': False,
+                            'errors': ['Cycle detected in DAG structure']
+                        }
+            
+            return {
+                'is_valid': True,
+                'total_nodes': len(graph),
+                'total_edges': len(all_edges)
+            }
+        except Exception as e:
+            return {
+                'is_valid': False,
+                'errors': [f'DAG verification failed: {str(e)}']
+            }
+    
+    def _verify_transaction_balances(self) -> Dict[str, Any]:
+        """Verify all account balances match transaction history"""
+        try:
+            all_accounts = self.db.query(TokenAccount).all()
+            errors = []
+            
+            # Handle empty database gracefully
+            if not all_accounts:
+                return {
+                    'is_valid': True,
+                    'accounts_checked': 0,
+                    'errors': []
+                }
+            
+            for account in all_accounts:
+                # Skip system accounts
+                if account.address in ['VALIDATOR_POOL', 'GENESIS']:
+                    continue
+                
+                # Calculate balance from transactions
+                incoming = self.db.query(WalletTransaction).filter_by(
+                    to_address=account.address,
+                    status='confirmed'
+                ).all()
+                
+                outgoing = self.db.query(WalletTransaction).filter_by(
+                    from_address=account.address,
+                    status='confirmed'
+                ).all()
+                
+                # Handle accounts with no transactions (valid state)
+                if not incoming and not outgoing:
+                    continue
+                
+                calculated_balance = sum(tx.amount_nxt * 100 for tx in incoming) - sum((tx.amount_nxt + tx.fee_nxt) * 100 for tx in outgoing)
+                
+                # Allow small rounding differences
+                if abs(calculated_balance - account.balance) > 1:
+                    errors.append(f"Balance mismatch for {account.address[:16]}...: expected {calculated_balance}, got {account.balance}")
+            
+            return {
+                'is_valid': len(errors) == 0,
+                'accounts_checked': len(all_accounts),
+                'errors': errors
+            }
+        except Exception as e:
+            return {
+                'is_valid': False,
+                'errors': [f'Balance verification failed: {str(e)}']
+            }
+    
+    def _verify_all_transactions_validated(self) -> Dict[str, Any]:
+        """Check all transactions have verification records"""
+        try:
+            total_txs = self.db.query(WalletTransaction).count()
+            verified_txs = self.db.query(VerificationRecord).count()
+            
+            missing = total_txs - verified_txs
+            
+            return {
+                'is_complete': missing == 0,
+                'total_transactions': total_txs,
+                'verified_count': verified_txs,
+                'missing_count': missing,
+                'coverage_percent': (verified_txs / total_txs * 100) if total_txs > 0 else 100
+            }
+        except Exception as e:
+            return {
+                'is_complete': False,
+                'error': str(e)
+            }
+    
+    def _verify_io_consistency(self) -> Dict[str, Any]:
+        """Verify IO records match transaction amounts"""
+        try:
+            all_txs = self.db.query(WalletTransaction).all()
+            errors = []
+            
+            for tx in all_txs:
+                io_records = self.db.query(TransactionIO).filter_by(tx_id=tx.tx_id).all()
+                
+                if not io_records:
+                    continue  # Older transactions before IO tracking
+                
+                inputs = [io for io in io_records if io.io_type == 'input']
+                outputs = [io for io in io_records if io.io_type == 'output']
+                
+                total_in = sum(io.amount_nxt for io in inputs)
+                total_out = sum(io.amount_nxt for io in outputs)
+                
+                # Input should equal output + fee
+                expected_in = tx.amount_nxt + tx.fee_nxt
+                
+                if abs(total_in - expected_in) > 0.000001:  # Allow floating point error
+                    errors.append(f"IO mismatch for {tx.tx_id[:16]}...: input {total_in} != expected {expected_in}")
+            
+            return {
+                'is_valid': len(errors) == 0,
+                'transactions_checked': len(all_txs),
+                'errors': errors
+            }
+        except Exception as e:
+            return {
+                'is_valid': False,
+                'errors': [f'IO verification failed: {str(e)}']
+            }

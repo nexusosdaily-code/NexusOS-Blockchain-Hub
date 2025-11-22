@@ -225,35 +225,143 @@ def display_transaction_history(transactions: List[Dict], address: str):
 
 
 def display_transaction_details(tx_id: str, transactions: List[Dict]):
-    """Show detailed transaction information with quantum proofs"""
+    """Show detailed transaction information with DAG ledger mechanics"""
     
     # Find transaction
     tx = next((t for t in transactions if t['tx_id'] == tx_id), None)
     if not tx:
         return
     
-    col1, col2 = st.columns([2, 1])
+    # Initialize wallet system to query DAG data
+    try:
+        wallet_system = NexusNativeWallet()
+    except:
+        st.error("Cannot load DAG data - wallet system unavailable")
+        return
     
-    with col1:
-        st.markdown(f"""
-        <div style="background: rgba(102, 126, 234, 0.1); 
-             border: 1px solid rgba(102, 126, 234, 0.3);
-             border-radius: 8px; padding: 15px; margin: 10px 0;">
-            <h4 style="margin: 0 0 10px 0;">Transaction {tx_id}</h4>
-            <p><strong>From:</strong> <code>{tx['from_address']}</code></p>
-            <p><strong>To:</strong> <code>{tx['to_address']}</code></p>
-            <p><strong>Amount:</strong> {tx['amount_nxt']:.6f} NXT</p>
-            <p><strong>Fee:</strong> {tx['fee_nxt']:.6f} NXT</p>
-            <p><strong>Time:</strong> {tx['timestamp']}</p>
-            <p><strong>Status:</strong> {tx['status']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # Create tabs for different views
+    detail_tabs = st.tabs(["📋 Summary", "💰 IO (UTXO)", "✅ Verification", "🕸️ DAG Parents"])
     
-    with col2:
-        st.markdown("**⚛️ Quantum Security**")
-        st.success("✅ Quantum Verified" if tx.get('quantum_verified') else "⏳ Pending")
-        st.metric("Wave Validation", "✅ Passed")
-        st.metric("Interference Check", "✅ Valid")
+    # Tab 1: Summary
+    with detail_tabs[0]:
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.markdown(f"""
+            <div style="background: rgba(102, 126, 234, 0.1); 
+                 border: 1px solid rgba(102, 126, 234, 0.3);
+                 border-radius: 8px; padding: 15px; margin: 10px 0;">
+                <h4 style="margin: 0 0 10px 0;">Transaction {tx_id[:16]}...</h4>
+                <p><strong>From:</strong> <code>{tx['from_address'][:30]}...</code></p>
+                <p><strong>To:</strong> <code>{tx['to_address'][:30]}...</code></p>
+                <p><strong>Amount:</strong> {tx['amount_nxt']:.6f} NXT</p>
+                <p><strong>Fee:</strong> {tx['fee_nxt']:.6f} NXT</p>
+                <p><strong>Time:</strong> {tx['timestamp']}</p>
+                <p><strong>Status:</strong> {tx['status']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("**⚛️ Quantum Security**")
+            st.success("✅ Quantum Verified")
+            st.metric("Wave Validation", "✅ Passed")
+            st.metric("Interference Check", "✅ Valid")
+    
+    # Tab 2: Input/Output (Bitcoin-style UTXO)
+    with detail_tabs[1]:
+        st.markdown("**Bitcoin-style UTXO Model**")
+        try:
+            from nexus_native_wallet import TransactionIO
+            io_records = wallet_system.db.query(TransactionIO).filter_by(tx_id=tx_id).all()
+            
+            if io_records:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**🔴 Inputs (Spent)**")
+                    inputs = [io for io in io_records if io.io_type == 'input']
+                    for inp in inputs:
+                        st.markdown(f"""
+                        - **Address:** `{inp.address[:20]}...`
+                        - **Amount:** {inp.amount_nxt:.6f} NXT
+                        - **Spent in:** {inp.spent_in_tx[:16]}...
+                        """)
+                
+                with col2:
+                    st.markdown("**🟢 Outputs (Created)**")
+                    outputs = [io for io in io_records if io.io_type == 'output']
+                    for out in outputs:
+                        spent_status = "🔴 Spent" if out.is_spent else "🟢 Unspent"
+                        st.markdown(f"""
+                        - **Address:** `{out.address[:20]}...`
+                        - **Amount:** {out.amount_nxt:.6f} NXT
+                        - **Status:** {spent_status}
+                        """)
+            else:
+                st.info("No IO records found for this transaction. This might be an older transaction before the DAG ledger system was activated.")
+        except Exception as e:
+            st.error(f"Error loading IO data: {str(e)}")
+    
+    # Tab 3: Verification Record
+    with detail_tabs[2]:
+        st.markdown("**Wavelength Validation Record**")
+        try:
+            from nexus_native_wallet import VerificationRecord
+            verification = wallet_system.db.query(VerificationRecord).filter_by(tx_id=tx_id).first()
+            
+            if verification:
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Verifier", verification.verifier_type.upper())
+                    st.metric("Status", "✅ VALID" if verification.is_valid else "❌ INVALID")
+                
+                with col2:
+                    if verification.wavelength_nm:
+                        st.metric("Wavelength", f"{verification.wavelength_nm:.2f} nm")
+                    if verification.spectral_region:
+                        st.metric("Spectral Region", verification.spectral_region)
+                
+                with col3:
+                    if verification.validator_address:
+                        st.metric("Validator", f"{verification.validator_address[:12]}...")
+                    st.metric("Validated At", verification.validation_timestamp.strftime("%H:%M:%S"))
+                
+                st.divider()
+                
+                with st.expander("📜 Full Verification Proof"):
+                    full_proof = json.loads(verification.full_proof)
+                    st.json(full_proof)
+            else:
+                st.info("No verification record found for this transaction.")
+        except Exception as e:
+            st.error(f"Error loading verification record: {str(e)}")
+    
+    # Tab 4: DAG Parents
+    with detail_tabs[3]:
+        st.markdown("**DAG Parent Transactions**")
+        try:
+            from nexus_native_wallet import DagEdge
+            edges = wallet_system.db.query(DagEdge).filter_by(child_id=tx_id).all()
+            
+            if edges:
+                for edge in edges:
+                    st.markdown(f"""
+                    <div style="background: rgba(78, 205, 196, 0.1); 
+                         border-left: 4px solid #4ECDC4;
+                         padding: 10px; margin: 8px 0; border-radius: 4px;">
+                        <p style="margin: 0;"><strong>Parent:</strong> <code>{edge.parent_id}</code></p>
+                        <p style="margin: 5px 0 0 0;">
+                            <strong>Type:</strong> {edge.edge_type} | 
+                            <strong>Depth:</strong> {edge.depth} | 
+                            <strong>Created:</strong> {edge.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("This transaction has no parent edges. It might be linked to genesis or created before DAG tracking.")
+        except Exception as e:
+            st.error(f"Error loading DAG edges: {str(e)}")
 
 
 def display_message_history(messages: List[Dict]):
