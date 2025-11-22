@@ -434,7 +434,7 @@ Molar Energy: E_molar = n × N_A × hf
         
         # Wealth percentiles
         st.subheader("💰 Wealth Percentiles")
-        percentiles = [10, 25, 50, 75, 90, 95, 99]
+        percentiles = [10.0, 25.0, 50.0, 75.0, 90.0, 95.0, 99.0]
         wealth_at_percentile = boltzmann.wealth_percentiles(percentiles)
         
         percentile_data = {
