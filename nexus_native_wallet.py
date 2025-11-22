@@ -841,6 +841,57 @@ class NexusNativeWallet:
             'energy_cost': tx.energy_cost
         }
     
+    @retry_on_connection_error(max_retries=2)
+    def get_all_transactions(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """
+        Get ALL transactions from blockchain (for explorer/analytics)
+        READ-ONLY bulk query - much more efficient than per-wallet queries
+        """
+        transactions = self.db.query(WalletTransaction).order_by(
+            WalletTransaction.timestamp.desc()
+        ).limit(limit).all()
+        
+        return [
+            {
+                'tx_id': tx.tx_id,
+                'from_address': tx.from_address,
+                'to_address': tx.to_address,
+                'amount_nxt': tx.amount_nxt,
+                'fee_nxt': tx.fee_nxt,
+                'status': tx.status,
+                'timestamp': tx.timestamp.isoformat(),
+                'energy_cost': tx.energy_cost,
+                'interference_hash': tx.interference_hash,
+                'quantum_verified': True
+            }
+            for tx in transactions
+        ]
+    
+    @retry_on_connection_error(max_retries=2)
+    def get_all_messages(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """
+        Get ALL messages from blockchain (for explorer/analytics)
+        READ-ONLY bulk query - much more efficient than per-wallet queries
+        """
+        messages = self.db.query(WalletMessage).order_by(
+            WalletMessage.timestamp.desc()
+        ).limit(limit).all()
+        
+        return [
+            {
+                'message_id': msg.message_id,
+                'from_address': msg.from_address,
+                'to_address': msg.to_address or 'broadcast',
+                'content': msg.content,
+                'wavelength': msg.wavelength,
+                'spectral_region': msg.spectral_region,
+                'cost_nxt': msg.cost_nxt,
+                'timestamp': msg.timestamp.isoformat(),
+                'dag_parents': msg.dag_parents
+            }
+            for msg in messages
+        ]
+    
     # ========================================================================
     # Private Methods - Quantum Cryptography
     # ========================================================================
