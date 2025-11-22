@@ -227,6 +227,21 @@
       },
       "metrics": {},
       "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-22T07:12:06.558830",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 125000.0,
+        "rewards": 0.0,
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "researcher_email": null
     }
   ],
   "patterns": {
@@ -237,26 +252,26 @@
         "stake": {
           "min": 125000.0,
           "max": 225000.0,
-          "successful_mean": 138636.36363636365,
-          "sample_count": 11
+          "successful_mean": 137500.0,
+          "sample_count": 12
         },
         "rewards": {
           "min": 0.0,
           "max": 0.0,
           "successful_mean": 0.0,
-          "sample_count": 11
+          "sample_count": 12
         },
         "apr": {
           "min": 14016.0,
           "max": 25228.800000000003,
-          "successful_mean": 23360.0,
-          "sample_count": 11
+          "successful_mean": 23515.733333333334,
+          "sample_count": 12
         },
         "uptime": {
           "min": 98.5,
           "max": 98.5,
           "successful_mean": 98.5,
-          "sample_count": 11
+          "sample_count": 12
         }
       },
       "civilization_risks": [],
@@ -327,5 +342,5 @@
       "f_floor_violations": []
     }
   },
-  "last_updated": "2025-11-21T18:00:23.143912"
+  "last_updated": "2025-11-22T07:12:06.570758"
 }
