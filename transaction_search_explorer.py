@@ -104,14 +104,16 @@ def display_address_details(wallet_system: NexusNativeWallet, address: str):
         # Get balance (READ-ONLY)
         balance_info = wallet_system.get_balance(address)
         
-        # Display balance card
+        # Display balance card - ATOMIC ECONOMICS (units as primary)
+        units = balance_info['balance_units']
+        nxt = balance_info['balance_nxt']
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
              padding: 25px; border-radius: 12px; color: white; margin: 20px 0;">
             <h2 style="margin: 0 0 10px 0;">💰 {address[:20]}...</h2>
-            <h1 style="margin: 0; font-size: 48px;">{balance_info['balance_nxt']:.6f} NXT</h1>
-            <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">
-                {balance_info['balance_units']:,} units • Nonce: {balance_info['nonce']}
+            <h1 style="margin: 0; font-size: 48px;">{units:,.0f} units</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.85;">
+                ≈ {nxt:.8f} NXT • Nonce: {balance_info['nonce']}
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -123,19 +125,19 @@ def display_address_details(wallet_system: NexusNativeWallet, address: str):
         transactions = wallet_system.get_transaction_history(address, limit=1000)
         messages = wallet_system.get_message_history(address, limit=1000)
         
-        # Calculate stats from READ-ONLY data
-        total_sent = sum(tx['amount_nxt'] for tx in transactions if tx['from_address'] == address)
-        total_received = sum(tx['amount_nxt'] for tx in transactions if tx['to_address'] == address)
-        total_fees = sum(tx['fee_nxt'] for tx in transactions if tx['from_address'] == address)
+        # Calculate stats from READ-ONLY data (in atomic units)
+        total_sent_units = sum(tx['amount_nxt'] * 100_000_000 for tx in transactions if tx['from_address'] == address)
+        total_received_units = sum(tx['amount_nxt'] * 100_000_000 for tx in transactions if tx['to_address'] == address)
+        total_fees_units = sum(tx['fee_nxt'] * 100_000_000 for tx in transactions if tx['from_address'] == address)
         
         with col1:
             st.metric("Transactions", len(transactions))
         with col2:
             st.metric("Messages Sent", len(messages))
         with col3:
-            st.metric("Total Sent", f"{total_sent:.4f} NXT")
+            st.metric("Total Sent", f"{total_sent_units:,.0f} units")
         with col4:
-            st.metric("Total Received", f"{total_received:.4f} NXT")
+            st.metric("Total Received", f"{total_received_units:,.0f} units")
         
         st.divider()
         
@@ -170,24 +172,28 @@ def display_address_details(wallet_system: NexusNativeWallet, address: str):
 def display_transaction_history(transactions: List[Dict], address: str):
     """Display transaction table with physics metrics"""
     
-    # Prepare data for display
+    # Prepare data for display (ATOMIC ECONOMICS - units as primary)
     tx_data = []
     for tx in transactions:
+        # Convert to atomic units
+        amount_units = tx['amount_nxt'] * 100_000_000
+        fee_units = tx['fee_nxt'] * 100_000_000
+        
         # Determine direction
         if tx['from_address'] == address:
             direction = "📤 Sent"
             counterparty = tx['to_address']
-            amount_display = f"-{tx['amount_nxt']:.6f}"
+            amount_display = f"-{amount_units:,.0f}"
         else:
             direction = "📥 Received"
             counterparty = tx['from_address']
-            amount_display = f"+{tx['amount_nxt']:.6f}"
+            amount_display = f"+{amount_units:,.0f}"
         
         tx_data.append({
             'Direction': direction,
             'Counterparty': counterparty[:20] + '...',
-            'Amount (NXT)': amount_display,
-            'Fee (NXT)': f"{tx['fee_nxt']:.6f}",
+            'Amount (units)': amount_display,
+            'Fee (units)': f"{fee_units:,.0f}",
             'Status': '✅ ' + tx['status'].title(),
             'Time': tx['timestamp'][:19],
             'TX ID': tx['tx_id']
