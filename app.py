@@ -175,26 +175,37 @@ def main():
         
         /* Streamlit dropdown popover - renders OUTSIDE sidebar in root DOM */
         div[data-baseweb="popover"] {
-            background: rgba(245, 250, 255, 0.98) !important;
+            background: #ffffff !important;
+            border: 2px solid rgba(102, 126, 234, 0.5) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         }
         
         /* Dropdown menu items - CRITICAL for visibility */
         div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] {
-            color: #000000 !important;
-            background: rgba(245, 250, 255, 0.98) !important;
+            color: #1B1B2F !important;
+            background: #ffffff !important;
             font-weight: 600 !important;
             font-size: 15px !important;
+            padding: 10px 15px !important;
         }
         
-        /* Dropdown menu item text */
-        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] span {
-            color: #000000 !important;
+        /* Dropdown menu item text - ALL text elements */
+        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] span,
+        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] div,
+        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] p {
+            color: #1B1B2F !important;
+            font-weight: 600 !important;
         }
         
         /* Dropdown menu item hover */
         div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"]:hover {
-            color: #000000 !important;
-            background: rgba(200, 230, 255, 0.98) !important;
+            color: #1B1B2F !important;
+            background: rgba(200, 230, 255, 0.8) !important;
+        }
+        
+        /* Force ALL dropdown list text to be visible */
+        div[data-baseweb="popover"] * {
+            color: #1B1B2F !important;
         }
         
         /* Sidebar selectbox options in dropdown - DARK text on light background */
