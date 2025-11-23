@@ -7,6 +7,7 @@ NexusOS is a civilization architecture founded on physics, replacing traditional
 -   **Communication Style**: Simple, everyday language
 -   **Technical Approach**: Physics-first, quantum-inspired economics
 -   **Architecture**: Wavelength-based validation over traditional cryptographic hashing
+-   **Licensing**: GPL v3 (GNU General Public License v3.0) to ensure community ownership and prevent corporate exploitation
 
 ## System Architecture
 

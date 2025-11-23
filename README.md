@@ -355,12 +355,30 @@ Built on principles of:
 
 ---
 
+## 📄 License
+
+**WNSP Unified Mesh Stack** is licensed under **GNU General Public License v3.0 (GPL v3)**
+
+### Why GPL v3?
+
+- **Community Ownership** - Ensures improvements stay open source forever
+- **Anti-Exploitation** - Prevents corporations from locking down the technology
+- **Copyleft Protection** - Any modifications must be shared back with the community
+- **Crisis Response** - Improvements made during emergencies benefit everyone
+- **Grassroots Values** - Aligns with community empowerment mission
+
+GPL v3 ensures that WNSP remains a public good, accessible to universities, refugee populations, rural communities, and anyone who needs censorship-resistant communication. No corporation can take it proprietary.
+
+See [LICENSE](LICENSE) file for full terms.
+
+---
+
 **NexusOS** - Civilization Operating System  
 📱 **Your Phone IS the Blockchain Node**
 
 ---
 
-*Last Updated: November 22, 2025*
+*Last Updated: November 23, 2025*
 
 ---
 
