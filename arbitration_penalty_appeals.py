@@ -264,7 +264,8 @@ class ArbitrationPenaltyBridge:
                 "successful_appeals": 0,
                 "success_rate": 0.0,
                 "average_confidence": 0.0,
-                "penalties_modified": 0
+                "penalties_modified": 0,
+                "decision_breakdown": {}
             }
         
         successful = sum(
