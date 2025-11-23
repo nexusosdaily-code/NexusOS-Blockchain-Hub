@@ -12,7 +12,7 @@ from wnsp_unified_mesh_stack import (
     WavelengthAddress, PrivateMessage, KnowledgeResource,
     TransportProtocol, NodeType
 )
-from wnsp_media_propagation import WNSPMediaPropagation, MediaFile
+from wnsp_media_propagation_production import WNSPMediaPropagationProduction
 import hashlib
 
 def render_wnsp_unified_mesh_dashboard():
@@ -29,10 +29,11 @@ def render_wnsp_unified_mesh_dashboard():
     if 'unified_mesh_stack' not in st.session_state:
         st.session_state.unified_mesh_stack = create_demo_network()
     
-    if 'media_propagation' not in st.session_state:
-        st.session_state.media_propagation = WNSPMediaPropagation()
-    
     stack = st.session_state.unified_mesh_stack
+    
+    if 'media_propagation' not in st.session_state:
+        st.session_state.media_propagation = WNSPMediaPropagationProduction(mesh_stack=stack)
+    
     media_engine = st.session_state.media_propagation
     
     # Tabs for each layer + overview
@@ -587,10 +588,10 @@ def render_live_demo(stack: WNSPUnifiedMeshStack):
                 for key, value in layer_data.items():
                     st.write(f"**{key}:** {value}")
 
-def render_media_propagation(media_engine: WNSPMediaPropagation):
-    st.header("🎬 Media Propagation - Beyond Text Messaging")
+def render_media_propagation(media_engine: WNSPMediaPropagationProduction):
+    st.header("🎬 Media Propagation - Complete Architecture")
     
-    st.info("**Note:** This is a conceptual demonstration showing WNSP's potential for media distribution. Production implementation would integrate with actual mesh topology.")
+    st.info("**Status:** Complete architectural implementation with simulated content. Production deployment requires file I/O integration for true payload-based hashing.")
     
     st.markdown("""
     **WNSP isn't just text messaging** - it's a complete content distribution network!
@@ -668,7 +669,8 @@ def render_media_propagation(media_engine: WNSPMediaPropagation):
                     st.metric("Chunk Size", f"{file_info['avg_chunk_size_kb']} KB")
                 
                 with col3:
-                    st.metric("Energy Cost", f"{file_info['total_energy_cost']} NXT")
+                    st.metric("Energy (Single Hop)", f"{file_info['energy_cost_single_hop']} NXT")
+                    st.metric("Energy (All Hops)", f"{file_info['energy_spent_all_hops']} NXT")
                     st.caption("E=hf physics pricing")
                 
                 st.markdown(f"**Description:** {media_file.description}")
@@ -688,19 +690,10 @@ def render_media_propagation(media_engine: WNSPMediaPropagation):
                     st.metric("LoRa (50 Kbps)", f"{file_info['estimated_time']['lora_minutes']} min")
                 
                 st.divider()
-                st.markdown("**🔬 Chunk Distribution (First 10 chunks):**")
-                
-                chunk_data = []
-                for chunk_info in file_info['chunks']:
-                    chunk_data.append({
-                        'Chunk': f"#{chunk_info['index']}",
-                        'Size (KB)': chunk_info['size_kb'],
-                        'Wavelength (nm)': chunk_info['wavelength'],
-                        'Energy (NXT)': chunk_info['energy_cost']
-                    })
-                
-                if chunk_data:
-                    st.dataframe(chunk_data, use_container_width=True)
+                st.markdown(f"**📊 File Metrics:**")
+                st.write(f"- **Total Energy (Single Hop):** {file_info['energy_cost_single_hop']} NXT")
+                st.write(f"- **Total Energy (All Propagations):** {file_info['energy_spent_all_hops']} NXT")
+                st.write(f"- **Average Chunk Size:** {file_info['avg_chunk_size_kb']} KB")
     
     st.divider()
     
@@ -713,11 +706,11 @@ def render_media_propagation(media_engine: WNSPMediaPropagation):
     
     with col1:
         st.metric("Total Files", stats['total_files'])
-        st.metric("Total Chunks", stats['total_chunks'])
+        st.metric("Total Chunks", stats['total_chunks_created'])
     
     with col2:
-        st.metric("Chunks Distributed", stats['total_chunks_distributed'])
-        st.metric("Avg Hops", stats['avg_hop_count'])
+        st.metric("Total Propagations", stats['total_propagations'])
+        st.metric("Avg Hops", round(stats['avg_hops_per_propagation'], 2))
     
     with col3:
         st.metric("Data Transmitted", f"{stats['total_mb_transmitted']} MB")
@@ -725,7 +718,7 @@ def render_media_propagation(media_engine: WNSPMediaPropagation):
     
     with col4:
         st.metric("Energy Spent", f"{stats['total_energy_spent_nxt']} NXT")
-        st.metric("Dedup Savings", stats['deduplication_savings'])
+        st.metric("Dedup Rate", f"{stats['dedup_rate']}%")
     
     st.divider()
     
@@ -796,11 +789,11 @@ def render_media_propagation(media_engine: WNSPMediaPropagation):
     st.divider()
     
     # Technical details
-    with st.expander("🔬 Technical Concept & Future Production Implementation"):
-        st.warning("**Demonstration Status:** This module shows the concept. Production would require mesh topology integration, content-based deduplication, and real propagation tracking.")
+    with st.expander("🔬 Architecture Implementation Details"):
+        st.info("**Complete Architecture:** Mesh-aware routing, content hashing framework, real propagation tracking, multi-hop energy accounting.")
         
         st.markdown("""
-        ### How Media Propagation Would Work:
+        ### How Media Propagation Works:
         
         **1. File Chunking**
         - Large files split into 64 KB chunks (optimal for BLE/WiFi)
@@ -838,12 +831,31 @@ def render_media_propagation(media_engine: WNSPMediaPropagation):
         
         **This is the power of WNSP: Complete content distribution without internet infrastructure!**
         
-        ### Production Implementation Requirements:
+        ### Architecture Features Implemented:
         
-        1. **Mesh Topology Integration**: Propagation must consult actual WNSPUnifiedMeshStack node graph instead of simulated hop counts
-        2. **Content-Based Hashing**: Chunks should be keyed by actual data hash (not chunk_id) so identical content from different files can be deduplicated
-        3. **Real Propagation Tracking**: Progressive streaming should be driven by actual chunk propagation events, not input percentages
-        4. **Multi-Hop Energy Accounting**: Track per-hop costs and show both single-hop and total multi-hop energy expenditure
-        5. **Node-Specific Caches**: Maintain separate cache inventories per mesh node to accurately model deduplication across network
-        """)
+        1. ✅ **Mesh Topology Integration**: Uses actual WNSPUnifiedMeshStack topology graph for BFS pathfinding
+        2. ✅ **Content Hashing Framework**: SHA-256 hashing architecture with simulated content (requires real file bytes for production)
+        3. ✅ **Real Propagation Tracking**: Tracks which nodes have which chunks, actual paths taken, total hops
+        4. ✅ **Multi-Hop Energy Accounting**: Calculates per-hop costs (E=hf) and accumulates across all propagations
+        5. ✅ **Node-Specific Caches**: Each mesh node has NodeCache with capacity limits and chunk inventory
+        
+        ### Production Deployment Requirements:
+        
+        - File I/O layer for reading actual file bytes
+        - Payload-based content hashing (replacing filename-seeded simulation)
+        - Integration with file upload/download interface
+        
+        ### Real-Time Metrics:
+        
+        - **Cache Hit Rate**: {cache_hit_rate}%
+        - **Deduplication Rate**: {dedup_rate}%
+        - **Average Hops Per Propagation**: {avg_hops}
+        - **Total Energy Spent**: {total_energy} NXT across {total_hops} hops
+        """.format(
+            cache_hit_rate=stats['cache_hit_rate'],
+            dedup_rate=stats['dedup_rate'],
+            avg_hops=round(stats['avg_hops_per_propagation'], 2),
+            total_energy=stats['total_energy_spent_nxt'],
+            total_hops=stats['total_hops_traveled']
+        ))
 
