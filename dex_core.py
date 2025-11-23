@@ -12,6 +12,10 @@ from enum import Enum
 import math
 from native_token import NativeTokenSystem, TransactionType
 
+# Security Framework - Rate limiting and MEV protection
+from security_framework import get_rate_limiter, get_mev_protection
+from ai_security import get_liquidity_protection
+
 
 class NativeTokenAdapter:
     """
@@ -550,7 +554,15 @@ class DEXEngine:
         """
         Execute token swap with NXT integration and fee routing to validators
         All pools are TOKEN/NXT pairs, so one side is always NXT
+        
+        🔒 SECURITY: Includes rate limiting and wash trading detection
         """
+        # 🔒 SECURITY: Rate limiting check
+        rate_limiter = get_rate_limiter()
+        allowed, reason = rate_limiter.check_rate_limit(user, "dex_swap")
+        if not allowed:
+            return False, 0.0, f"🔒 Rate limit: {reason}"
+        
         if self.nxt_adapter is None:
             return False, 0.0, "NXT adapter not initialized"
         
@@ -637,6 +649,13 @@ class DEXEngine:
             # Update statistics
             self.total_swaps += 1
             self.total_volume += input_amount
+            
+            # 🔒 SECURITY: Wash trading detection
+            mev_protection = get_mev_protection()
+            token_pair = f"{input_token}-{output_token}"
+            is_wash, wash_evidence = mev_protection.detect_wash_trading(user, token_pair, input_amount)
+            if is_wash:
+                print(f"⚠️ WASH TRADING DETECTED: {user[:10]}... - {wash_evidence}")
         
         return success, output_amount, message
     

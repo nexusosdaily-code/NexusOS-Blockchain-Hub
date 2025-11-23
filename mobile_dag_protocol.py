@@ -36,6 +36,9 @@ import secrets
 from economic_loop_controller import get_flow_controller
 from native_token import NativeTokenSystem
 
+# Security Framework - Rate limiting
+from security_framework import get_rate_limiter
+
 # Import all messaging components
 try:
     from messaging_routing import get_ai_message_router, Message, MessagePriority, MessageStatus
@@ -202,6 +205,12 @@ class MobileDAGProtocol:
         Returns:
             (success, message, mobile_message)
         """
+        # 🔒 SECURITY: Rate limiting check for messaging
+        rate_limiter = get_rate_limiter()
+        allowed, reason = rate_limiter.check_rate_limit(sender_address, "message")
+        if not allowed:
+            return (False, f"🔒 Rate limit exceeded: {reason}", None)
+        
         # STEP 1: Create mobile message
         message_id = f"msg_{secrets.token_hex(16)}"
         

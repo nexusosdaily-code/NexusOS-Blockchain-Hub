@@ -34,6 +34,9 @@ from orbital_transition_engine import (
     OrbitalTransition
 )
 
+# Security Framework - Rate limiting and attack prevention
+from security_framework import get_rate_limiter
+
 
 class TransactionType(Enum):
     """Types of token transactions"""
@@ -178,7 +181,14 @@ class NativeTokenSystem:
         return self.accounts[address]
     
     def transfer(self, from_address: str, to_address: str, amount: int, fee: Optional[int] = None) -> Optional[TokenTransaction]:
-        """Transfer tokens between accounts"""
+        """Transfer tokens between accounts with rate limiting"""
+        # 🔒 SECURITY: Rate limiting check
+        rate_limiter = get_rate_limiter()
+        allowed, reason = rate_limiter.check_rate_limit(from_address, "transfer")
+        if not allowed:
+            print(f"⚠️ Rate limit exceeded for {from_address[:10]}...: {reason}")
+            return None
+        
         if fee is None:
             fee = self.BASE_TRANSFER_FEE
         
@@ -229,6 +239,8 @@ class NativeTokenSystem:
         """
         Atomic transfer with rollback support - Production-safe transaction.
         
+        🔒 SECURITY: Includes rate limiting to prevent transaction flooding
+        
         This method ensures all-or-nothing semantics: if any step fails,
         all changes are rolled back to maintain consistency.
         
@@ -247,6 +259,12 @@ class NativeTokenSystem:
                 "alice", "TRANSITION_RESERVE", 5700, reason="message burn"
             )
         """
+        # 🔒 SECURITY: Rate limiting check (BEFORE any operations)
+        rate_limiter = get_rate_limiter()
+        allowed, rate_reason = rate_limiter.check_rate_limit(from_address, "transfer")
+        if not allowed:
+            return (False, None, f"🔒 Rate limit: {rate_reason}")
+        
         if fee is None:
             fee = self.BASE_TRANSFER_FEE
         
