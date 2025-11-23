@@ -34,7 +34,14 @@ Key technical components and features include:
 -   **AI Management Control Dashboard**: A centralized governance interface for all AI systems with F_floor protection.
 -   **Talk to Nexus AI**: A conversational AI interface for governance and report generation.
 -   **Offline Mesh Network with Hybrid AI Routing**: A peer-to-peer internet infrastructure for direct phone-to-phone communication, integrating with WNSP v2.0 DAG messaging and using a Hybrid AI Routing Controller for intelligent path selection.
--   **Comprehensive Security Framework**: A multi-layered defense system protecting against 8 major attack vectors including authentication hardening, rate limiting, DEX MEV protection, multi-oracle consensus, quadratic voting, validator collusion detection, AI anomaly detection, and liquidity protection.
+-   **Comprehensive Security Framework (Production-Integrated)**: A multi-layered defense system with enforcement hooks directly integrated into transaction flows:
+    -   **Rate Limiting**: Pre-operation enforcement in native_token.py (10 transfers/60s), mobile_dag_protocol.py (20 messages/60s), and dex_core.py (5 swaps/60s) with exponential backoff
+    -   **Authentication Hardening**: 7-day session expiry (reduced from 30 days), automatic token rotation after 24 hours, SHA-256 token hashing
+    -   **DEX Security**: Wash trading detection (>30% pair volume flags), liquidity withdrawal protection (10% daily limit), commit-reveal scheme for MEV prevention
+    -   **Multi-Oracle Consensus**: 3-source validation with outlier detection and TWAP pricing
+    -   **Governance Protection**: Quadratic voting, collusion detection, Sybil resistance
+    -   **AI Anomaly Detection**: Real-time monitoring of economic patterns and validator behavior
+    -   **Security Command Center**: Real-time monitoring dashboard with live metrics and alerts
 
 ### WaveLang Ecosystem
 A complete quantum-level programming stack:
