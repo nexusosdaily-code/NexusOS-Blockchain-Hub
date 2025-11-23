@@ -55,6 +55,7 @@ from napp_deployment_center import render_napp_deployment_center
 from transaction_search_explorer import render_transaction_search_explorer
 from sybil_dashboard import render_sybil_detection_dashboard
 from ai_arbitration_dashboard import render_arbitration_dashboard
+from security_dashboard import security_dashboard
 
 
 def main():
@@ -529,6 +530,7 @@ def main():
                 "🏛️ Civic Governance",
                 "🛡️ Sybil Detection System",
                 "⚖️ AI Arbitration & Moderation",
+                "🔒 Security Command Center",
                 "🌊 WaveLang Studio",
                 "🤖 WaveLang AI Teacher",
                 "💻 WaveLang Binary Compiler",
@@ -680,6 +682,11 @@ def main():
                 "icon": "⚖️",
                 "desc": "AI-powered dispute resolution and conflict mediation system with evidence-based decision making",
                 "features": ["Penalty Appeals", "Governance Mediation", "Validator Conflicts", "Evidence Analysis", "Confidence Scoring", "Transparent Reasoning"]
+            },
+            "🔒 Security Command Center": {
+                "icon": "🔒",
+                "desc": "Comprehensive security framework protecting against 8 major attack vectors",
+                "features": ["🚦 Rate Limiting", "💱 DEX MEV Protection", "📊 Multi-Oracle", "🗳️ Quadratic Voting", "🤖 AI Anomaly Detection", "💧 Liquidity Time-Locks", "🛡️ Collusion Detection", "📈 Security Analytics"]
             }
         }
         
@@ -747,6 +754,7 @@ def main():
                 "🌐 Offline Mesh Network",
                 "🏛️ Civic Governance",
                 "🛡️ Sybil Detection System",
+                "🔒 Security Command Center",
                 "⚛️ Avogadro Economics",
                 "🌊 WaveLang Studio",
                 "🤖 WaveLang AI Teacher",
@@ -875,6 +883,10 @@ def main():
     elif module == "⚖️ AI Arbitration & Moderation":
         # AI-powered dispute resolution and moderation
         render_arbitration_dashboard()
+    
+    elif module == "🔒 Security Command Center":
+        # Comprehensive security monitoring and protection
+        security_dashboard()
 
 
 if __name__ == "__main__":

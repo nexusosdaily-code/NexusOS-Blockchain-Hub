@@ -17,7 +17,7 @@ from sqlalchemy.exc import (
     TimeoutError as SQLTimeoutError, SQLAlchemyError
 )
 
-SESSION_EXPIRY_DAYS = 30
+SESSION_EXPIRY_DAYS = 7  # Reduced from 30 to 7 days for security (was 30)
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
@@ -219,8 +219,14 @@ class AuthManager:
     
     @staticmethod
     def is_auth_enabled() -> bool:
-        """Check if authentication is enabled via environment variable."""
-        return os.getenv('AUTH_ENABLED', 'false').lower() == 'true'
+        """
+        SECURITY: Authentication is now ALWAYS enabled.
+        
+        This method is maintained for backwards compatibility but always returns True.
+        Removing the AUTH_ENABLED bypass eliminates a critical security vulnerability
+        where attackers could disable authentication via environment variables.
+        """
+        return True  # SECURITY FIX: Always require authentication
     
     @staticmethod
     def initialize():
