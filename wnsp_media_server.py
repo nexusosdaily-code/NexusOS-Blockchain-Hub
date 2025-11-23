@@ -7,7 +7,7 @@ Serves the user-facing media player interface and integrates with WNSP backend
 
 from flask import Flask, send_from_directory, jsonify, request, Response, send_file
 from flask_cors import CORS
-import socketio as sio
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.utils import secure_filename
 import os
 import sys
@@ -33,11 +33,9 @@ except ImportError:
     print("⚠️  WNSP backend not available - running in standalone mode")
 
 app = Flask(__name__, static_folder='static')
+app.config['SECRET_KEY'] = 'wnsp-livestream-secret-key-2024'
 CORS(app)
-
-# Create Socket.IO server with python-socketio (not flask-socketio)
-sio_server = sio.Server(async_mode='threading', cors_allowed_origins='*')
-app.wsgi_app = sio.WSGIApp(sio_server, app.wsgi_app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Security: Enforce maximum upload size (100MB)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
@@ -410,10 +408,10 @@ def connect(sid, environ):
     print(f"📡 Client connected: {sid}")
     sio_server.emit('connected', {'message': 'Connected to WNSP LiveStream Network'}, to=sid)
 
-@socketio.on('start_broadcast')
-def handle_start_broadcast(data):
+@sio_server.on('start_broadcast')
+def handle_start_broadcast(sid, data):
     """Broadcaster initiates livestream with consent"""
-    broadcaster_id = request.sid
+    broadcaster_id = sid
     title = data.get('title', 'Untitled Stream')
     category = data.get('category', 'university')
     
@@ -427,84 +425,84 @@ def handle_start_broadcast(data):
         'started_at': os.times().elapsed
     }
     
-    join_room(room_id)
+    sio_server.enter_room(sid, room_id)
     
     print(f"📹 Broadcast started: {title} ({category}) - Room: {room_id}")
     
-    emit('broadcast_started', {
+    sio_server.emit('broadcast_started', {
         'success': True,
         'broadcaster_id': broadcaster_id,
         'room_id': room_id
-    })
+    }, to=sid)
     
     # Notify all clients about new broadcast (mesh discovery)
-    socketio.emit('broadcast_available', {
+    sio_server.emit('broadcast_available', {
         'broadcaster_id': broadcaster_id,
         'title': title,
         'category': category,
         'room_id': room_id
     }, skip_sid=broadcaster_id)
 
-@socketio.on('stop_broadcast')
-def handle_stop_broadcast():
+@sio_server.on('stop_broadcast')
+def handle_stop_broadcast(sid):
     """Broadcaster ends livestream"""
-    broadcaster_id = request.sid
+    broadcaster_id = sid
     
     if broadcaster_id in active_broadcasts:
         broadcast = active_broadcasts[broadcaster_id]
         room_id = broadcast['room_id']
         
         # Notify all viewers
-        socketio.emit('broadcast_ended', {
+        sio_server.emit('broadcast_ended', {
             'broadcaster_id': broadcaster_id,
             'message': 'Broadcast has ended'
-        }, room=room_id)
+        }, to=room_id)
         
-        leave_room(room_id)
+        sio_server.leave_room(sid, room_id)
         del active_broadcasts[broadcaster_id]
         
         print(f"📹 Broadcast stopped: {broadcaster_id}")
         
-        emit('broadcast_stopped', {'success': True})
+        sio_server.emit('broadcast_stopped', {'success': True}, to=sid)
 
-@socketio.on('join_broadcast')
-def handle_join_broadcast(data):
+@sio_server.on('join_broadcast')
+def handle_join_broadcast(sid, data):
     """Viewer requests to join broadcast with consent"""
-    viewer_id = request.sid
+    viewer_id = sid
     broadcaster_id = data.get('broadcaster_id')
     
     if broadcaster_id not in active_broadcasts:
-        emit('join_failed', {'error': 'Broadcast not found'})
+        sio_server.emit('join_failed', {'error': 'Broadcast not found'}, to=sid)
         return
     
     broadcast = active_broadcasts[broadcaster_id]
     room_id = broadcast['room_id']
     
     # Join room
-    join_room(room_id)
+    sio_server.enter_room(sid, room_id)
     active_viewers[viewer_id] = broadcaster_id
     broadcast['viewer_count'] += 1
     
     print(f"👁️  Viewer {viewer_id} joined broadcast {broadcaster_id}")
     
     # Notify viewer they've joined
-    emit('joined_broadcast', {
+    sio_server.emit('joined_broadcast', {
         'success': True,
         'broadcaster_id': broadcaster_id,
         'title': broadcast['title'],
         'category': broadcast['category']
-    })
+    }, to=sid)
     
     # Notify broadcaster of new viewer
-    socketio.emit('viewer_joined', {
+    sio_server.emit('viewer_joined', {
         'viewer_id': viewer_id,
         'viewer_count': broadcast['viewer_count']
-    }, room=broadcaster_id)
+    }, to=broadcaster_id)
 
-@socketio.on('leave_broadcast')
-def handle_leave_broadcast():
+@sio_server.on('leave_broadcast')
+def handle_leave_broadcast(sid):
     """Viewer leaves broadcast"""
-    viewer_id = request.sid
+    viewer_id = sid
     
     if viewer_id in active_viewers:
         broadcaster_id = active_viewers[viewer_id]
@@ -514,61 +512,61 @@ def handle_leave_broadcast():
             broadcast['viewer_count'] -= 1
             room_id = broadcast['room_id']
             
-            leave_room(room_id)
+            sio_server.leave_room(sid, room_id)
             
             # Notify broadcaster
-            socketio.emit('viewer_left', {
+            sio_server.emit('viewer_left', {
                 'viewer_id': viewer_id,
                 'viewer_count': broadcast['viewer_count']
-            }, room=broadcaster_id)
+            }, to=broadcaster_id)
         
         del active_viewers[viewer_id]
         print(f"👁️  Viewer {viewer_id} left broadcast")
 
-@socketio.on('webrtc_offer')
-def handle_webrtc_offer(data):
+@sio_server.on('webrtc_offer')
+def handle_webrtc_offer(sid, data):
     """Forward WebRTC SDP offer via mesh (hybrid direct + relay)"""
     target_id = data.get('target')
     offer = data.get('offer')
     
-    print(f"🔗 WebRTC offer: {request.sid} → {target_id}")
+    print(f"🔗 WebRTC offer: {sid} → {target_id}")
     
     # Forward SDP offer to target peer
-    socketio.emit('webrtc_offer', {
-        'from': request.sid,
+    sio_server.emit('webrtc_offer', {
+        'from': sid,
         'offer': offer
-    }, room=target_id)
+    }, to=target_id)
 
-@socketio.on('webrtc_answer')
-def handle_webrtc_answer(data):
+@sio_server.on('webrtc_answer')
+def handle_webrtc_answer(sid, data):
     """Forward WebRTC SDP answer via mesh"""
     target_id = data.get('target')
     answer = data.get('answer')
     
-    print(f"🔗 WebRTC answer: {request.sid} → {target_id}")
+    print(f"🔗 WebRTC answer: {sid} → {target_id}")
     
     # Forward SDP answer to target peer
-    socketio.emit('webrtc_answer', {
-        'from': request.sid,
+    sio_server.emit('webrtc_answer', {
+        'from': sid,
         'answer': answer
-    }, room=target_id)
+    }, to=target_id)
 
-@socketio.on('webrtc_ice')
-def handle_webrtc_ice(data):
+@sio_server.on('webrtc_ice')
+def handle_webrtc_ice(sid, data):
     """Forward ICE candidate via mesh"""
     target_id = data.get('target')
     candidate = data.get('candidate')
     
     # Forward ICE candidate to target peer
-    socketio.emit('webrtc_ice', {
-        'from': request.sid,
+    sio_server.emit('webrtc_ice', {
+        'from': sid,
         'candidate': candidate
-    }, room=target_id)
+    }, to=target_id)
 
-@socketio.on('disconnect')
-def handle_disconnect():
+@sio_server.event
+def disconnect(sid):
     """Client disconnects - cleanup broadcasts/viewers"""
-    client_id = request.sid
+    client_id = sid
     
     # Check if broadcaster
     if client_id in active_broadcasts:
@@ -576,10 +574,10 @@ def handle_disconnect():
         room_id = broadcast['room_id']
         
         # Notify all viewers
-        socketio.emit('broadcast_ended', {
+        sio_server.emit('broadcast_ended', {
             'broadcaster_id': client_id,
             'message': 'Broadcaster disconnected'
-        }, room=room_id)
+        }, to=room_id)
         
         del active_broadcasts[client_id]
         print(f"📹 Broadcaster disconnected: {client_id}")
@@ -592,10 +590,10 @@ def handle_disconnect():
             broadcast = active_broadcasts[broadcaster_id]
             broadcast['viewer_count'] -= 1
             
-            socketio.emit('viewer_left', {
+            sio_server.emit('viewer_left', {
                 'viewer_id': client_id,
                 'viewer_count': broadcast['viewer_count']
-            }, room=broadcaster_id)
+            }, to=broadcaster_id)
         
         del active_viewers[client_id]
         print(f"👁️  Viewer disconnected: {client_id}")
@@ -635,4 +633,4 @@ if __name__ == '__main__':
     if FILE_MANAGER_AVAILABLE:
         media_manager.scan_media_directory()
     
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
