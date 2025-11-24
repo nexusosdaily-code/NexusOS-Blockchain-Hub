@@ -585,6 +585,8 @@ function handleFileSelect(files) {
     
     const formData = new FormData();
     const category = uploadCategory.value;
+    let validFileCount = 0;
+    let hasErrors = false;
     
     Array.from(files).forEach(file => {
         // Validate file type
@@ -594,17 +596,28 @@ function handleFileSelect(files) {
         
         if (!validExts.includes(fileExt)) {
             showUploadStatus(`Invalid file type: ${file.name}. Only MP3, MP4, PDF allowed.`, 'error');
+            hasErrors = true;
             return;
         }
         
         // Validate file size (max 100MB)
         if (file.size > 100 * 1024 * 1024) {
             showUploadStatus(`File too large: ${file.name}. Max 100MB allowed.`, 'error');
+            hasErrors = true;
             return;
         }
         
         formData.append('files', file);
+        validFileCount++;
     });
+    
+    // Don't upload if no valid files
+    if (validFileCount === 0) {
+        if (!hasErrors) {
+            showUploadStatus('No valid files to upload', 'error');
+        }
+        return;
+    }
     
     formData.append('category', category);
     
@@ -725,6 +738,8 @@ function attachEventListeners() {
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
             handleFileSelect(e.target.files);
+            // Reset file input so the same file can be selected again
+            e.target.value = '';
         });
     }
     
