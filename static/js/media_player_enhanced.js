@@ -987,32 +987,20 @@ function initWallet() {
 
 async function loadNearbyPeers() {
     try {
-        // Load mesh network peers
+        // Load mesh network peers ONLY (not manually added friends)
+        // Manually added friends are for contact management, NOT mesh propagation
         const peersResponse = await fetch('/api/peers');
         const peersData = await peersResponse.json();
         
-        // Load manually added friends
-        const friendsResponse = await fetch('/api/friends?user_id=default_user');
-        const friendsData = await friendsResponse.json();
-        
-        // Merge mesh peers and friends
         let allPeers = [];
         
         if (peersData.success && peersData.peers) {
             allPeers = [...peersData.peers];
         }
         
-        // Add manually added friends to peer list
-        if (friendsData.success && friendsData.friends) {
-            friendsData.friends.forEach(friend => {
-                allPeers.push({
-                    device_id: friend.device_id || friend.contact,
-                    device_name: friend.name,
-                    status: 'Friend',
-                    transport_protocols: ['Manual']
-                });
-            });
-        }
+        // NOTE: We don't include manually added friends in the peer list
+        // because they're not active mesh nodes. Only show devices that are
+        // actually connected to the mesh network.
         
         discoveredPeers = allPeers;
         renderPeerList(allPeers);
