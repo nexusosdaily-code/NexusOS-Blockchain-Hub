@@ -327,6 +327,89 @@ def remove_friend(friend_id):
             'error': 'Friend not found or could not be removed'
         }), 404
 
+# ============================================================================
+# WALLET MANAGEMENT APIs
+# ============================================================================
+
+@app.route('/api/wallet/create', methods=['POST'])
+def create_wallet():
+    """Create new wallet"""
+    from wallet_manager import get_wallet_manager
+    
+    data = request.get_json()
+    device_name = data.get('device_name', '').strip()
+    contact = data.get('contact', '').strip()
+    
+    if not device_name or not contact:
+        return jsonify({
+            'success': False,
+            'error': 'Device name and contact are required'
+        }), 400
+    
+    manager = get_wallet_manager()
+    if not manager:
+        return jsonify({
+            'success': False,
+            'error': 'Wallet manager not available'
+        }), 503
+    
+    result = manager.create_wallet(device_name, contact)
+    
+    if result['success']:
+        return jsonify(result), 201
+    else:
+        return jsonify(result), 400
+
+@app.route('/api/wallet/login', methods=['POST'])
+def login_wallet():
+    """Login to wallet"""
+    from wallet_manager import get_wallet_manager
+    
+    data = request.get_json()
+    contact = data.get('contact', '').strip()
+    
+    if not contact:
+        return jsonify({
+            'success': False,
+            'error': 'Contact is required'
+        }), 400
+    
+    manager = get_wallet_manager()
+    if not manager:
+        return jsonify({
+            'success': False,
+            'error': 'Wallet manager not available'
+        }), 503
+    
+    result = manager.login_wallet(contact)
+    
+    if result['success']:
+        return jsonify(result)
+    else:
+        return jsonify(result), 404
+
+@app.route('/api/wallet/balance')
+def get_wallet_balance():
+    """Get wallet balance"""
+    from wallet_manager import get_wallet_manager
+    
+    device_id = request.args.get('device_id')
+    if not device_id:
+        return jsonify({
+            'success': False,
+            'error': 'Device ID required'
+        }), 400
+    
+    manager = get_wallet_manager()
+    if not manager:
+        return jsonify({
+            'success': False,
+            'error': 'Wallet manager not available'
+        }), 503
+    
+    result = manager.get_balance(device_id)
+    return jsonify(result)
+
 @app.route('/api/stats')
 def get_network_stats():
     """Get WNSP network statistics"""

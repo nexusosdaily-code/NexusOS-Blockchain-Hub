@@ -26,9 +26,81 @@
                     <span class="status-text">Mesh Network Active</span>
                     <span class="node-count">10 nodes</span>
                 </div>
+                <div class="wallet-info" id="walletInfo" style="display: none;">
+                    <div class="wallet-balance">
+                        <span class="balance-label">Balance:</span>
+                        <span class="balance-amount" id="walletBalance">0</span>
+                        <span class="balance-unit">units</span>
+                    </div>
+                    <button class="wallet-btn" id="walletDetailsBtn">💎 Wallet</button>
+                </div>
+                <button class="wallet-login-btn" id="walletLoginBtn">🔐 Connect Wallet</button>
             </div>
         </div>
     </header>
+
+    <!-- Wallet Login/Signup Modal -->
+    <div class="upload-modal" id="walletModal" style="display: none;">
+        <div class="upload-modal-content">
+            <div class="upload-modal-header">
+                <h2>💎 NexusOS Wallet</h2>
+                <button class="close-btn" id="closeWalletModal">✕</button>
+            </div>
+            <div class="upload-modal-body">
+                <div class="wallet-tabs">
+                    <button class="wallet-tab-btn active" data-tab="login">Login</button>
+                    <button class="wallet-tab-btn" data-tab="signup">Create Wallet</button>
+                </div>
+                
+                <!-- Login Tab -->
+                <div class="wallet-tab-content" id="loginTab">
+                    <h3>Connect Your Wallet</h3>
+                    <div class="form-group">
+                        <label for="loginDeviceId">Device ID or Phone Number:</label>
+                        <input type="text" id="loginDeviceId" placeholder="e.g., +1-234-567-8900" class="form-input">
+                    </div>
+                    <button class="upload-btn" id="loginWalletBtn" style="width: 100%;">
+                        <span class="upload-icon">🔓</span>
+                        Connect Wallet
+                    </button>
+                </div>
+                
+                <!-- Signup Tab -->
+                <div class="wallet-tab-content" id="signupTab" style="display: none;">
+                    <h3>Create New Wallet</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 16px;">Get 1,000,000 NXT units (0.01 NXT) to start!</p>
+                    <div class="form-group">
+                        <label for="signupDeviceName">Device Name:</label>
+                        <input type="text" id="signupDeviceName" placeholder="e.g., My Phone" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupContact">Mobile Number or Email:</label>
+                        <input type="text" id="signupContact" placeholder="e.g., +1-234-567-8900" class="form-input">
+                    </div>
+                    <button class="upload-btn" id="createWalletBtn" style="width: 100%;">
+                        <span class="upload-icon">✨</span>
+                        Create Wallet
+                    </button>
+                </div>
+                
+                <div class="wallet-info-box">
+                    <h4>📱 Your Phone IS the Blockchain</h4>
+                    <p>Access full blockchain features:</p>
+                    <ul>
+                        <li>💱 DEX Trading</li>
+                        <li>🏛️ Validator Staking</li>
+                        <li>📊 Blockchain Explorer</li>
+                        <li>🌐 DAG Messaging</li>
+                    </ul>
+                    <a href="/mobile_blockchain_hub" class="blockchain-hub-link" target="_blank">
+                        Open Mobile Blockchain Hub →
+                    </a>
+                </div>
+                
+                <div class="upload-status" id="walletStatus"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main class="main-content">

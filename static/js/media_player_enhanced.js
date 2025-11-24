@@ -23,6 +23,9 @@ function init() {
     // Cache DOM elements
     cacheDOM();
     
+    // Initialize wallet
+    initWallet();
+    
     // Load media from backend
     loadMediaLibrary();
     
@@ -621,8 +624,22 @@ const friendsList = document.getElementById('friendsList');
 const friendCount = document.getElementById('friendCount');
 const friendsStatus = document.getElementById('friendsStatus');
 
+// Wallet Elements
+const walletLoginBtn = document.getElementById('walletLoginBtn');
+const walletModal = document.getElementById('walletModal');
+const closeWalletModal = document.getElementById('closeWalletModal');
+const walletInfo = document.getElementById('walletInfo');
+const walletBalance = document.getElementById('walletBalance');
+const loginWalletBtn = document.getElementById('loginWalletBtn');
+const createWalletBtn = document.getElementById('createWalletBtn');
+const loginDeviceId = document.getElementById('loginDeviceId');
+const signupDeviceName = document.getElementById('signupDeviceName');
+const signupContact = document.getElementById('signupContact');
+const walletStatus = document.getElementById('walletStatus');
+
 let discoveredPeers = [];
 let myFriends = [];
+let currentWallet = null;
 
 // Friend Management Functions
 async function loadMyFriends() {
@@ -735,6 +752,125 @@ function openFriendsModal() {
 
 function closeFriendsModalFunc() {
     friendsModal.style.display = 'none';
+}
+
+// Wallet Functions
+function openWalletModal() {
+    walletModal.style.display = 'flex';
+}
+
+function closeWalletModalFunc() {
+    walletModal.style.display = 'none';
+}
+
+function switchWalletTab(tab) {
+    const tabs = document.querySelectorAll('.wallet-tab-btn');
+    const contents = document.querySelectorAll('.wallet-tab-content');
+    
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.style.display = 'none');
+    
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    document.getElementById(tab === 'login' ? 'loginTab' : 'signupTab').style.display = 'block';
+}
+
+async function createWallet() {
+    const deviceName = signupDeviceName.value.trim();
+    const contact = signupContact.value.trim();
+    
+    if (!deviceName || !contact) {
+        showWalletStatus('Please fill in all fields', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/wallet/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                device_name: deviceName,
+                contact: contact
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentWallet = data.wallet;
+            localStorage.setItem('wallet', JSON.stringify(currentWallet));
+            updateWalletUI();
+            closeWalletModalFunc();
+            showWalletStatus('✅ Wallet created successfully!', 'success');
+        } else {
+            showWalletStatus(`❌ ${data.error}`, 'error');
+        }
+    } catch (error) {
+        showWalletStatus('❌ Failed to create wallet', 'error');
+        console.error('Error creating wallet:', error);
+    }
+}
+
+async function loginWallet() {
+    const contact = loginDeviceId.value.trim();
+    
+    if (!contact) {
+        showWalletStatus('Please enter your contact', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/wallet/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contact: contact
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentWallet = data.wallet;
+            localStorage.setItem('wallet', JSON.stringify(currentWallet));
+            updateWalletUI();
+            closeWalletModalFunc();
+            showWalletStatus('✅ Wallet connected!', 'success');
+        } else {
+            showWalletStatus(`❌ ${data.error}`, 'error');
+        }
+    } catch (error) {
+        showWalletStatus('❌ Failed to connect wallet', 'error');
+        console.error('Error logging in wallet:', error);
+    }
+}
+
+function updateWalletUI() {
+    if (currentWallet) {
+        walletLoginBtn.style.display = 'none';
+        walletInfo.style.display = 'flex';
+        walletBalance.textContent = currentWallet.balance_units.toLocaleString();
+    } else {
+        walletLoginBtn.style.display = 'block';
+        walletInfo.style.display = 'none';
+    }
+}
+
+function showWalletStatus(message, type) {
+    walletStatus.textContent = message;
+    walletStatus.className = `upload-status ${type}`;
+}
+
+// Check for existing wallet on page load
+function initWallet() {
+    const savedWallet = localStorage.getItem('wallet');
+    if (savedWallet) {
+        currentWallet = JSON.parse(savedWallet);
+        updateWalletUI();
+    }
 }
 
 async function loadNearbyPeers() {
@@ -977,6 +1113,37 @@ function attachEventListeners() {
     
     if (addFriendBtn) {
         addFriendBtn.addEventListener('click', addNewFriend);
+    }
+    
+    // Wallet modal
+    if (walletLoginBtn) {
+        walletLoginBtn.addEventListener('click', openWalletModal);
+    }
+    
+    if (closeWalletModal) {
+        closeWalletModal.addEventListener('click', closeWalletModalFunc);
+    }
+    
+    if (walletModal) {
+        walletModal.addEventListener('click', (e) => {
+            if (e.target === walletModal) {
+                closeWalletModalFunc();
+            }
+        });
+    }
+    
+    // Wallet tabs
+    const walletTabBtns = document.querySelectorAll('.wallet-tab-btn');
+    walletTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => switchWalletTab(btn.dataset.tab));
+    });
+    
+    if (loginWalletBtn) {
+        loginWalletBtn.addEventListener('click', loginWallet);
+    }
+    
+    if (createWalletBtn) {
+        createWalletBtn.addEventListener('click', createWallet);
     }
     
     if (uploadModal) {

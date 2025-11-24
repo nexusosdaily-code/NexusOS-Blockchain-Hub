@@ -51,3 +51,5 @@ scikit-learn
 scipy
 flask-socketio
 werkzeug
+psycopg2-binary
+socketio
