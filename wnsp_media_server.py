@@ -127,12 +127,9 @@ def init_media_engine():
     _wnsp_initializing = True
     try:
         print("🔄 Initializing WNSP Media Engine with YOUR devices...", flush=True)
-        local_mesh = create_user_mesh_network()
-        local_engine = WNSPMediaPropagationProduction(mesh_stack=local_mesh)
-        
-        # CRITICAL: Must use global keyword to modify module-level variable
-        mesh_stack = local_mesh
-        media_engine = local_engine
+        # Direct assignment to globals (no intermediate variables)
+        mesh_stack = create_user_mesh_network()
+        media_engine = WNSPMediaPropagationProduction(mesh_stack=mesh_stack)
         
         print(f"✅ WNSP Media Engine initialized! engine={media_engine is not None}, mesh={mesh_stack is not None}, id={id(media_engine)}", flush=True)
     except Exception as e:
