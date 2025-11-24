@@ -353,13 +353,17 @@ def upload_media():
             # 🌐 PEER-TO-PEER MESH PROPAGATION: Detect source device and propagate to peer
             propagation_results = []
             engine = get_media_engine()
+            print(f"🔍 DEBUG: engine={engine is not None}, mesh={engine.mesh_stack is not None if engine else False}", flush=True)
+            
             if engine and engine.mesh_stack:
                 # CRITICAL: Also ingest into WNSP engine for mesh propagation
                 try:
+                    print(f"📝 Reading file content from {filepath}...", flush=True)
                     # Read actual file content for content-based hashing
                     with open(filepath, 'rb') as f:
                         file_content = f.read()
                     
+                    print(f"📝 Adding to WNSP engine: {filename} ({file_size} bytes)...", flush=True)
                     media_file = engine.add_media_file(
                         filename=filename,
                         file_type=file_ext.replace('.', ''),
@@ -369,9 +373,11 @@ def upload_media():
                         simulated_content=file_content  # Real file content for dedup
                     )
                     wnsp_media_id = media_file.file_id
-                    print(f"✅ Ingested into WNSP engine: {wnsp_media_id} ({media_file.total_chunks} chunks)")
+                    print(f"✅ Ingested into WNSP engine: {wnsp_media_id} ({media_file.total_chunks} chunks)", flush=True)
                 except Exception as ingest_error:
-                    print(f"⚠️  WNSP ingestion failed: {ingest_error}")
+                    import traceback
+                    print(f"⚠️  WNSP ingestion failed: {ingest_error}", flush=True)
+                    print(traceback.format_exc(), flush=True)
                     wnsp_media_id = None
                 # Detect which device is uploading
                 source_ip = request.remote_addr
