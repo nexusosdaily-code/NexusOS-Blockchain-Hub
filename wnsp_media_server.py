@@ -810,8 +810,12 @@ def upload_media():
                     print(f"✅ Ingested into WNSP engine: {wnsp_media_id} ({media_file.total_chunks} chunks)", flush=True)
                 except Exception as ingest_error:
                     import traceback
-                    print(f"⚠️  WNSP ingestion failed: {ingest_error}", flush=True)
-                    print(traceback.format_exc(), flush=True)
+                    error_details = traceback.format_exc()
+                    print(f"❌ WNSP INGESTION ERROR for {filename}:", flush=True)
+                    print(f"   Error type: {type(ingest_error).__name__}", flush=True)
+                    print(f"   Error message: {str(ingest_error)}", flush=True)
+                    print(f"   Full traceback:", flush=True)
+                    print(error_details, flush=True)
                     wnsp_media_id = None
                 
                 # Determine target nodes based on share mode
@@ -993,17 +997,24 @@ def upload_media():
                         errors.append(f'{filename}: Propagation failed - no targets reached')
                         continue
                 else:
-                    print("⚠️  Skipping propagation - WNSP ingestion failed or no targets")
+                    if not wnsp_media_id:
+                        print(f"❌ WNSP INGESTION FAILED for {filename} - wnsp_media_id is None", flush=True)
+                    else:
+                        print(f"❌ NO TARGET NODES for {filename} - target_nodes is empty (share_mode={share_mode}, friend_ids={friend_ids})", flush=True)
                     
                     # WNSP ingestion failed - rollback
                     try:
                         if os.path.exists(filepath):
                             os.remove(filepath)
+                            print(f"🗑️  Rolled back file: {filepath}", flush=True)
                         if media_manager and media_id:
                             media_manager.remove_file(media_id)
+                            print(f"🗑️  Rolled back media manager entry: {media_id}", flush=True)
                     except Exception as e:
-                        print(f"⚠️  Rollback error: {e}")
-                    errors.append(f'{filename}: WNSP ingestion failed')
+                        print(f"⚠️  Rollback error: {e}", flush=True)
+                    
+                    error_msg = 'WNSP ingestion failed' if not wnsp_media_id else f'No target nodes (share_mode={share_mode})'
+                    errors.append(f'{filename}: {error_msg}')
                     continue
             
             # Two-phase transaction complete (reserve → propagate → finalize)
