@@ -746,9 +746,9 @@ def upload_media():
                                 print(f"🗑️  Removed from media manager: {media_id}")
                             
                             # Remove from WNSP engine cache (critical for preventing unpaid propagation)
-                            if wnsp_media_id and wnsp_media_id in engine.media_files:
-                                del engine.media_files[wnsp_media_id]
-                                print(f"🗑️  Removed from WNSP engine cache: {wnsp_media_id}")
+                            if wnsp_media_id:
+                                engine.remove_media_file(wnsp_media_id, purge_chunks=True)
+                                print(f"🗑️  Purged from WNSP engine: {wnsp_media_id}")
                         except Exception as rollback_error:
                             print(f"⚠️  Rollback error: {rollback_error}")
                         

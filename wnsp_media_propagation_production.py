@@ -374,6 +374,54 @@ class WNSPMediaPropagationProduction:
         
         return media_file
     
+    def remove_media_file(self, file_id: str, purge_chunks: bool = True) -> bool:
+        """Remove a media file and optionally purge all its chunks from caches
+        
+        Args:
+            file_id: ID of file to remove
+            purge_chunks: If True, removes chunks from node caches and content index
+        
+        Returns:
+            True if file was removed, False if not found
+        """
+        if file_id not in self.media_library:
+            return False
+        
+        media_file = self.media_library[file_id]
+        
+        if purge_chunks:
+            # Remove chunks from all node caches
+            for chunk in media_file.chunks:
+                # Remove from content index
+                if chunk.content_hash in self.content_index:
+                    self.content_index[chunk.content_hash] = [
+                        c for c in self.content_index[chunk.content_hash]
+                        if c.chunk_id != chunk.chunk_id
+                    ]
+                    # Clean up empty entries
+                    if not self.content_index[chunk.content_hash]:
+                        del self.content_index[chunk.content_hash]
+                
+                # Remove from node caches
+                for node_id in list(chunk.nodes_with_chunk):
+                    if node_id in self.node_caches:
+                        cache = self.node_caches[node_id]
+                        if chunk.content_hash in cache.chunks_cached:
+                            del cache.chunks_cached[chunk.content_hash]
+                    chunk.nodes_with_chunk.discard(node_id)
+            
+            # Update stats
+            self.propagation_stats['total_chunks_created'] = max(
+                0,
+                self.propagation_stats['total_chunks_created'] - media_file.total_chunks
+            )
+        
+        # Remove file from library
+        del self.media_library[file_id]
+        self.propagation_stats['total_files'] = max(0, self.propagation_stats['total_files'] - 1)
+        
+        return True
+    
     def _generate_file_id(self, filename: str) -> str:
         """Generate unique file ID from filename"""
         return hashlib.sha256(filename.encode()).hexdigest()[:12]
