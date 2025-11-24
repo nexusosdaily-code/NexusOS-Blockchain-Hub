@@ -379,6 +379,238 @@ class WalletManager:
             }
         finally:
             conn.close()
+    
+    def reserve_energy_cost(self, device_id: str, amount_units: int, filename: str, file_size: int, wavelength_nm: float = None, energy_description: str = None) -> Dict:
+        """
+        Phase 1: Reserve (hold) energy cost without final deduction
+        Used for two-phase transaction: reserve → propagate → finalize
+        
+        Args:
+            device_id: User's device ID
+            amount_units: Estimated energy cost in NXT units to reserve
+            filename: Name of file being shared
+            file_size: Size of file in bytes
+            wavelength_nm: Wavelength used for calculation
+            energy_description: Description of the transaction
+        
+        Returns:
+            Dict with success, reservation_id, and balance info
+        """
+        conn = self._get_connection()
+        try:
+            with conn.cursor() as cur:
+                # Check current balance
+                cur.execute("""
+                    SELECT balance_units FROM wallets
+                    WHERE device_id = %s
+                """, (device_id,))
+                
+                row = cur.fetchone()
+                if not row:
+                    return {
+                        'success': False,
+                        'error': 'Wallet not found'
+                    }
+                
+                current_balance = row[0]
+                if current_balance < amount_units:
+                    return {
+                        'success': False,
+                        'error': f'Insufficient balance. Required: {amount_units} units, Available: {current_balance} units'
+                    }
+                
+                # Temporarily deduct (reserve) the amount
+                cur.execute("""
+                    UPDATE wallets
+                    SET balance_units = balance_units - %s
+                    WHERE device_id = %s
+                    RETURNING balance_units
+                """, (amount_units, device_id))
+                
+                new_balance = cur.fetchone()[0]
+                
+                # Create pending transaction record
+                cur.execute("""
+                    INSERT INTO transactions (device_id, amount_units, tx_type, filename, file_size, wavelength_nm, energy_description)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (device_id, amount_units, 'ENERGY_RESERVE', filename, file_size, wavelength_nm, f"PENDING: {energy_description}"))
+                
+                reservation_id = cur.fetchone()[0]
+                
+                conn.commit()
+                
+                return {
+                    'success': True,
+                    'reservation_id': reservation_id,
+                    'reserved_amount': amount_units,
+                    'new_balance': new_balance,
+                    'balance_nxt': new_balance / UNITS_PER_NXT
+                }
+        except Exception as e:
+            print(f"❌ Reserve energy cost error: {e}")
+            conn.rollback()
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        finally:
+            conn.close()
+    
+    def finalize_energy_cost(self, device_id: str, reservation_id: int, actual_amount_units: int, reserved_amount_units: int) -> Dict:
+        """
+        Phase 2: Finalize reserved energy cost with actual amount
+        - If actual > reserved: deduct additional amount (top-up)
+        - If actual < reserved: refund excess (partial refund)
+        - If actual == reserved: mark as finalized
+        
+        Args:
+            device_id: User's device ID
+            reservation_id: Transaction ID from reserve_energy_cost
+            actual_amount_units: Actual energy cost from propagation
+            reserved_amount_units: Originally reserved amount
+        
+        Returns:
+            Dict with success, adjustment info, and final balance
+        """
+        conn = self._get_connection()
+        try:
+            with conn.cursor() as cur:
+                delta = actual_amount_units - reserved_amount_units
+                
+                if delta > 0:
+                    # Top-up: Deduct additional amount
+                    cur.execute("""
+                        SELECT balance_units FROM wallets
+                        WHERE device_id = %s
+                    """, (device_id,))
+                    
+                    row = cur.fetchone()
+                    if not row:
+                        return {'success': False, 'error': 'Wallet not found'}
+                    
+                    current_balance = row[0]
+                    if current_balance < delta:
+                        return {
+                            'success': False,
+                            'error': f'Insufficient balance for top-up. Required: {delta} units, Available: {current_balance} units'
+                        }
+                    
+                    cur.execute("""
+                        UPDATE wallets
+                        SET balance_units = balance_units - %s
+                        WHERE device_id = %s
+                        RETURNING balance_units
+                    """, (delta, device_id))
+                    
+                    adjustment_type = 'TOP_UP'
+                    
+                elif delta < 0:
+                    # Refund: Add back excess amount
+                    cur.execute("""
+                        UPDATE wallets
+                        SET balance_units = balance_units + %s
+                        WHERE device_id = %s
+                        RETURNING balance_units
+                    """, (abs(delta), device_id))
+                    
+                    adjustment_type = 'REFUND'
+                else:
+                    # Exact match: no adjustment needed
+                    cur.execute("""
+                        SELECT balance_units FROM wallets
+                        WHERE device_id = %s
+                    """, (device_id,))
+                    adjustment_type = 'EXACT'
+                
+                final_balance = cur.fetchone()[0]
+                
+                # Update original transaction to FINALIZED
+                cur.execute("""
+                    UPDATE transactions
+                    SET tx_type = 'ENERGY_COST',
+                        amount_units = %s,
+                        energy_description = REPLACE(energy_description, 'PENDING: ', '')
+                    WHERE id = %s
+                """, (actual_amount_units, reservation_id))
+                
+                # Create adjustment record if needed
+                if delta != 0:
+                    cur.execute("""
+                        INSERT INTO transactions (device_id, amount_units, tx_type, energy_description)
+                        VALUES (%s, %s, %s, %s)
+                    """, (device_id, abs(delta), adjustment_type, f"Reconciliation for reservation #{reservation_id}"))
+                
+                conn.commit()
+                
+                return {
+                    'success': True,
+                    'adjustment_type': adjustment_type,
+                    'adjustment_amount': abs(delta),
+                    'actual_cost': actual_amount_units,
+                    'reserved_cost': reserved_amount_units,
+                    'final_balance': final_balance,
+                    'balance_nxt': final_balance / UNITS_PER_NXT
+                }
+        except Exception as e:
+            print(f"❌ Finalize energy cost error: {e}")
+            conn.rollback()
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        finally:
+            conn.close()
+    
+    def cancel_reservation(self, device_id: str, reservation_id: int, reserved_amount_units: int) -> Dict:
+        """
+        Cancel a reservation and refund the full reserved amount
+        Used when propagation fails completely
+        
+        Args:
+            device_id: User's device ID
+            reservation_id: Transaction ID to cancel
+            reserved_amount_units: Amount to refund
+        
+        Returns:
+            Dict with success and refunded balance
+        """
+        conn = self._get_connection()
+        try:
+            with conn.cursor() as cur:
+                # Refund the full reserved amount
+                cur.execute("""
+                    UPDATE wallets
+                    SET balance_units = balance_units + %s
+                    WHERE device_id = %s
+                    RETURNING balance_units
+                """, (reserved_amount_units, device_id))
+                
+                final_balance = cur.fetchone()[0]
+                
+                # Delete the pending reservation transaction
+                cur.execute("""
+                    DELETE FROM transactions
+                    WHERE id = %s
+                """, (reservation_id,))
+                
+                conn.commit()
+                
+                return {
+                    'success': True,
+                    'refunded_amount': reserved_amount_units,
+                    'final_balance': final_balance,
+                    'balance_nxt': final_balance / UNITS_PER_NXT
+                }
+        except Exception as e:
+            print(f"❌ Cancel reservation error: {e}")
+            conn.rollback()
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        finally:
+            conn.close()
 
 
 # Global instance

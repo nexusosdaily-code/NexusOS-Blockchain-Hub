@@ -705,11 +705,9 @@ def upload_media():
                 print(f"📤 Upload from {source_display} ({source_ip})")
                 print(f"📡 Share Mode: {share_type}")
                 
-                # 💰 CRITICAL: Calculate CONSERVATIVE upper-bound cost BEFORE propagation
+                # 💰 PHASE 1: RESERVE energy cost (two-phase transaction for exact physics enforcement)
                 if wnsp_media_id and target_nodes:
-                    # Use CONSERVATIVE estimate to ensure we never undercharge
-                    # Assume worst-case: 3 hops per target + 20% safety margin
-                    # This guarantees payment covers actual energy liability
+                    # Calculate conservative upper-bound estimate for reservation
                     conservative_hops_per_target = 3  # Worst-case mesh depth
                     safety_margin = 1.2  # 20% overcharge margin
                     
@@ -717,46 +715,56 @@ def upload_media():
                     estimated_cost_units = int(estimated_cost_nxt * 100_000_000)
                     avg_wavelength = sum(chunk.wavelength for chunk in media_file.chunks) / len(media_file.chunks) if media_file.chunks else 0
                     
-                    print(f"📊 CONSERVATIVE estimate: {estimated_cost_units} units ({estimated_cost_nxt:.8f} NXT) for {len(target_nodes)} target(s)")
+                    print(f"📊 RESERVE estimate: {estimated_cost_units} units ({estimated_cost_nxt:.8f} NXT) for {len(target_nodes)} target(s)")
                     
-                    # 🔒 DEDUCT ENERGY COST BEFORE PROPAGATION (prevent free distribution)
-                    energy_description = f"P2P content sharing (pre-paid): {len(target_nodes)} target(s), {media_file.total_chunks} chunks"
+                    # Reserve funds BEFORE propagation
+                    energy_description = f"P2P content sharing: {len(target_nodes)} target(s), {media_file.total_chunks} chunks"
                     
-                    deduction_result = wallet_mgr.deduct_energy_cost(
+                    reserve_result = wallet_mgr.reserve_energy_cost(
                         device_id=device_id,
-                        amount_units=total_energy_cost_units,
+                        amount_units=estimated_cost_units,
                         filename=filename,
                         file_size=file_size,
                         wavelength_nm=avg_wavelength,
                         energy_description=energy_description
                     )
                     
-                    if not deduction_result['success']:
-                        # ❌ PAYMENT FAILED - ABORT UPLOAD, ROLLBACK EVERYTHING
-                        print(f"❌ PAYMENT FAILED: {deduction_result.get('error')}")
+                    if not reserve_result['success']:
+                        # ❌ RESERVATION FAILED - ABORT UPLOAD, ROLLBACK EVERYTHING
+                        print(f"❌ RESERVATION FAILED: {reserve_result.get('error')}")
                         print(f"🔄 ROLLBACK: Deleting unpaid content (NO FREE SHARING!)")
                         
                         try:
+                            # Delete file from disk
                             if os.path.exists(filepath):
                                 os.remove(filepath)
                                 print(f"🗑️  Deleted unpaid file: {filepath}")
+                            
+                            # Remove from media manager
                             if media_manager and media_id:
                                 media_manager.remove_file(media_id)
                                 print(f"🗑️  Removed from media manager: {media_id}")
+                            
+                            # Remove from WNSP engine cache (critical for preventing unpaid propagation)
+                            if wnsp_media_id and wnsp_media_id in engine.media_files:
+                                del engine.media_files[wnsp_media_id]
+                                print(f"🗑️  Removed from WNSP engine cache: {wnsp_media_id}")
                         except Exception as rollback_error:
                             print(f"⚠️  Rollback error: {rollback_error}")
                         
-                        errors.append(f'{filename}: {deduction_result.get("error")} - Upload cancelled (payment required before distribution)')
+                        errors.append(f'{filename}: {reserve_result.get("error")} - Upload cancelled (payment required before distribution)')
                         continue  # Skip propagation and file listing - NO SUCCESS!
                     
-                    # ✅ Payment successful - NOW propagate to network
-                    print(f"✅ Payment deducted: {total_energy_cost_units} units ({total_energy_cost_nxt:.8f} NXT)")
-                    print(f"💰 New balance: {deduction_result['new_balance']} units")
-                    current_balance = deduction_result['new_balance']
+                    # ✅ Funds reserved - NOW propagate to network
+                    reservation_id = reserve_result['reservation_id']
+                    reserved_amount = reserve_result['reserved_amount']
+                    
+                    print(f"✅ Funds reserved: {reserved_amount} units (reservation #{reservation_id})")
+                    print(f"💰 Temp balance: {reserve_result['new_balance']} units")
                     
                     print(f"📡 Propagating {filename} to {len(target_nodes)} peer node(s)...")
                     
-                    # Propagate to peer nodes only (payment already confirmed)
+                    # Propagate to peer nodes (funds already reserved)
                     for node_id in target_nodes:
                         try:
                             result = engine.propagate_file_to_node(wnsp_media_id, node_id, source_node_id=source_node)
@@ -773,6 +781,93 @@ def upload_media():
                                 print(f"✅ {source_display} → {target_display}: {result.get('successful_chunks')} chunks, {result.get('total_hops')} hops, {result.get('total_energy_cost', 0):.6f} NXT")
                         except Exception as prop_error:
                             print(f"⚠️  Propagation to {node_id} failed: {prop_error}")
+                    
+                    # 💰 PHASE 2: FINALIZE with ACTUAL cost (exact physics enforcement)
+                    if propagation_results:
+                        # Calculate ACTUAL energy cost from real propagation
+                        actual_energy_nxt = sum(p.get('energy', 0) for p in propagation_results)
+                        actual_energy_units = int(actual_energy_nxt * 100_000_000)
+                        
+                        print(f"📊 ACTUAL energy cost: {actual_energy_units} units ({actual_energy_nxt:.8f} NXT)")
+                        
+                        # Reconcile: refund overcharge or top-up undercharge
+                        finalize_result = wallet_mgr.finalize_energy_cost(
+                            device_id=device_id,
+                            reservation_id=reservation_id,
+                            actual_amount_units=actual_energy_units,
+                            reserved_amount_units=reserved_amount
+                        )
+                        
+                        if finalize_result['success']:
+                            adjustment_type = finalize_result['adjustment_type']
+                            adjustment_amount = finalize_result['adjustment_amount']
+                            
+                            if adjustment_type == 'REFUND':
+                                print(f"💸 REFUND: {adjustment_amount} units returned (overcharge)")
+                            elif adjustment_type == 'TOP_UP':
+                                print(f"💰 TOP-UP: {adjustment_amount} units deducted (undercharge)")
+                            else:
+                                print(f"✅ EXACT match: No adjustment needed")
+                            
+                            print(f"💰 Final balance: {finalize_result['final_balance']} units ({finalize_result['balance_nxt']:.8f} NXT)")
+                            current_balance = finalize_result['final_balance']
+                        else:
+                            # ❌ Finalization failed - CRITICAL ERROR (cancel reservation + rollback)
+                            print(f"❌ CRITICAL: Finalization failed: {finalize_result.get('error')}")
+                            print(f"🔄 Cancelling reservation and rolling back...")
+                            
+                            # Cancel reservation and refund
+                            cancel_result = wallet_mgr.cancel_reservation(
+                                device_id=device_id,
+                                reservation_id=reservation_id,
+                                reserved_amount_units=reserved_amount
+                            )
+                            
+                            if cancel_result['success']:
+                                print(f"💸 REFUND: {cancel_result['refunded_amount']} units (finalization failed)")
+                                current_balance = cancel_result['final_balance']
+                            
+                            # Rollback file and engine data
+                            try:
+                                if os.path.exists(filepath):
+                                    os.remove(filepath)
+                                if media_manager and media_id:
+                                    media_manager.remove_file(media_id)
+                                if wnsp_media_id and wnsp_media_id in engine.media_files:
+                                    del engine.media_files[wnsp_media_id]
+                            except Exception as e:
+                                print(f"⚠️  Rollback error: {e}")
+                            
+                            errors.append(f'{filename}: Finalization failed - {finalize_result.get("error")}')
+                            continue  # ABORT - do not add to uploaded_files
+                    else:
+                        # No successful propagation - CANCEL reservation and refund
+                        print(f"❌ Propagation failed - cancelling reservation #{reservation_id}")
+                        
+                        cancel_result = wallet_mgr.cancel_reservation(
+                            device_id=device_id,
+                            reservation_id=reservation_id,
+                            reserved_amount_units=reserved_amount
+                        )
+                        
+                        if cancel_result['success']:
+                            print(f"💸 REFUND: {cancel_result['refunded_amount']} units returned (propagation failed)")
+                            print(f"💰 Balance restored: {cancel_result['final_balance']} units")
+                            current_balance = cancel_result['final_balance']
+                        
+                        # Rollback file and engine data
+                        try:
+                            if os.path.exists(filepath):
+                                os.remove(filepath)
+                            if media_manager and media_id:
+                                media_manager.remove_file(media_id)
+                            if wnsp_media_id and wnsp_media_id in engine.media_files:
+                                del engine.media_files[wnsp_media_id]
+                        except Exception as e:
+                            print(f"⚠️  Rollback error: {e}")
+                        
+                        errors.append(f'{filename}: Propagation failed - no targets reached')
+                        continue
                 else:
                     print("⚠️  Skipping propagation - WNSP ingestion failed or no targets")
                     
@@ -787,7 +882,7 @@ def upload_media():
                     errors.append(f'{filename}: WNSP ingestion failed')
                     continue
             
-            # Payment already deducted before propagation (above) - just track results
+            # Two-phase transaction complete (reserve → propagate → finalize)
             
             uploaded_files.append({
                 'filename': filename,
