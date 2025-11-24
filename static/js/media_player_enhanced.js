@@ -1028,7 +1028,27 @@ function renderPeerList(peers) {
         return;
     }
     
-    friendListContainer.innerHTML = peers.map(peer => `
+    // Detect current device (filter out self - can't send to yourself!)
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const currentDevice = isLocalhost ? 'your_computer' : 'your_phone';
+    
+    // Filter out current device from friend selection
+    const availablePeers = peers.filter(peer => peer.device_id !== currentDevice);
+    
+    if (availablePeers.length === 0) {
+        friendListContainer.innerHTML = '<div class="loading-peers">⚠️ No other devices available (you can\'t send to yourself)</div>';
+        return;
+    }
+    
+    // Show note about current device
+    const deviceEmoji = currentDevice === 'your_phone' ? '📱' : '💻';
+    const deviceName = currentDevice === 'your_phone' ? 'Phone' : 'Computer';
+    
+    friendListContainer.innerHTML = `
+        <div class="current-device-note" style="padding: 8px; margin-bottom: 10px; background: #f0f8ff; border-radius: 8px; font-size: 12px; color: #0066cc;">
+            ${deviceEmoji} Uploading from <strong>${deviceName}</strong> - Select devices to send to:
+        </div>
+    ` + availablePeers.map(peer => `
         <div class="friend-item" data-peer-id="${peer.device_id}">
             <input type="checkbox" class="friend-checkbox" value="${peer.device_id}" id="peer_${peer.device_id}">
             <div class="friend-info">
