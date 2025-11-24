@@ -753,11 +753,42 @@ function attachEventListeners() {
     
     if (fileInput) {
         console.log('✅ Attaching change event listener to fileInput');
-        fileInput.addEventListener('change', (e) => {
+        
+        // Mobile Fix: Use multiple event types for better compatibility
+        const handleFileChange = (e) => {
             console.log('📁 File input change event triggered!', e.target.files);
-            handleFileSelect(e.target.files);
-            // Reset file input so the same file can be selected again
-            e.target.value = '';
+            if (e.target.files && e.target.files.length > 0) {
+                handleFileSelect(e.target.files);
+                // Reset file input so the same file can be selected again
+                setTimeout(() => { e.target.value = ''; }, 100);
+            }
+        };
+        
+        // Listen to both 'change' and 'input' events for mobile compatibility
+        fileInput.addEventListener('change', handleFileChange);
+        fileInput.addEventListener('input', handleFileChange);
+        
+        // Mobile Safari fix: also listen for click -> focus -> blur sequence
+        let filesSelectedViaClick = false;
+        fileInput.addEventListener('click', () => {
+            console.log('📱 File input clicked (mobile)');
+            filesSelectedViaClick = true;
+        });
+        
+        fileInput.addEventListener('blur', () => {
+            if (filesSelectedViaClick) {
+                console.log('📱 File input blur - checking for files...');
+                setTimeout(() => {
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        console.log('📱 Files detected on blur!', fileInput.files);
+                        handleFileSelect(fileInput.files);
+                        fileInput.value = '';
+                    } else {
+                        console.log('📱 No files selected on blur');
+                    }
+                    filesSelectedViaClick = false;
+                }, 200);
+            }
         });
     } else {
         console.error('❌ fileInput element not found!');
