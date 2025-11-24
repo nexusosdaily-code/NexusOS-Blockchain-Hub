@@ -220,8 +220,9 @@ class WNSPMediaFileManager:
                 
                 chunks.append(chunk)
                 
-                # Cache chunk in memory
-                self.chunk_cache[chunk_id] = chunk_data
+                # Skip memory caching for large files to prevent OOM crashes
+                # Files are streamed directly from disk instead
+                # self.chunk_cache[chunk_id] = chunk_data  # Disabled for production
                 
                 chunk_index += 1
         
