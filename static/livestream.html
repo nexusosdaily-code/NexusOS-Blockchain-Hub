@@ -154,6 +154,27 @@
             margin-bottom: 16px;
             font-size: 14px;
         }
+
+        /* Explicit select styling to ensure visibility */
+        select {
+            appearance: auto;
+            -webkit-appearance: menulist;
+            -moz-appearance: menulist;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            width: 100%;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        select option {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 8px;
+        }
     </style>
 </head>
 <body>
