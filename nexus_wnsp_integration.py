@@ -198,15 +198,22 @@ class NexusWNSPWallet(NexusNativeWallet):
             session.close()
     
     def finalize_energy_cost(self, device_id: str, reservation_id: int,
-                            actual_amount_units: int, reserved_amount_units: int) -> Dict[str, Any]:
+                            actual_amount_units: int) -> Dict[str, Any]:
         """
         Phase 2: Finalize reservation with actual energy cost
         
         Performs blockchain deduction for exact amount
         Refunds if overcharged, charges top-up if undercharged
+        
+        SECURITY: reserved_amount_units is read from DATABASE reservation,
+        NOT from client request (prevents refund fraud)
         """
         session = self.SessionMaker()
         try:
+            # Validate actual_amount_units is non-negative
+            if actual_amount_units < 0:
+                return {'success': False, 'error': f'Invalid actual_amount_units: {actual_amount_units}'}
+            
             # Get reservation
             reservation = session.query(EnergyReservation).filter_by(
                 id=reservation_id,
@@ -218,6 +225,9 @@ class NexusWNSPWallet(NexusNativeWallet):
                 return {'success': False, 'error': 'Reservation not found or already finalized'}
             
             address = reservation.address
+            
+            # 🔒 SECURITY: Read reserved amount from DATABASE (not client!)
+            reserved_amount_units = reservation.reserved_amount_units
             
             # Calculate adjustment
             adjustment = reserved_amount_units - actual_amount_units
@@ -271,9 +281,13 @@ class NexusWNSPWallet(NexusNativeWallet):
         finally:
             session.close()
     
-    def cancel_reservation(self, device_id: str, reservation_id: int,
-                          reserved_amount_units: int) -> Dict[str, Any]:
-        """Cancel reservation and refund (for failed uploads)"""
+    def cancel_reservation(self, device_id: str, reservation_id: int) -> Dict[str, Any]:
+        """
+        Cancel reservation and refund (for failed uploads)
+        
+        SECURITY: reserved_amount_units is read from DATABASE reservation,
+        NOT from client request (prevents refund fraud)
+        """
         session = self.SessionMaker()
         try:
             # Get reservation
@@ -284,6 +298,9 @@ class NexusWNSPWallet(NexusNativeWallet):
             
             if not reservation:
                 return {'success': False, 'error': 'Reservation not found'}
+            
+            # 🔒 SECURITY: Read reserved amount from DATABASE (not client!)
+            reserved_amount_units = reservation.reserved_amount_units
             
             # 🔒 CRITICAL: Get token account from SAME session (not separate session!)
             address = reservation.address

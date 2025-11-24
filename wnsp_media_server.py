@@ -919,11 +919,11 @@ def upload_media():
                         print(f"📊 ACTUAL energy cost: {actual_energy_units} units ({actual_energy_nxt:.8f} NXT)")
                         
                         # Reconcile: refund overcharge or top-up undercharge
+                        # SECURITY: reserved_amount is read from database, not client
                         finalize_result = wallet_mgr.finalize_energy_cost(
                             device_id=device_id,
                             reservation_id=reservation_id,
-                            actual_amount_units=actual_energy_units,
-                            reserved_amount_units=reserved_amount
+                            actual_amount_units=actual_energy_units
                         )
                         
                         if finalize_result['success']:
@@ -945,10 +945,10 @@ def upload_media():
                             print(f"🔄 Cancelling reservation and rolling back...")
                             
                             # Cancel reservation and refund
+                            # SECURITY: reserved_amount is read from database, not client
                             cancel_result = wallet_mgr.cancel_reservation(
                                 device_id=device_id,
-                                reservation_id=reservation_id,
-                                reserved_amount_units=reserved_amount
+                                reservation_id=reservation_id
                             )
                             
                             if cancel_result['success']:
@@ -972,10 +972,10 @@ def upload_media():
                         # No successful propagation - CANCEL reservation and refund
                         print(f"❌ Propagation failed - cancelling reservation #{reservation_id}")
                         
+                        # SECURITY: reserved_amount is read from database, not client
                         cancel_result = wallet_mgr.cancel_reservation(
                             device_id=device_id,
-                            reservation_id=reservation_id,
-                            reserved_amount_units=reserved_amount
+                            reservation_id=reservation_id
                         )
                         
                         if cancel_result['success']:
