@@ -64,6 +64,12 @@ class FriendManager:
                 result = cur.fetchone()
                 conn.commit()
                 
+                if not result:
+                    return {
+                        'success': False,
+                        'error': 'Failed to add friend'
+                    }
+                
                 return {
                     'success': True,
                     'friend': {
