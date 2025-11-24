@@ -8,7 +8,7 @@ import hashlib
 import secrets
 from datetime import datetime
 from typing import Dict, Any
-from nexus_native_wallet import NexusNativeWallet, DeviceWalletMapping, EnergyReservation
+from nexus_native_wallet import NexusNativeWallet, DeviceWalletMapping, EnergyReservation, TokenAccount
 
 UNITS_PER_NXT = 100_000_000
 
@@ -152,8 +152,8 @@ class NexusWNSPWallet(NexusNativeWallet):
             
             address = mapping.nexus_address
             
-            # Get token account and check balance
-            account = self._get_token_account(address)
+            # 🔒 CRITICAL: Get token account from SAME session (not separate session!)
+            account = session.query(TokenAccount).filter_by(address=address).first()
             if not account:
                 return {'success': False, 'error': 'Account not found'}
             
@@ -228,8 +228,8 @@ class NexusWNSPWallet(NexusNativeWallet):
             elif adjustment < 0:
                 adjustment_type = 'TOP_UP'
             
-            # Get token account for adjustment
-            account = self._get_token_account(address)
+            # 🔒 CRITICAL: Get token account from SAME session (not separate session!)
+            account = session.query(TokenAccount).filter_by(address=address).first()
             if not account:
                 return {'success': False, 'error': 'Account not found'}
             
@@ -285,9 +285,9 @@ class NexusWNSPWallet(NexusNativeWallet):
             if not reservation:
                 return {'success': False, 'error': 'Reservation not found'}
             
-            # Get token account and refund reserved funds
+            # 🔒 CRITICAL: Get token account from SAME session (not separate session!)
             address = reservation.address
-            account = self._get_token_account(address)
+            account = session.query(TokenAccount).filter_by(address=address).first()
             if not account:
                 return {'success': False, 'error': 'Account not found'}
             
