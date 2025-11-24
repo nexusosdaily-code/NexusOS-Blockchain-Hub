@@ -136,6 +136,11 @@ def init_media_engine():
         print(f"⚠️  WNSP Engine initialization failed: {e}", flush=True)
         WNSP_AVAILABLE = False
 
+@app.before_request
+def ensure_wnsp_engine():
+    """Ensure WNSP engine is initialized before handling any request"""
+    get_media_engine()
+
 @app.route('/')
 def index():
     """Serve the main media player page"""
