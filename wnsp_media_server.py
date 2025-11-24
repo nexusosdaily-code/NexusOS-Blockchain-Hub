@@ -1458,6 +1458,22 @@ def handle_register_phone(data):
         'phone_number': phone_number,
         'message': 'Phone number registered successfully'
     })
+    
+    # 📡 CRITICAL: Send all active broadcasts to newly connected viewer
+    # This ensures viewers who connect AFTER a broadcast started can still see it
+    for broadcaster_id, broadcast_info in active_broadcasts.items():
+        # Check if this broadcast is public or if viewer is in allowed friends list
+        is_public = broadcast_info.get('broadcast_type') == 'public'
+        allowed_friends = broadcast_info.get('allowed_friends', [])
+        
+        if is_public or phone_number in allowed_friends:
+            print(f"📤 Sending existing broadcast to {phone_number}: {broadcast_info['title']}")
+            emit('broadcast_available', {
+                'broadcaster_id': broadcaster_id,
+                'title': broadcast_info['title'],
+                'category': broadcast_info['category'],
+                'viewer_count': broadcast_info['viewer_count']
+            })
 
 @socketio.on('disconnect')
 def handle_disconnect(reason=None):
