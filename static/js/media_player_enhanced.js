@@ -904,6 +904,21 @@ function showWalletStatus(message, type) {
     walletStatus.className = `upload-status ${type}`;
 }
 
+// Logout wallet
+function logoutWallet() {
+    if (confirm('Are you sure you want to disconnect your wallet?')) {
+        // Clear wallet data
+        currentWallet = null;
+        localStorage.removeItem('wallet');
+        
+        // Update UI
+        updateWalletUI();
+        
+        // Show success message
+        showToast('✅ Wallet disconnected successfully', 'success');
+    }
+}
+
 // Load available wallets for import
 async function loadAvailableWallets() {
     try {
@@ -1276,6 +1291,11 @@ function attachEventListeners() {
     
     if (createWalletBtn) {
         createWalletBtn.addEventListener('click', createWallet);
+    }
+    
+    const walletLogoutBtn = document.getElementById('walletLogoutBtn');
+    if (walletLogoutBtn) {
+        walletLogoutBtn.addEventListener('click', logoutWallet);
     }
     
     if (uploadModal) {
