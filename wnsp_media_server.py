@@ -1292,6 +1292,371 @@ def test_encryption():
     
     return jsonify(results), 200
 
+# =============================================================================
+# SOCKET.IO EVENT HANDLERS - WEBRTC SIGNALING & LIVE STREAMING
+# =============================================================================
+
+@socketio.on('connect')
+def handle_connect():
+    """Client connected to Socket.IO"""
+    print(f"📡 Client connected: {request.sid}")
+    emit('connected', {'message': 'Connected to WNSP mesh network', 'client_id': request.sid})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """
+    Client disconnected - Clean up broadcast or viewer state
+    
+    CRITICAL: Properly handle both broadcaster and viewer disconnects
+    to prevent state inconsistencies and ensure E=hf costs are finalized
+    """
+    print(f"📡 Client disconnected: {request.sid}")
+    
+    # Clean up if broadcaster
+    if request.sid in active_broadcasts:
+        print(f"🛑 Broadcaster {request.sid} disconnected - stopping broadcast and finalizing costs")
+        handle_stop_broadcast_internal(request.sid)
+    
+    # Clean up if viewer  
+    if request.sid in viewer_to_broadcaster:
+        broadcaster_id = viewer_to_broadcaster[request.sid]
+        viewer_id = request.sid
+        
+        # Remove viewer from broadcast
+        if broadcaster_id in active_broadcasts:
+            active_broadcasts[broadcaster_id]['viewers'].discard(viewer_id)
+            active_broadcasts[broadcaster_id]['viewer_count'] = len(active_broadcasts[broadcaster_id]['viewers'])
+            
+            # Notify broadcaster about viewer leaving
+            socketio.emit('viewer_left', {
+                'viewer_id': viewer_id,
+                'viewer_count': active_broadcasts[broadcaster_id]['viewer_count']
+            }, room=broadcaster_id)
+            
+            print(f"👋 Viewer {viewer_id} left broadcast {broadcaster_id} (disconnect)")
+        
+        del viewer_to_broadcaster[request.sid]
+
+@socketio.on('start_broadcast')
+def handle_start_broadcast(data):
+    """
+    Broadcaster wants to start streaming
+    
+    CRITICAL: Requires device_id for E=hf energy cost enforcement
+    Client must send device_id in the request to reserve NXT
+    """
+    broadcaster_id = request.sid
+    title = data.get('title', 'Untitled Stream')
+    category = data.get('category', 'university')
+    device_id = data.get('device_id')  # REQUIRED for wallet charging
+    quality = data.get('quality', 'medium')
+    
+    print(f"📹 Starting broadcast: {title} ({category}) by {broadcaster_id}")
+    
+    # 💰 STEP 1: Reserve NXT for estimated streaming cost (10 minutes @ quality)
+    if device_id:
+        from wallet_manager import get_wallet_manager
+        wallet_mgr = get_wallet_manager()
+        
+        # Estimate 10 minutes of streaming (600 seconds)
+        estimated_duration = 600  # seconds
+        estimated_cost_units = calculate_stream_energy_cost(estimated_duration, quality)
+        
+        # Reserve funds from wallet
+        reserve_result = wallet_mgr.reserve_energy_cost(
+            device_id=device_id,
+            amount_units=estimated_cost_units,
+            filename=f"stream_{title}",
+            file_size=0,  # N/A for streaming
+            wavelength_nm=650.0  # Red wavelength for video
+        )
+        
+        if not reserve_result['success']:
+            # Insufficient balance - cannot start streaming
+            emit('broadcast_started', {
+                'success': False,
+                'error': f"Insufficient NXT balance. Need {estimated_cost_units/UNITS_PER_NXT:.4f} NXT to start streaming.",
+                'required_nxt': estimated_cost_units / UNITS_PER_NXT
+            }, room=broadcaster_id)
+            print(f"❌ Broadcast failed: {reserve_result.get('error')}")
+            return
+        
+        reservation_id = reserve_result['reservation_id']
+        reserved_amount = reserve_result['reserved_amount']
+        
+        print(f"💰 Reserved {reserved_amount} units ({reserved_amount/UNITS_PER_NXT:.4f} NXT) for streaming")
+        
+        # Store reservation info
+        broadcaster_streams[broadcaster_id] = {
+            'device_id': device_id,
+            'reservation_id': reservation_id,
+            'reserved_amount': reserved_amount,
+            'quality': quality
+        }
+    else:
+        print("⚠️  No device_id provided - streaming will be FREE (not enforcing E=hf costs)")
+    
+    # Create broadcast entry
+    active_broadcasts[broadcaster_id] = {
+        'broadcaster_id': broadcaster_id,
+        'title': title,
+        'category': category,
+        'viewers': set(),
+        'started_at': datetime.utcnow(),
+        'viewer_count': 0,
+        'quality': quality
+    }
+    
+    # Notify broadcaster
+    emit('broadcast_started', {
+        'success': True,
+        'broadcaster_id': broadcaster_id,
+        'title': title,
+        'cost_per_minute': calculate_stream_energy_cost(60, quality) / UNITS_PER_NXT  # NXT per minute
+    }, room=broadcaster_id)
+    
+    # Notify all other clients about new broadcast
+    emit('broadcast_available', {
+        'broadcaster_id': broadcaster_id,
+        'title': title,
+        'category': category,
+        'viewer_count': 0
+    }, broadcast=True, include_self=False)
+
+@socketio.on('stop_broadcast')
+def handle_stop_broadcast():
+    """Broadcaster wants to stop streaming"""
+    handle_stop_broadcast_internal(request.sid)
+
+def handle_stop_broadcast_internal(broadcaster_id):
+    """Internal function to stop broadcast and clean up"""
+    if broadcaster_id not in active_broadcasts:
+        return
+    
+    broadcast = active_broadcasts[broadcaster_id]
+    print(f"🛑 Stopping broadcast: {broadcast['title']} by {broadcaster_id}")
+    
+    # Calculate streaming duration and E=hf cost
+    duration_seconds = (datetime.utcnow() - broadcast['started_at']).total_seconds()
+    
+    # Notify all viewers
+    for viewer_id in broadcast['viewers']:
+        socketio.emit('broadcast_ended', {
+            'broadcaster_id': broadcaster_id
+        }, room=viewer_id)
+        
+        if viewer_id in viewer_to_broadcaster:
+            del viewer_to_broadcaster[viewer_id]
+    
+    # Clean up broadcast
+    del active_broadcasts[broadcaster_id]
+    
+    # Finalize energy cost if wallet was used
+    if broadcaster_id in broadcaster_streams:
+        stream_info = broadcaster_streams[broadcaster_id]
+        finalize_stream_energy_cost(broadcaster_id, duration_seconds)
+        del broadcaster_streams[broadcaster_id]
+    
+    # Notify all clients broadcast ended
+    socketio.emit('broadcast_ended', {
+        'broadcaster_id': broadcaster_id
+    }, broadcast=True)
+
+@socketio.on('join_broadcast')
+def handle_join_broadcast(data):
+    """Viewer wants to join a broadcast"""
+    viewer_id = request.sid
+    broadcaster_id = data.get('broadcaster_id')
+    
+    if broadcaster_id not in active_broadcasts:
+        emit('joined_broadcast', {
+            'success': False,
+            'error': 'Broadcast not found'
+        })
+        return
+    
+    broadcast = active_broadcasts[broadcaster_id]
+    broadcast['viewers'].add(viewer_id)
+    broadcast['viewer_count'] = len(broadcast['viewers'])
+    viewer_to_broadcaster[viewer_id] = broadcaster_id
+    
+    print(f"👁️ Viewer {viewer_id} joined broadcast: {broadcast['title']}")
+    
+    # Notify viewer
+    emit('joined_broadcast', {
+        'success': True,
+        'broadcaster_id': broadcaster_id,
+        'title': broadcast['title']
+    })
+    
+    # Notify broadcaster about new viewer
+    socketio.emit('viewer_joined', {
+        'viewer_id': viewer_id,
+        'viewer_count': broadcast['viewer_count']
+    }, room=broadcaster_id)
+
+@socketio.on('leave_broadcast')
+def handle_leave_broadcast():
+    """Viewer wants to leave a broadcast"""
+    viewer_id = request.sid
+    
+    if viewer_id not in viewer_to_broadcaster:
+        return
+    
+    broadcaster_id = viewer_to_broadcaster[viewer_id]
+    
+    if broadcaster_id in active_broadcasts:
+        broadcast = active_broadcasts[broadcaster_id]
+        broadcast['viewers'].discard(viewer_id)
+        broadcast['viewer_count'] = len(broadcast['viewers'])
+        
+        # Notify broadcaster
+        socketio.emit('viewer_left', {
+            'viewer_id': viewer_id,
+            'viewer_count': broadcast['viewer_count']
+        }, room=broadcaster_id)
+    
+    del viewer_to_broadcaster[viewer_id]
+
+@socketio.on('webrtc_offer')
+def handle_webrtc_offer(data):
+    """Forward WebRTC offer from broadcaster to viewer"""
+    target = data.get('target')
+    offer = data.get('offer')
+    
+    socketio.emit('webrtc_offer', {
+        'from': request.sid,
+        'offer': offer
+    }, room=target)
+
+@socketio.on('webrtc_answer')
+def handle_webrtc_answer(data):
+    """Forward WebRTC answer from viewer to broadcaster"""
+    target = data.get('target')
+    answer = data.get('answer')
+    
+    socketio.emit('webrtc_answer', {
+        'from': request.sid,
+        'answer': answer
+    }, room=target)
+
+@socketio.on('webrtc_ice')
+def handle_webrtc_ice(data):
+    """Forward ICE candidate"""
+    target = data.get('target')
+    candidate = data.get('candidate')
+    
+    socketio.emit('webrtc_ice', {
+        'from': request.sid,
+        'candidate': candidate
+    }, room=target)
+
+# API endpoint for getting active broadcasts
+@app.route('/api/live/broadcasts')
+def get_live_broadcasts():
+    """Get list of active broadcasts"""
+    broadcasts = []
+    for broadcast_id, broadcast in active_broadcasts.items():
+        broadcasts.append({
+            'broadcaster_id': broadcast_id,
+            'title': broadcast['title'],
+            'category': broadcast['category'],
+            'viewer_count': broadcast['viewer_count'],
+            'started_at': broadcast['started_at'].isoformat()
+        })
+    
+    return jsonify({
+        'success': True,
+        'broadcasts': broadcasts
+    })
+
+def calculate_stream_energy_cost(duration_seconds, quality='medium'):
+    """
+    Calculate E=hf energy cost for live streaming
+    
+    Cost factors:
+    - Duration (seconds)
+    - Video quality (bitrate)
+    - Number of viewers (mesh propagation)
+    
+    Formula: E = h * f * duration * bitrate_factor
+    """
+    # Quality -> bitrate factor mapping
+    bitrate_factors = {
+        'low': 1.0,     # 480p: ~1 Mbps
+        'medium': 2.0,  # 720p: ~2.5 Mbps
+        'high': 4.0     # 1080p: ~5 Mbps
+    }
+    
+    factor = bitrate_factors.get(quality, 2.0)
+    
+    # Base cost: 0.0001 NXT per second at medium quality
+    base_cost_per_second = 10_000  # units (0.0001 NXT)
+    
+    # Total cost = duration * quality * base
+    total_cost_units = int(duration_seconds * factor * base_cost_per_second)
+    
+    return total_cost_units
+
+def finalize_stream_energy_cost(broadcaster_id, duration_seconds):
+    """
+    Finalize energy cost for completed stream
+    
+    CRITICAL: This actually debits NXT from broadcaster's wallet based on:
+    - Actual streaming duration (seconds)
+    - Video quality (bitrate multiplier)
+    - E=hf formula: cost = duration * quality_factor * base_rate
+    """
+    if broadcaster_id not in broadcaster_streams:
+        print(f"⚠️  No stream info for {broadcaster_id} - cannot charge")
+        return
+    
+    stream_info = broadcaster_streams[broadcaster_id]
+    device_id = stream_info.get('device_id')
+    reservation_id = stream_info.get('reservation_id')
+    quality = stream_info.get('quality', 'medium')
+    
+    if not device_id or not reservation_id:
+        print(f"⚠️  Missing device_id or reservation_id - cannot charge")
+        return
+    
+    # 💰 CALCULATE ACTUAL E=hf COST based on real streaming duration
+    actual_cost_units = calculate_stream_energy_cost(duration_seconds, quality)
+    
+    print(f"💰 Finalizing stream cost: {actual_cost_units} units ({actual_cost_units/UNITS_PER_NXT:.8f} NXT) for {duration_seconds:.1f}s @ {quality}")
+    
+    # 🔒 FINALIZE WITH WALLET - This actually debits the NXT!
+    from wallet_manager import get_wallet_manager
+    wallet_mgr = get_wallet_manager()
+    
+    result = wallet_mgr.finalize_energy_cost(
+        device_id=device_id,
+        reservation_id=reservation_id,
+        actual_amount_units=actual_cost_units
+    )
+    
+    if result['success']:
+        adjustment_type = result.get('adjustment_type', 'NONE')
+        adjustment_amount = result.get('adjustment_amount', 0)
+        final_balance = result.get('final_balance', 0)
+        
+        if adjustment_type == 'REFUND':
+            print(f"💸 REFUND: {adjustment_amount} units returned (streamed less than reserved)")
+        elif adjustment_type == 'TOP_UP':
+            print(f"💰 TOP-UP: {adjustment_amount} units charged (streamed more than reserved)")
+        
+        print(f"✅ Stream cost finalized! Final balance: {final_balance} units ({final_balance/UNITS_PER_NXT:.4f} NXT)")
+    else:
+        print(f"❌ Failed to finalize stream cost: {result.get('error')}")
+        
+        # CRITICAL: Cancel reservation and refund if finalization fails
+        cancel_result = wallet_mgr.cancel_reservation(
+            device_id=device_id,
+            reservation_id=reservation_id
+        )
+        if cancel_result['success']:
+            print(f"💸 REFUND: {cancel_result['refunded_amount']} units returned (finalization failed)")
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🌐 WNSP Media Server Starting...")
@@ -1311,4 +1676,7 @@ if __name__ == '__main__':
     # Note: WNSP Media Engine will auto-initialize on first API call
     # Running without auto-reload to preserve engine state across requests
     
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    print(f"📡 Live Streaming: ✅ WebRTC + Socket.IO")
+    print("=" * 60)
+    
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
