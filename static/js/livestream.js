@@ -186,14 +186,13 @@ async function loadFriends() {
     /**
      * Load user's friends from API for targeted streaming
      */
-    const deviceId = localStorage.getItem('device_id');
-    if (!deviceId) {
-        console.log('⚠️ No device_id - cannot load friends');
+    if (!userPhone) {
+        console.log('⚠️ No phone number - cannot load friends');
         return;
     }
     
     try {
-        const response = await fetch(`/api/friends?device_id=${deviceId}`);
+        const response = await fetch(`/api/friends?phone_number=${encodeURIComponent(userPhone)}`);
         const data = await response.json();
         
         if (data.success && data.friends) {
@@ -275,7 +274,12 @@ async function startBroadcast() {
     const category = document.getElementById('streamCategory').value;
     const isPublic = document.querySelector('input[name="streamPrivacy"]:checked').value === 'public';
     const selectedFriends = isPublic ? [] : getSelectedFriends();
-    const deviceId = localStorage.getItem('device_id');
+    
+    // Phone number is required for all broadcasts
+    if (!userPhone) {
+        alert('Phone number required to broadcast');
+        return;
+    }
     
     if (!title.trim()) {
         alert('Please enter a stream title');
@@ -322,12 +326,12 @@ async function startBroadcast() {
         socket.emit('start_broadcast', { 
             title, 
             category,
-            device_id: deviceId,  // Required for E=hf energy cost enforcement
+            phone_number: userPhone,  // Required for E=hf energy cost enforcement and identity
             is_public: isPublic,
-            allowed_friends: selectedFriends  // List of friend device_ids who can join
+            allowed_friends: selectedFriends  // List of friend phone numbers who can join
         });
         
-        console.log(`📹 Starting ${isPublic ? 'PUBLIC' : 'PRIVATE'} broadcast${!isPublic ? ` for ${selectedFriends.length} friends` : ''}`);
+        console.log(`📹 Starting ${isPublic ? 'PUBLIC' : 'PRIVATE'} broadcast from ${userPhone}${!isPublic ? ` for ${selectedFriends.length} friends` : ''}`);
         
     } catch (error) {
         console.error('❌ Camera access denied:', error);
@@ -406,12 +410,16 @@ async function createPeerConnectionForViewer(viewerId) {
 async function joinBroadcast(broadcasterId) {
     console.log('👁️ Joining broadcast:', broadcasterId);
     
-    const deviceId = localStorage.getItem('device_id');
+    // Phone number required for joining any broadcast
+    if (!userPhone) {
+        alert('Phone number required to watch broadcasts');
+        return;
+    }
     
-    // Notify server with device_id for friend permission check
+    // Notify server with phone_number for friend permission check
     socket.emit('join_broadcast', { 
         broadcaster_id: broadcasterId,
-        device_id: deviceId  // Required for friend-only stream permission check
+        phone_number: userPhone  // Required for friend-only stream permission check
     });
 }
 

@@ -560,29 +560,25 @@ def get_wallet_balance():
 
 @app.route('/api/friends')
 def api_get_friends():
-    """Get friend list for a user (device)"""
+    """Get friend list for a user (by phone number)"""
     if not FRIEND_MANAGER_AVAILABLE:
         return jsonify({
             'success': False,
             'error': 'Friend manager not available'
         }), 503
     
-    device_id = request.args.get('device_id')
-    user_id = request.args.get('user_id')  # Alternative parameter
+    phone_number = request.args.get('phone_number')
     
-    # Accept either device_id or user_id (they map to the same thing in our system)
-    identifier = device_id or user_id
-    
-    if not identifier:
+    if not phone_number:
         return jsonify({
             'success': False,
-            'error': 'Device ID or User ID required'
+            'error': 'Phone number required'
         }), 400
     
     try:
         friend_mgr = get_friend_manager()
-        # Use identifier as user_id (device_id and user_id are interchangeable in our system)
-        friends = friend_mgr.get_friends(identifier)
+        # Use phone_number as user identifier
+        friends = friend_mgr.get_friends(phone_number)
         
         return jsonify({
             'success': True,
@@ -597,7 +593,7 @@ def api_get_friends():
 
 @app.route('/api/friends', methods=['POST'])
 def api_add_friend():
-    """Add a new friend"""
+    """Add a new friend (phone number based)"""
     if not FRIEND_MANAGER_AVAILABLE:
         return jsonify({
             'success': False,
@@ -605,24 +601,23 @@ def api_add_friend():
         }), 503
     
     data = request.get_json()
-    device_id = data.get('device_id')
+    phone_number = data.get('phone_number')  # User's phone number
     friend_name = data.get('friend_name', '').strip()
-    friend_contact = data.get('friend_contact', '').strip()
-    friend_device_id = data.get('friend_device_id', '').strip()
+    friend_phone = data.get('friend_phone', '').strip()  # Friend's phone number
     
-    if not device_id or not friend_name or not friend_contact:
+    if not phone_number or not friend_name or not friend_phone:
         return jsonify({
             'success': False,
-            'error': 'Device ID, friend name, and friend contact required'
+            'error': 'Phone number, friend name, and friend phone required'
         }), 400
     
     try:
         friend_mgr = get_friend_manager()
         result = friend_mgr.add_friend(
-            user_id=device_id,
+            user_id=phone_number,  # Use phone as user ID
             friend_name=friend_name,
-            friend_contact=friend_contact,
-            device_id=friend_device_id if friend_device_id else None
+            friend_contact=friend_phone,  # Friend's phone number
+            device_id=friend_phone  # Also store in device_id field for compatibility
         )
         
         return jsonify(result)
@@ -1504,28 +1499,31 @@ def handle_start_broadcast(data):
     """
     Broadcaster wants to start streaming
     
-    CRITICAL: Requires device_id for E=hf energy cost enforcement
-    Client must send device_id in the request to reserve NXT
+    CRITICAL: Requires phone_number for E=hf energy cost enforcement
+    Client must send phone_number in the request to reserve NXT
     """
     broadcaster_id = request.sid
     title = data.get('title', 'Untitled Stream')
     category = data.get('category', 'university')
-    device_id = data.get('device_id')  # REQUIRED for wallet charging
+    phone_number = data.get('phone_number')  # REQUIRED for identity and wallet charging
     quality = data.get('quality', 'medium')
+    
+    # Verify phone number is registered for this socket
+    if not phone_number or socket_to_phone.get(broadcaster_id) != phone_number:
+        emit('broadcast_error', {
+            'error': 'Phone number not registered or mismatched. Please register first.'
+        })
+        return
     
     # 👥 Friend-only streaming support
     is_public = data.get('is_public', True)  # Default: public stream
-    allowed_friends = data.get('allowed_friends', [])  # List of friend device_ids
-    
-    # Register device_id -> socket mapping for friend-based access
-    if device_id:
-        device_to_socket[device_id] = broadcaster_id
+    allowed_friends = data.get('allowed_friends', [])  # List of friend phone numbers
     
     stream_type = "PUBLIC" if is_public else f"FRIENDS-ONLY ({len(allowed_friends)} friends)"
-    print(f"📹 Starting broadcast: {title} ({category}) by {broadcaster_id} [{stream_type}]")
+    print(f"📹 Starting broadcast: {title} ({category}) by {phone_number} [{stream_type}]")
     
     # 💰 STEP 1: Reserve NXT for estimated streaming cost (10 minutes @ quality)
-    if device_id:
+    if phone_number:
         from wallet_manager import get_wallet_manager
         wallet_mgr = get_wallet_manager()
         
@@ -1533,9 +1531,9 @@ def handle_start_broadcast(data):
         estimated_duration = 600  # seconds
         estimated_cost_units = calculate_stream_energy_cost(estimated_duration, quality)
         
-        # Reserve funds from wallet
+        # Reserve funds from wallet (using phone_number as device_id for now)
         reserve_result = wallet_mgr.reserve_energy_cost(
-            device_id=device_id,
+            device_id=phone_number,  # Use phone_number as identifier
             amount_units=estimated_cost_units,
             filename=f"stream_{title}",
             file_size=0,  # N/A for streaming
@@ -1555,17 +1553,17 @@ def handle_start_broadcast(data):
         reservation_id = reserve_result['reservation_id']
         reserved_amount = reserve_result['reserved_amount']
         
-        print(f"💰 Reserved {reserved_amount} units ({reserved_amount/UNITS_PER_NXT:.4f} NXT) for streaming")
+        print(f"💰 Reserved {reserved_amount} units ({reserved_amount/UNITS_PER_NXT:.4f} NXT) for {phone_number}")
         
         # Store reservation info
         broadcaster_streams[broadcaster_id] = {
-            'device_id': device_id,
+            'phone_number': phone_number,
             'reservation_id': reservation_id,
             'reserved_amount': reserved_amount,
             'quality': quality
         }
     else:
-        print("⚠️  No device_id provided - streaming will be FREE (not enforcing E=hf costs)")
+        print("⚠️  No phone_number provided - streaming will be FREE (not enforcing E=hf costs)")
     
     # Create broadcast entry
     active_broadcasts[broadcaster_id] = {
@@ -1577,8 +1575,8 @@ def handle_start_broadcast(data):
         'viewer_count': 0,
         'quality': quality,
         'is_public': is_public,
-        'allowed_friends': allowed_friends,  # List of friend device_ids who can join
-        'broadcaster_device_id': device_id  # Store broadcaster's device_id for permission checks
+        'allowed_friends': allowed_friends,  # List of friend phone numbers who can join
+        'broadcaster_phone': phone_number  # Store broadcaster's phone number for permission checks
     }
     
     # Notify broadcaster
@@ -1645,11 +1643,19 @@ def handle_join_broadcast(data):
     - Public broadcasts: anyone can join
     - Friend-only broadcasts: only allowed friends can join
     
-    SECURITY: Viewer must provide valid device_id for permission checking
+    SECURITY: Viewer must provide valid phone_number for permission checking
     """
     viewer_id = request.sid
     broadcaster_id = data.get('broadcaster_id')
-    viewer_device_id = data.get('device_id')  # Viewer's device_id for friend permission check
+    viewer_phone = data.get('phone_number')  # Viewer's phone number for friend permission check
+    
+    # Verify viewer's phone number is registered
+    if not viewer_phone or socket_to_phone.get(viewer_id) != viewer_phone:
+        emit('joined_broadcast', {
+            'success': False,
+            'error': 'Phone number required to join broadcasts. Please register first.'
+        })
+        return
     
     if broadcaster_id not in active_broadcasts:
         emit('joined_broadcast', {
@@ -1660,45 +1666,30 @@ def handle_join_broadcast(data):
     
     broadcast = active_broadcasts[broadcaster_id]
     
-    # 🔒 CRITICAL SECURITY: Reject viewers without device_id for private broadcasts
-    if not broadcast.get('is_public', True) and not viewer_device_id:
-        emit('joined_broadcast', {
-            'success': False,
-            'error': 'Device ID required to join private broadcasts. Please log in first.',
-            'is_private': True,
-            'missing_device_id': True
-        })
-        print(f"🚫 Viewer {viewer_id} denied - missing device_id for private broadcast: {broadcast['title']}")
-        return
-    
     # 🔒 PERMISSION CHECK: Friend-only broadcast
     if not broadcast.get('is_public', True):
         # This is a friend-only broadcast
         allowed_friends = broadcast.get('allowed_friends', [])
         
-        # Check if viewer is in allowed friends list
-        if viewer_device_id not in allowed_friends:
+        # Check if viewer's phone is in allowed friends list
+        if viewer_phone not in allowed_friends:
             broadcaster_name = broadcast.get('title', 'Unknown')
             emit('joined_broadcast', {
                 'success': False,
                 'error': f'This is a private stream. Only selected friends can join.',
                 'is_private': True
             })
-            print(f"🚫 Viewer {viewer_id} ({viewer_device_id}) denied - not in friend list for broadcast: {broadcast['title']}")
+            print(f"🚫 Viewer {viewer_phone} denied - not in friend list for broadcast: {broadcast['title']}")
             return
         else:
-            print(f"✅ Friend verified: {viewer_device_id} allowed to join broadcast: {broadcast['title']}")
-    
-    # Register device_id -> socket mapping
-    if viewer_device_id:
-        device_to_socket[viewer_device_id] = viewer_id
+            print(f"✅ Friend verified: {viewer_phone} allowed to join broadcast: {broadcast['title']}")
     
     # Add viewer to broadcast
     broadcast['viewers'].add(viewer_id)
     broadcast['viewer_count'] = len(broadcast['viewers'])
     viewer_to_broadcaster[viewer_id] = broadcaster_id
     
-    print(f"👁️ Viewer {viewer_id} joined broadcast: {broadcast['title']}")
+    print(f"👁️ Viewer {viewer_phone} joined broadcast: {broadcast['title']}")
     
     # Notify viewer
     emit('joined_broadcast', {
