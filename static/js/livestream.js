@@ -142,6 +142,43 @@ socket.on('webrtc_ice', async (data) => {
 });
 
 // ============================================================================
+// PHONE REGISTRATION FUNCTIONS
+// ============================================================================
+
+function updatePhonePrefix() {
+    /**
+     * Update phone prefix when country is selected
+     */
+    const countrySelect = document.getElementById('countrySelect');
+    const phonePrefix = document.getElementById('phonePrefix');
+    phonePrefix.value = countrySelect.value;
+}
+
+function registerPhone() {
+    /**
+     * Register user's phone number with server
+     */
+    const prefix = document.getElementById('phonePrefix').value;
+    const number = document.getElementById('phoneNumber').value.trim();
+    
+    if (!number) {
+        alert('Please enter your phone number');
+        return;
+    }
+    
+    // Remove any spaces, dashes, or parentheses
+    const cleanNumber = number.replace(/[\s\-\(\)]/g, '');
+    
+    // Combine prefix + number
+    const fullPhone = prefix + cleanNumber;
+    
+    console.log('📱 Registering phone:', fullPhone);
+    
+    // Send to server for verification
+    socket.emit('register_phone', { phone_number: fullPhone });
+}
+
+// ============================================================================
 // FRIEND MANAGEMENT FUNCTIONS
 // ============================================================================
 
