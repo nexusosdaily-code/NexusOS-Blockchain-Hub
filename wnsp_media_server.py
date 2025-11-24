@@ -895,8 +895,8 @@ def upload_media():
                 'selected_friends': friend_ids if share_mode == 'friends' else [],
                 'propagated_to_nodes': len(propagation_results),
                 'propagation_details': propagation_results,
-                'energy_cost_units': total_energy_cost_units,
-                'energy_cost_nxt': total_energy_cost_units / 100_000_000,
+                'energy_cost_units': actual_energy_units,
+                'energy_cost_nxt': actual_energy_nxt,
                 'new_wallet_balance': current_balance
             })
         except Exception as e:
