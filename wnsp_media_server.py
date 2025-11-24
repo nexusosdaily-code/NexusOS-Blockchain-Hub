@@ -562,15 +562,21 @@ def api_get_friends():
         }), 503
     
     device_id = request.args.get('device_id')
-    if not device_id:
+    user_id = request.args.get('user_id')  # Alternative parameter
+    
+    # Accept either device_id or user_id (they map to the same thing in our system)
+    identifier = device_id or user_id
+    
+    if not identifier:
         return jsonify({
             'success': False,
-            'error': 'Device ID required'
+            'error': 'Device ID or User ID required'
         }), 400
     
     try:
         friend_mgr = get_friend_manager()
-        friends = friend_mgr.get_friends(device_id)
+        # Use identifier as user_id (device_id and user_id are interchangeable in our system)
+        friends = friend_mgr.get_friends(identifier)
         
         return jsonify({
             'success': True,
@@ -1593,6 +1599,8 @@ def handle_join_broadcast(data):
     PERMISSION CHECK: 
     - Public broadcasts: anyone can join
     - Friend-only broadcasts: only allowed friends can join
+    
+    SECURITY: Viewer must provide valid device_id for permission checking
     """
     viewer_id = request.sid
     broadcaster_id = data.get('broadcaster_id')
@@ -1606,6 +1614,17 @@ def handle_join_broadcast(data):
         return
     
     broadcast = active_broadcasts[broadcaster_id]
+    
+    # 🔒 CRITICAL SECURITY: Reject viewers without device_id for private broadcasts
+    if not broadcast.get('is_public', True) and not viewer_device_id:
+        emit('joined_broadcast', {
+            'success': False,
+            'error': 'Device ID required to join private broadcasts. Please log in first.',
+            'is_private': True,
+            'missing_device_id': True
+        })
+        print(f"🚫 Viewer {viewer_id} denied - missing device_id for private broadcast: {broadcast['title']}")
+        return
     
     # 🔒 PERMISSION CHECK: Friend-only broadcast
     if not broadcast.get('is_public', True):

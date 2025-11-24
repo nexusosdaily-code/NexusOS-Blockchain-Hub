@@ -21,6 +21,7 @@ let broadcasterId = null;
 let peerConnections = {}; // viewer_id -> RTCPeerConnection
 let viewingBroadcast = null;
 let currentViewPeerConnection = null;
+let userFriends = []; // List of user's friends (loaded on page load)
 
 // ============================================================================
 // SOCKET.IO EVENT HANDLERS
@@ -114,12 +115,103 @@ socket.on('webrtc_ice', async (data) => {
 });
 
 // ============================================================================
+// FRIEND MANAGEMENT FUNCTIONS
+// ============================================================================
+
+async function loadFriends() {
+    /**
+     * Load user's friends from API for targeted streaming
+     */
+    const deviceId = localStorage.getItem('device_id');
+    if (!deviceId) {
+        console.log('⚠️ No device_id - cannot load friends');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/friends?device_id=${deviceId}`);
+        const data = await response.json();
+        
+        if (data.success && data.friends) {
+            userFriends = data.friends;
+            console.log(`✅ Loaded ${userFriends.length} friends`);
+            renderFriendsList();
+        } else {
+            userFriends = [];
+            renderFriendsList();
+        }
+    } catch (error) {
+        console.error('❌ Failed to load friends:', error);
+        userFriends = [];
+        renderFriendsList();
+    }
+}
+
+function renderFriendsList() {
+    /**
+     * Render friend checkboxes in the UI
+     */
+    const friendsList = document.getElementById('friendsList');
+    
+    if (userFriends.length === 0) {
+        friendsList.innerHTML = `
+            <p style="color: var(--text-secondary); font-size: 14px;">
+                No friends added yet. Add friends from the main menu to stream privately.
+            </p>
+        `;
+        return;
+    }
+    
+    // Render checkboxes for each friend
+    friendsList.innerHTML = userFriends.map(friend => `
+        <label style="display: flex; align-items: center; padding: 8px; cursor: pointer; border-radius: 6px;" 
+               onmouseover="this.style.background='rgba(99, 102, 241, 0.1)'" 
+               onmouseout="this.style.background='transparent'">
+            <input type="checkbox" 
+                   class="friend-checkbox" 
+                   value="${friend.device_id || friend.contact}" 
+                   style="margin-right: 10px; width: auto;">
+            <div>
+                <div style="font-weight: 500;">${friend.name}</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">${friend.contact}</div>
+            </div>
+        </label>
+    `).join('');
+}
+
+function toggleFriendSelector() {
+    /**
+     * Show/hide friend selector based on privacy selection
+     */
+    const isPrivate = document.querySelector('input[name="streamPrivacy"]:checked').value === 'friends';
+    const friendSelector = document.getElementById('friendSelector');
+    
+    if (isPrivate) {
+        friendSelector.style.display = 'block';
+        loadFriends(); // Load friends when switching to private mode
+    } else {
+        friendSelector.style.display = 'none';
+    }
+}
+
+function getSelectedFriends() {
+    /**
+     * Get list of selected friend device_ids
+     */
+    const checkboxes = document.querySelectorAll('.friend-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// ============================================================================
 // BROADCASTING FUNCTIONS
 // ============================================================================
 
 async function startBroadcast() {
     const title = document.getElementById('streamTitle').value || 'Untitled Stream';
     const category = document.getElementById('streamCategory').value;
+    const isPublic = document.querySelector('input[name="streamPrivacy"]:checked').value === 'public';
+    const selectedFriends = isPublic ? [] : getSelectedFriends();
+    const deviceId = localStorage.getItem('device_id');
     
     if (!title.trim()) {
         alert('Please enter a stream title');
@@ -155,8 +247,23 @@ async function startBroadcast() {
         broadcastBtn.classList.add('btn-stop-broadcast');
         broadcastBtn.onclick = stopBroadcast;
         
-        // Notify server
-        socket.emit('start_broadcast', { title, category });
+        // Validate friend selection for private streams
+        if (!isPublic && selectedFriends.length === 0) {
+            alert('Please select at least one friend for private streaming, or choose "Everyone (Public)"');
+            stopBroadcast();
+            return;
+        }
+        
+        // Notify server with friend selection
+        socket.emit('start_broadcast', { 
+            title, 
+            category,
+            device_id: deviceId,  // Required for E=hf energy cost enforcement
+            is_public: isPublic,
+            allowed_friends: selectedFriends  // List of friend device_ids who can join
+        });
+        
+        console.log(`📹 Starting ${isPublic ? 'PUBLIC' : 'PRIVATE'} broadcast${!isPublic ? ` for ${selectedFriends.length} friends` : ''}`);
         
     } catch (error) {
         console.error('❌ Camera access denied:', error);
@@ -235,8 +342,13 @@ async function createPeerConnectionForViewer(viewerId) {
 async function joinBroadcast(broadcasterId) {
     console.log('👁️ Joining broadcast:', broadcasterId);
     
-    // Notify server
-    socket.emit('join_broadcast', { broadcaster_id: broadcasterId });
+    const deviceId = localStorage.getItem('device_id');
+    
+    // Notify server with device_id for friend permission check
+    socket.emit('join_broadcast', { 
+        broadcaster_id: broadcasterId,
+        device_id: deviceId  // Required for friend-only stream permission check
+    });
 }
 
 async function handleOfferAsViewer(broadcasterId, offer) {

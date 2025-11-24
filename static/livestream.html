@@ -186,6 +186,30 @@
                 </select>
             </div>
 
+            <div class="input-group">
+                <label>👥 Who can watch this stream?</label>
+                <div style="display: flex; gap: 12px; margin-top: 8px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="streamPrivacy" value="public" checked onchange="toggleFriendSelector()" style="margin-right: 8px; width: auto;">
+                        <span>🌐 Everyone (Public)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="streamPrivacy" value="friends" onchange="toggleFriendSelector()" style="margin-right: 8px; width: auto;">
+                        <span>👥 Selected Friends Only</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="input-group" id="friendSelector" style="display: none;">
+                <label>Select Friends to Share With</label>
+                <div id="friendsList" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; background: var(--bg-secondary);">
+                    <p style="color: var(--text-secondary); font-size: 14px;">Loading friends...</p>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 8px;">
+                    💡 Tip: No friends yet? Add friends from the main menu to stream privately.
+                </p>
+            </div>
+
             <button class="btn-start-broadcast" id="startBroadcastBtn" onclick="startBroadcast()">
                 Start Live Broadcast
             </button>
