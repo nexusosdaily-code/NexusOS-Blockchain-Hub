@@ -26,6 +26,14 @@ except ImportError:
     FILE_MANAGER_AVAILABLE = False
     print("⚠️  File manager not available")
 
+# Import friend manager for targeted streaming
+try:
+    from friend_manager import get_friend_manager
+    FRIEND_MANAGER_AVAILABLE = True
+except ImportError:
+    FRIEND_MANAGER_AVAILABLE = False
+    print("⚠️  Friend manager not available - streaming will be public only")
+
 # Import WNSP backend
 try:
     from wnsp_unified_mesh_stack import create_demo_network
@@ -51,9 +59,10 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # =============================================================================
 # LIVESTREAM STATE MANAGEMENT
 # =============================================================================
-active_broadcasts = {}  # broadcaster_id -> {title, category, viewers: set(), started_at, energy_cost}
+active_broadcasts = {}  # broadcaster_id -> {title, category, viewers: set(), started_at, energy_cost, allowed_friends: list, is_public: bool}
 viewer_to_broadcaster = {}  # viewer_id -> broadcaster_id
 broadcaster_streams = {}  # broadcaster_id -> {device_id, reservation_id, bytes_streamed}
+device_to_socket = {}  # device_id -> socket_id (maps device_id to Socket.IO session for friend-based access)
 
 # Error handler for file too large
 @app.errorhandler(413)
@@ -538,6 +547,108 @@ def get_wallet_balance():
     
     result = manager.get_balance(device_id)
     return jsonify(result)
+
+# =============================================================================
+# FRIEND MANAGEMENT API (for targeted streaming)
+# =============================================================================
+
+@app.route('/api/friends')
+def api_get_friends():
+    """Get friend list for a user (device)"""
+    if not FRIEND_MANAGER_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Friend manager not available'
+        }), 503
+    
+    device_id = request.args.get('device_id')
+    if not device_id:
+        return jsonify({
+            'success': False,
+            'error': 'Device ID required'
+        }), 400
+    
+    try:
+        friend_mgr = get_friend_manager()
+        friends = friend_mgr.get_friends(device_id)
+        
+        return jsonify({
+            'success': True,
+            'friends': friends,
+            'total_friends': len(friends)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/friends', methods=['POST'])
+def api_add_friend():
+    """Add a new friend"""
+    if not FRIEND_MANAGER_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Friend manager not available'
+        }), 503
+    
+    data = request.get_json()
+    device_id = data.get('device_id')
+    friend_name = data.get('friend_name', '').strip()
+    friend_contact = data.get('friend_contact', '').strip()
+    friend_device_id = data.get('friend_device_id', '').strip()
+    
+    if not device_id or not friend_name or not friend_contact:
+        return jsonify({
+            'success': False,
+            'error': 'Device ID, friend name, and friend contact required'
+        }), 400
+    
+    try:
+        friend_mgr = get_friend_manager()
+        result = friend_mgr.add_friend(
+            user_id=device_id,
+            friend_name=friend_name,
+            friend_contact=friend_contact,
+            device_id=friend_device_id if friend_device_id else None
+        )
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/friends/<int:friend_id>', methods=['DELETE'])
+def api_remove_friend(friend_id):
+    """Remove a friend"""
+    if not FRIEND_MANAGER_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Friend manager not available'
+        }), 503
+    
+    device_id = request.args.get('device_id')
+    if not device_id:
+        return jsonify({
+            'success': False,
+            'error': 'Device ID required'
+        }), 400
+    
+    try:
+        friend_mgr = get_friend_manager()
+        success = friend_mgr.remove_friend(user_id=device_id, friend_id=friend_id)
+        
+        return jsonify({
+            'success': success,
+            'message': 'Friend removed' if success else 'Friend not found'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/stats')
 def get_network_stats():
@@ -1351,7 +1462,16 @@ def handle_start_broadcast(data):
     device_id = data.get('device_id')  # REQUIRED for wallet charging
     quality = data.get('quality', 'medium')
     
-    print(f"📹 Starting broadcast: {title} ({category}) by {broadcaster_id}")
+    # 👥 Friend-only streaming support
+    is_public = data.get('is_public', True)  # Default: public stream
+    allowed_friends = data.get('allowed_friends', [])  # List of friend device_ids
+    
+    # Register device_id -> socket mapping for friend-based access
+    if device_id:
+        device_to_socket[device_id] = broadcaster_id
+    
+    stream_type = "PUBLIC" if is_public else f"FRIENDS-ONLY ({len(allowed_friends)} friends)"
+    print(f"📹 Starting broadcast: {title} ({category}) by {broadcaster_id} [{stream_type}]")
     
     # 💰 STEP 1: Reserve NXT for estimated streaming cost (10 minutes @ quality)
     if device_id:
@@ -1404,7 +1524,10 @@ def handle_start_broadcast(data):
         'viewers': set(),
         'started_at': datetime.utcnow(),
         'viewer_count': 0,
-        'quality': quality
+        'quality': quality,
+        'is_public': is_public,
+        'allowed_friends': allowed_friends,  # List of friend device_ids who can join
+        'broadcaster_device_id': device_id  # Store broadcaster's device_id for permission checks
     }
     
     # Notify broadcaster
@@ -1464,9 +1587,16 @@ def handle_stop_broadcast_internal(broadcaster_id):
 
 @socketio.on('join_broadcast')
 def handle_join_broadcast(data):
-    """Viewer wants to join a broadcast"""
+    """
+    Viewer wants to join a broadcast
+    
+    PERMISSION CHECK: 
+    - Public broadcasts: anyone can join
+    - Friend-only broadcasts: only allowed friends can join
+    """
     viewer_id = request.sid
     broadcaster_id = data.get('broadcaster_id')
+    viewer_device_id = data.get('device_id')  # Viewer's device_id for friend permission check
     
     if broadcaster_id not in active_broadcasts:
         emit('joined_broadcast', {
@@ -1476,6 +1606,30 @@ def handle_join_broadcast(data):
         return
     
     broadcast = active_broadcasts[broadcaster_id]
+    
+    # 🔒 PERMISSION CHECK: Friend-only broadcast
+    if not broadcast.get('is_public', True):
+        # This is a friend-only broadcast
+        allowed_friends = broadcast.get('allowed_friends', [])
+        
+        # Check if viewer is in allowed friends list
+        if viewer_device_id not in allowed_friends:
+            broadcaster_name = broadcast.get('title', 'Unknown')
+            emit('joined_broadcast', {
+                'success': False,
+                'error': f'This is a private stream. Only selected friends can join.',
+                'is_private': True
+            })
+            print(f"🚫 Viewer {viewer_id} ({viewer_device_id}) denied - not in friend list for broadcast: {broadcast['title']}")
+            return
+        else:
+            print(f"✅ Friend verified: {viewer_device_id} allowed to join broadcast: {broadcast['title']}")
+    
+    # Register device_id -> socket mapping
+    if viewer_device_id:
+        device_to_socket[viewer_device_id] = viewer_id
+    
+    # Add viewer to broadcast
     broadcast['viewers'].add(viewer_id)
     broadcast['viewer_count'] = len(broadcast['viewers'])
     viewer_to_broadcaster[viewer_id] = broadcaster_id
@@ -1486,7 +1640,8 @@ def handle_join_broadcast(data):
     emit('joined_broadcast', {
         'success': True,
         'broadcaster_id': broadcaster_id,
-        'title': broadcast['title']
+        'title': broadcast['title'],
+        'is_public': broadcast.get('is_public', True)
     })
     
     # Notify broadcaster about new viewer
