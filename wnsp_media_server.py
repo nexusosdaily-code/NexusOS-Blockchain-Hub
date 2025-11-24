@@ -7,9 +7,13 @@ Serves the user-facing media player interface and integrates with WNSP backend
 
 from flask import Flask, send_from_directory, jsonify, request, Response, send_file
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.utils import secure_filename
 import os
 import sys
+from datetime import datetime
+from threading import Thread
+import time
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -32,7 +36,11 @@ except ImportError:
     print("⚠️  WNSP backend not available - running in standalone mode")
 
 app = Flask(__name__, static_folder='static')
+app.config['SECRET_KEY'] = 'nexus_wnsp_livestream_secret_key'
 CORS(app)
+
+# Initialize Socket.IO for real-time WebRTC signaling
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Constants
 UNITS_PER_NXT = 100_000_000  # 1 NXT = 100,000,000 units
@@ -40,9 +48,12 @@ UNITS_PER_NXT = 100_000_000  # 1 NXT = 100,000,000 units
 # Security: Enforce maximum upload size (100MB)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
-# TODO: LiveStream feature - Socket.IO signaling server will be added here
-# Requires: python-socketio>=5.10.0 with proper dependency resolution
-# See: static/livestream.html and static/js/livestream.js for frontend
+# =============================================================================
+# LIVESTREAM STATE MANAGEMENT
+# =============================================================================
+active_broadcasts = {}  # broadcaster_id -> {title, category, viewers: set(), started_at, energy_cost}
+viewer_to_broadcaster = {}  # viewer_id -> broadcaster_id
+broadcaster_streams = {}  # broadcaster_id -> {device_id, reservation_id, bytes_streamed}
 
 # Error handler for file too large
 @app.errorhandler(413)
