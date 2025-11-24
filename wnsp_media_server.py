@@ -701,6 +701,10 @@ def upload_media():
         if file.filename == '':
             continue
         
+        # Initialize energy cost tracking variables
+        actual_energy_units = 0
+        actual_energy_nxt = 0.0
+        
         # Secure the filename
         filename = secure_filename(file.filename)
         
