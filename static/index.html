@@ -69,6 +69,10 @@
                     <span class="upload-icon">📤</span>
                     Upload Media to WNSP Network
                 </button>
+                <button class="upload-btn" id="manageFriendsBtn" style="margin-left: 12px;">
+                    <span class="upload-icon">👥</span>
+                    Manage Friends
+                </button>
                 <a href="livestream.html" class="upload-btn" style="margin-left: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
                     <span class="upload-icon">📹</span>
                     Go Live - Peer-to-Peer Broadcasting
@@ -133,6 +137,44 @@
                             <p class="progress-text" id="uploadProgressText">Uploading...</p>
                         </div>
                         <div class="upload-status" id="uploadStatus"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Friend Management Modal -->
+            <div class="upload-modal" id="friendsModal" style="display: none;">
+                <div class="upload-modal-content">
+                    <div class="upload-modal-header">
+                        <h2>👥 Manage Friends</h2>
+                        <button class="close-btn" id="closeFriendsModal">✕</button>
+                    </div>
+                    <div class="upload-modal-body">
+                        <!-- Add Friend Form -->
+                        <div class="add-friend-form">
+                            <h3>Add New Friend</h3>
+                            <div class="form-group">
+                                <label for="friendName">Friend's Name:</label>
+                                <input type="text" id="friendName" placeholder="e.g., Alice Smith" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="friendContact">Mobile Number or Device ID:</label>
+                                <input type="text" id="friendContact" placeholder="e.g., +1-234-567-8900 or device_abc123" class="form-input">
+                            </div>
+                            <button class="upload-btn" id="addFriendBtn" style="width: 100%;">
+                                <span class="upload-icon">➕</span>
+                                Add Friend
+                            </button>
+                        </div>
+                        
+                        <!-- Friends List -->
+                        <div class="friends-list-section">
+                            <h3>Your Friends (<span id="friendCount">0</span>)</h3>
+                            <div class="friends-list" id="friendsList">
+                                <div class="loading-peers">No friends added yet</div>
+                            </div>
+                        </div>
+                        
+                        <div class="upload-status" id="friendsStatus"></div>
                     </div>
                 </div>
             </div>

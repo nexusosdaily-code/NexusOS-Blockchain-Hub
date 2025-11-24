@@ -233,6 +233,100 @@ def get_media_file(media_id):
             'error': 'WNSP backend not available'
         }), 503
 
+# ============================================================================
+# FRIEND MANAGEMENT APIs
+# ============================================================================
+
+@app.route('/api/friends', methods=['GET'])
+def get_friends():
+    """Get all friends for current user"""
+    from friend_manager import get_friend_manager
+    
+    # Get user ID from request (in production, this would come from auth token)
+    user_id = request.args.get('user_id', 'default_user')
+    
+    manager = get_friend_manager()
+    if not manager:
+        return jsonify({
+            'success': False,
+            'error': 'Friend manager not available'
+        }), 503
+    
+    friends = manager.get_friends(user_id)
+    return jsonify({
+        'success': True,
+        'friends': friends,
+        'count': len(friends)
+    })
+
+@app.route('/api/friends', methods=['POST'])
+def add_friend():
+    """Add a new friend"""
+    from friend_manager import get_friend_manager
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            'success': False,
+            'error': 'No data provided'
+        }), 400
+    
+    # Validate required fields
+    friend_name = data.get('name', '').strip()
+    friend_contact = data.get('contact', '').strip()
+    
+    if not friend_name or not friend_contact:
+        return jsonify({
+            'success': False,
+            'error': 'Name and contact are required'
+        }), 400
+    
+    # Get user ID (in production, this would come from auth token)
+    user_id = data.get('user_id', 'default_user')
+    device_id = data.get('device_id')
+    
+    manager = get_friend_manager()
+    if not manager:
+        return jsonify({
+            'success': False,
+            'error': 'Friend manager not available'
+        }), 503
+    
+    result = manager.add_friend(user_id, friend_name, friend_contact, device_id)
+    
+    if result['success']:
+        return jsonify(result), 201
+    else:
+        return jsonify(result), 400
+
+@app.route('/api/friends/<int:friend_id>', methods=['DELETE'])
+def remove_friend(friend_id):
+    """Remove a friend"""
+    from friend_manager import get_friend_manager
+    
+    # Get user ID (in production, this would come from auth token)
+    user_id = request.args.get('user_id', 'default_user')
+    
+    manager = get_friend_manager()
+    if not manager:
+        return jsonify({
+            'success': False,
+            'error': 'Friend manager not available'
+        }), 503
+    
+    success = manager.remove_friend(user_id, friend_id)
+    
+    if success:
+        return jsonify({
+            'success': True,
+            'message': 'Friend removed successfully'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Friend not found or could not be removed'
+        }), 404
+
 @app.route('/api/stats')
 def get_network_stats():
     """Get WNSP network statistics"""

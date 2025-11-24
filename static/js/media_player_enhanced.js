@@ -610,19 +610,164 @@ const uploadStatus = document.getElementById('uploadStatus');
 const friendSelection = document.getElementById('friendSelection');
 const friendListContainer = document.getElementById('friendListContainer');
 
+// Friend Management Elements
+const manageFriendsBtn = document.getElementById('manageFriendsBtn');
+const friendsModal = document.getElementById('friendsModal');
+const closeFriendsModal = document.getElementById('closeFriendsModal');
+const addFriendBtn = document.getElementById('addFriendBtn');
+const friendName = document.getElementById('friendName');
+const friendContact = document.getElementById('friendContact');
+const friendsList = document.getElementById('friendsList');
+const friendCount = document.getElementById('friendCount');
+const friendsStatus = document.getElementById('friendsStatus');
+
 let discoveredPeers = [];
+let myFriends = [];
+
+// Friend Management Functions
+async function loadMyFriends() {
+    try {
+        const response = await fetch('/api/friends?user_id=default_user');
+        const data = await response.json();
+        
+        if (data.success) {
+            myFriends = data.friends;
+            renderFriendsList(data.friends);
+            friendCount.textContent = data.friends.length;
+        }
+    } catch (error) {
+        console.error('Error loading friends:', error);
+    }
+}
+
+function renderFriendsList(friends) {
+    if (!friends || friends.length === 0) {
+        friendsList.innerHTML = '<div class="loading-peers">No friends added yet</div>';
+        return;
+    }
+    
+    friendsList.innerHTML = friends.map(friend => `
+        <div class="friend-list-item">
+            <div class="friend-list-info">
+                <div class="friend-list-name">${friend.name}</div>
+                <div class="friend-list-contact">${friend.contact}</div>
+            </div>
+            <button class="remove-friend-btn" onclick="removeFriend(${friend.id})">Remove</button>
+        </div>
+    `).join('');
+}
+
+async function addNewFriend() {
+    const name = friendName.value.trim();
+    const contact = friendContact.value.trim();
+    
+    if (!name || !contact) {
+        showFriendsStatus('Please enter both name and contact', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/friends', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                contact: contact,
+                user_id: 'default_user'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showFriendsStatus(`✅ ${name} added to friends!`, 'success');
+            friendName.value = '';
+            friendContact.value = '';
+            loadMyFriends();
+        } else {
+            showFriendsStatus(`❌ ${data.error}`, 'error');
+        }
+    } catch (error) {
+        showFriendsStatus('❌ Failed to add friend', 'error');
+        console.error('Error adding friend:', error);
+    }
+}
+
+async function removeFriend(friendId) {
+    if (!confirm('Are you sure you want to remove this friend?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/friends/${friendId}?user_id=default_user`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showFriendsStatus('✅ Friend removed', 'success');
+            loadMyFriends();
+        } else {
+            showFriendsStatus('❌ Failed to remove friend', 'error');
+        }
+    } catch (error) {
+        showFriendsStatus('❌ Failed to remove friend', 'error');
+        console.error('Error removing friend:', error);
+    }
+}
+
+function showFriendsStatus(message, type) {
+    friendsStatus.textContent = message;
+    friendsStatus.className = `upload-status ${type}`;
+    setTimeout(() => {
+        friendsStatus.textContent = '';
+        friendsStatus.className = 'upload-status';
+    }, 3000);
+}
+
+function openFriendsModal() {
+    friendsModal.style.display = 'flex';
+    loadMyFriends();
+}
+
+function closeFriendsModalFunc() {
+    friendsModal.style.display = 'none';
+}
 
 async function loadNearbyPeers() {
     try {
-        const response = await fetch('/api/peers');
-        const data = await response.json();
+        // Load mesh network peers
+        const peersResponse = await fetch('/api/peers');
+        const peersData = await peersResponse.json();
         
-        if (data.success && data.peers) {
-            discoveredPeers = data.peers;
-            renderPeerList(data.peers);
-        } else {
-            friendListContainer.innerHTML = '<div class="loading-peers">⚠️ No peers found</div>';
+        // Load manually added friends
+        const friendsResponse = await fetch('/api/friends?user_id=default_user');
+        const friendsData = await friendsResponse.json();
+        
+        // Merge mesh peers and friends
+        let allPeers = [];
+        
+        if (peersData.success && peersData.peers) {
+            allPeers = [...peersData.peers];
         }
+        
+        // Add manually added friends to peer list
+        if (friendsData.success && friendsData.friends) {
+            friendsData.friends.forEach(friend => {
+                allPeers.push({
+                    device_id: friend.device_id || friend.contact,
+                    device_name: friend.name,
+                    status: 'Friend',
+                    transport_protocols: ['Manual']
+                });
+            });
+        }
+        
+        discoveredPeers = allPeers;
+        renderPeerList(allPeers);
     } catch (error) {
         console.error('Error loading peers:', error);
         friendListContainer.innerHTML = '<div class="loading-peers">⚠️ Failed to discover peers</div>';
@@ -811,6 +956,27 @@ function attachEventListeners() {
     
     if (closeUploadModal) {
         closeUploadModal.addEventListener('click', closeUploadModalFunc);
+    }
+    
+    // Friend Management modal
+    if (manageFriendsBtn) {
+        manageFriendsBtn.addEventListener('click', openFriendsModal);
+    }
+    
+    if (closeFriendsModal) {
+        closeFriendsModal.addEventListener('click', closeFriendsModalFunc);
+    }
+    
+    if (friendsModal) {
+        friendsModal.addEventListener('click', (e) => {
+            if (e.target === friendsModal) {
+                closeFriendsModalFunc();
+            }
+        });
+    }
+    
+    if (addFriendBtn) {
+        addFriendBtn.addEventListener('click', addNewFriend);
     }
     
     if (uploadModal) {
