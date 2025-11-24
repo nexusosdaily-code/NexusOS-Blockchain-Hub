@@ -919,6 +919,11 @@ function logoutWallet() {
     }
 }
 
+// Open Mobile Blockchain Hub
+function openBlockchainHub() {
+    showToast('ℹ️ Mobile Blockchain Hub is available in the main NexusOS Dashboard (app.py). This is the WNSP P2P Content Hub for decentralized file sharing.', 'info');
+}
+
 // Load available wallets for import
 async function loadAvailableWallets() {
     try {
