@@ -372,6 +372,12 @@ def upload_media():
             print(f"🔍 DEBUG upload: engine={engine is not None}, mesh={engine.mesh_stack is not None if engine else False}, engine_id={id(engine) if engine else 'None'}", flush=True)
             
             if engine and engine.mesh_stack:
+                # Detect which device is uploading
+                source_ip = request.remote_addr
+                is_local = source_ip == '127.0.0.1' or source_ip.startswith('127.')
+                source_node = "your_computer" if is_local else "your_phone"
+                source_display = "💻 Computer" if is_local else "📱 Phone"
+                
                 # CRITICAL: Also ingest into WNSP engine for mesh propagation
                 try:
                     print(f"📝 Reading file content from {filepath}...", flush=True)
@@ -386,7 +392,8 @@ def upload_media():
                         file_size=file_size,
                         description=f"{category} content",
                         category=category,
-                        simulated_content=file_content  # Real file content for dedup
+                        simulated_content=file_content,  # Real file content for dedup
+                        source_node_id=source_node  # Add chunks to source node cache
                     )
                     wnsp_media_id = media_file.file_id
                     print(f"✅ Ingested into WNSP engine: {wnsp_media_id} ({media_file.total_chunks} chunks)", flush=True)
@@ -395,13 +402,6 @@ def upload_media():
                     print(f"⚠️  WNSP ingestion failed: {ingest_error}", flush=True)
                     print(traceback.format_exc(), flush=True)
                     wnsp_media_id = None
-                # Detect which device is uploading
-                source_ip = request.remote_addr
-                is_local = source_ip == '127.0.0.1' or source_ip.startswith('127.')
-                
-                # Map IP to mesh node
-                source_node = "your_computer" if is_local else "your_phone"
-                source_display = "💻 Computer" if is_local else "📱 Phone"
                 
                 # Get all mesh nodes EXCEPT the source
                 all_nodes = list(engine.mesh_stack.layer1_mesh_isp.nodes.keys())
@@ -421,10 +421,10 @@ def upload_media():
                                     'node': node_id,
                                     'node_display': target_display,
                                     'chunks': result.get('successful_chunks', 0),
-                                    'energy': result.get('total_energy', 0),
+                                    'energy': result.get('total_energy_cost', 0),
                                     'hops': result.get('total_hops', 0)
                                 })
-                                print(f"✅ {source_display} → {target_display}: {result.get('successful_chunks')} chunks, {result.get('total_hops')} hops, {result.get('total_energy'):.6f} NXT")
+                                print(f"✅ {source_display} → {target_display}: {result.get('successful_chunks')} chunks, {result.get('total_hops')} hops, {result.get('total_energy_cost', 0):.6f} NXT")
                         except Exception as prop_error:
                             print(f"⚠️  Propagation to {node_id} failed: {prop_error}")
                 else:

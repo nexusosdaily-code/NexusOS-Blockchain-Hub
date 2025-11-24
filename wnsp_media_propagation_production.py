@@ -308,7 +308,8 @@ class WNSPMediaPropagationProduction:
             )
     
     def add_media_file(self, filename: str, file_type: str, file_size: int,
-                       description: str, category: str, simulated_content: bytes = None) -> MediaFile:
+                       description: str, category: str, simulated_content: bytes = None,
+                       source_node_id: Optional[str] = None) -> MediaFile:
         """Add a new media file to the library
         
         Args:
@@ -319,6 +320,7 @@ class WNSPMediaPropagationProduction:
             category: Community category (university, refugee, rural, crisis)
             simulated_content: Optional pre-generated content bytes (for testing deduplication)
                              If None, unique content is generated based on filename
+            source_node_id: Optional node ID that is uploading this file (chunks will be added to its cache)
         """
         file_id = self._generate_file_id(filename)
         
@@ -342,6 +344,14 @@ class WNSPMediaPropagationProduction:
         # Create chunks with content-based hashing from actual content
         media_file.total_chunks = math.ceil(file_size / self.CHUNK_SIZE)
         media_file.chunks = self._create_chunks(media_file, simulated_content)
+        
+        # Add chunks to source node's cache if specified
+        if source_node_id and source_node_id in self.node_caches:
+            source_cache = self.node_caches[source_node_id]
+            for chunk in media_file.chunks:
+                if source_cache.add_chunk(chunk):
+                    # Mark that this node has this chunk
+                    chunk.nodes_with_chunk.add(source_node_id)
         
         self.media_library[file_id] = media_file
         self.propagation_stats['total_files'] += 1
