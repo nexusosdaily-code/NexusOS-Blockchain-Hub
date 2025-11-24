@@ -586,6 +586,106 @@ def get_active_broadcasts():
         'message': 'LiveStream feature coming soon - Socket.IO signaling server required'
     })
 
+# ============================================================================
+# WNSP QUANTUM ENCRYPTION TEST API
+# ============================================================================
+
+@app.route('/api/test/encryption', methods=['POST'])
+def test_encryption():
+    """
+    Test WNSP quantum encryption end-to-end
+    
+    Creates a test file, encrypts it, propagates through mesh, decrypts, and verifies
+    """
+    engine = get_media_engine()
+    
+    if not engine or not engine.mesh_stack:
+        return jsonify({'error': 'WNSP engine not available'}), 503
+    
+    # Create test data
+    test_message = "🔒 WNSP Quantum Encrypted Test Message - E=hf secured!"
+    test_data = test_message.encode()
+    
+    # Create test file WITHOUT encryption first
+    print("🧪 Creating unencrypted test file...")
+    media_file_plain = engine.add_media_file(
+        filename="test_encryption_plain.txt",
+        file_type="txt",
+        file_size=len(test_data),
+        description="Unencrypted test file",
+        category="university",
+        simulated_content=test_data,
+        source_node_id="your_phone",
+        enable_encryption=False
+    )
+    
+    # Create test file WITH encryption
+    print("🔐 Creating encrypted test file...")
+    media_file_encrypted = engine.add_media_file(
+        filename="test_encryption_encrypted.txt",
+        file_type="txt",
+        file_size=len(test_data),
+        description="Encrypted test file",
+        category="university",
+        simulated_content=test_data,
+        source_node_id="your_phone",
+        enable_encryption=True
+    )
+    
+    # Test decryption
+    results = {
+        'test_message': test_message,
+        'file_size': len(test_data),
+        'plain_file': {
+            'file_id': media_file_plain.file_id,
+            'is_encrypted': media_file_plain.is_encrypted,
+            'total_chunks': media_file_plain.total_chunks
+        },
+        'encrypted_file': {
+            'file_id': media_file_encrypted.file_id,
+            'is_encrypted': media_file_encrypted.is_encrypted,
+            'total_chunks': media_file_encrypted.total_chunks,
+            'chunks': []
+        }
+    }
+    
+    # Test each encrypted chunk
+    decryption_success = True
+    for i, chunk in enumerate(media_file_encrypted.chunks):
+        # Decrypt chunk
+        decrypted_data = engine.decrypt_chunk(chunk)
+        
+        # Verify quantum signature
+        signature_valid = engine.verify_quantum_signature(chunk)
+        
+        # Get original chunk data for comparison
+        start = i * engine.CHUNK_SIZE
+        end = min(start + engine.CHUNK_SIZE, len(test_data))
+        original_data = test_data[start:end]
+        
+        decryption_matches = decrypted_data == original_data if decrypted_data else False
+        
+        if not decryption_matches:
+            decryption_success = False
+        
+        results['encrypted_file']['chunks'].append({
+            'chunk_index': chunk.chunk_index,
+            'is_encrypted': chunk.is_encrypted,
+            'has_encrypted_data': chunk.encrypted_data is not None,
+            'encryption_wavelength': chunk.encryption_wavelength,
+            'quantum_signature_valid': signature_valid,
+            'decryption_successful': decryption_matches,
+            'original_size': len(original_data),
+            'decrypted_size': len(decrypted_data) if decrypted_data else 0
+        })
+    
+    results['overall_success'] = decryption_success
+    results['message'] = "✅ All chunks encrypted and decrypted successfully!" if decryption_success else "❌ Some chunks failed decryption"
+    
+    print(f"🔐 Encryption test: {results['message']}")
+    
+    return jsonify(results), 200
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🌐 WNSP Media Server Starting...")

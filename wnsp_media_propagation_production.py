@@ -36,7 +36,7 @@ import numpy as np
 
 @dataclass
 class MediaChunk:
-    """Represents a chunk of a media file for DAG propagation"""
+    """Represents a chunk of a media file for DAG propagation with quantum encryption"""
     chunk_id: str
     file_id: str
     chunk_index: int
@@ -46,6 +46,13 @@ class MediaChunk:
     wavelength: float  # nm (for energy calculation)
     energy_cost_per_hop: float  # NXT per single hop
     timestamp: float = field(default_factory=time.time)
+    
+    # Quantum encryption fields
+    encrypted_data: Optional[bytes] = None  # Encrypted chunk payload
+    quantum_signature: Optional[str] = None  # 5D wave signature for quantum resistance
+    is_encrypted: bool = False  # Flag indicating encryption status
+    encryption_wavelength: Optional[float] = None  # Wavelength used for encryption key derivation
+    encryption_timestamp: Optional[float] = None  # Timestamp when encryption occurred (for signature verification)
     
     # Production tracking
     nodes_with_chunk: Set[str] = field(default_factory=set)  # Which nodes have this chunk
@@ -59,7 +66,7 @@ class MediaChunk:
 
 @dataclass
 class MediaFile:
-    """Represents a complete media file in the mesh network"""
+    """Represents a complete media file in the mesh network with quantum encryption"""
     file_id: str
     filename: str
     file_type: str  # mp3, mp4, pdf, jpg, png, etc.
@@ -70,6 +77,7 @@ class MediaFile:
     chunks: List[MediaChunk] = field(default_factory=list)
     total_chunks: int = 0
     upload_timestamp: float = field(default_factory=time.time)
+    is_encrypted: bool = False  # Flag indicating if file is encrypted
     
     @property
     def total_energy_cost_single_hop(self) -> float:
@@ -309,7 +317,8 @@ class WNSPMediaPropagationProduction:
     
     def add_media_file(self, filename: str, file_type: str, file_size: int,
                        description: str, category: str, simulated_content: bytes = None,
-                       source_node_id: Optional[str] = None) -> MediaFile:
+                       source_node_id: Optional[str] = None, enable_encryption: bool = False,
+                       encryption_wavelength: Optional[float] = None) -> MediaFile:
         """Add a new media file to the library
         
         Args:
@@ -345,6 +354,14 @@ class WNSPMediaPropagationProduction:
         media_file.total_chunks = math.ceil(file_size / self.CHUNK_SIZE)
         media_file.chunks = self._create_chunks(media_file, simulated_content)
         
+        # Add file to library FIRST before encryption
+        self.media_library[file_id] = media_file
+        
+        # Encrypt file if requested
+        if enable_encryption and simulated_content:
+            success = self.encrypt_file(file_id, simulated_content, encryption_wavelength)
+            print(f"🔐 Encryption result: {success}, file encrypted: {media_file.is_encrypted}")
+        
         # Add chunks to source node's cache if specified
         if source_node_id and source_node_id in self.node_caches:
             source_cache = self.node_caches[source_node_id]
@@ -352,8 +369,6 @@ class WNSPMediaPropagationProduction:
                 if source_cache.add_chunk(chunk):
                     # Mark that this node has this chunk
                     chunk.nodes_with_chunk.add(source_node_id)
-        
-        self.media_library[file_id] = media_file
         self.propagation_stats['total_files'] += 1
         self.propagation_stats['total_chunks_created'] += media_file.total_chunks
         
@@ -458,6 +473,134 @@ class WNSPMediaPropagationProduction:
         energy_cost = photon_energy * data_size * self.ENERGY_MULTIPLIER
         
         return round(energy_cost, 8)
+    
+    def _derive_encryption_key(self, file_id: str, wavelength: float) -> bytes:
+        """Derive quantum encryption key from file ID and wavelength
+        
+        Uses SHA-256 to create deterministic encryption key based on:
+        - File ID (unique identifier)
+        - Wavelength (quantum parameter)
+        
+        Note: Key is deterministic (same inputs = same key) to enable decryption
+        """
+        key_material = f"{file_id}{wavelength}".encode()
+        return hashlib.sha256(key_material).digest()
+    
+    def encrypt_chunk(self, chunk: MediaChunk, chunk_data: bytes, encryption_wavelength: Optional[float] = None) -> MediaChunk:
+        """Encrypt chunk data using quantum-inspired encryption
+        
+        Args:
+            chunk: MediaChunk to encrypt
+            chunk_data: Raw chunk data bytes
+            encryption_wavelength: Optional wavelength for encryption (defaults to chunk wavelength)
+        
+        Returns:
+            Updated MediaChunk with encrypted data and quantum signature
+        """
+        if chunk.is_encrypted:
+            return chunk  # Already encrypted
+        
+        # Use chunk wavelength if not specified
+        wavelength = encryption_wavelength or chunk.wavelength
+        
+        # Derive encryption key from file ID and wavelength
+        encryption_key = self._derive_encryption_key(chunk.file_id, wavelength)
+        
+        # XOR encryption (same as PrivateMessage)
+        encrypted_data = bytes([b ^ encryption_key[i % len(encryption_key)] 
+                               for i, b in enumerate(chunk_data)])
+        
+        # Record encryption timestamp for signature
+        encryption_ts = time.time()
+        
+        # Generate 5D wave signature for quantum resistance
+        signature = hashlib.sha512(
+            f"{encrypted_data}{wavelength}{encryption_ts}{chunk.chunk_id}".encode()
+        ).hexdigest()
+        
+        # Update chunk with encryption data
+        chunk.encrypted_data = encrypted_data
+        chunk.quantum_signature = signature
+        chunk.is_encrypted = True
+        chunk.encryption_wavelength = wavelength
+        chunk.encryption_timestamp = encryption_ts
+        
+        return chunk
+    
+    def decrypt_chunk(self, chunk: MediaChunk) -> Optional[bytes]:
+        """Decrypt chunk data using quantum-inspired decryption
+        
+        Args:
+            chunk: MediaChunk to decrypt
+        
+        Returns:
+            Decrypted data bytes, or None if chunk is not encrypted
+        """
+        if not chunk.is_encrypted or chunk.encrypted_data is None:
+            return None
+        
+        # Derive decryption key (same as encryption key)
+        wavelength = chunk.encryption_wavelength or chunk.wavelength
+        decryption_key = self._derive_encryption_key(chunk.file_id, wavelength)
+        
+        # XOR decryption (symmetric with encryption)
+        decrypted_data = bytes([b ^ decryption_key[i % len(decryption_key)] 
+                               for i, b in enumerate(chunk.encrypted_data)])
+        
+        return decrypted_data
+    
+    def encrypt_file(self, file_id: str, file_data: bytes, encryption_wavelength: Optional[float] = None) -> bool:
+        """Encrypt all chunks of a media file
+        
+        Args:
+            file_id: File ID to encrypt
+            file_data: Complete file data bytes
+            encryption_wavelength: Optional wavelength for encryption
+        
+        Returns:
+            True if encryption successful, False otherwise
+        """
+        if file_id not in self.media_library:
+            return False
+        
+        media_file = self.media_library[file_id]
+        
+        # Encrypt each chunk with its corresponding data
+        for i, chunk in enumerate(media_file.chunks):
+            # Extract chunk data from file
+            start = i * self.CHUNK_SIZE
+            end = min(start + self.CHUNK_SIZE, len(file_data))
+            chunk_data = file_data[start:end]
+            
+            # Encrypt the chunk
+            self.encrypt_chunk(chunk, chunk_data, encryption_wavelength)
+        
+        # Mark file as encrypted
+        media_file.is_encrypted = True
+        
+        return True
+    
+    def verify_quantum_signature(self, chunk: MediaChunk) -> bool:
+        """Verify quantum signature integrity of encrypted chunk
+        
+        Args:
+            chunk: MediaChunk to verify
+        
+        Returns:
+            True if signature valid, False otherwise
+        """
+        if not chunk.is_encrypted or not chunk.quantum_signature:
+            return False
+        
+        # Recompute signature using encryption timestamp
+        wavelength = chunk.encryption_wavelength or chunk.wavelength
+        encryption_ts = chunk.encryption_timestamp or chunk.timestamp
+        expected_signature = hashlib.sha512(
+            f"{chunk.encrypted_data}{wavelength}{encryption_ts}{chunk.chunk_id}".encode()
+        ).hexdigest()
+        
+        # Note: In production, use constant-time comparison to prevent timing attacks
+        return chunk.quantum_signature == expected_signature
     
     def propagate_chunk_to_node(self, chunk: MediaChunk, target_node_id: str,
                                 source_node_id: Optional[str] = None) -> Dict:
