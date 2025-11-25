@@ -1300,15 +1300,6 @@ def stream_media(file_id):
 # LIVESTREAMING API (Placeholder - Socket.IO backend to be added)
 # ============================================================================
 
-@app.route('/api/live/broadcasts')
-def get_active_broadcasts():
-    """Get list of active livestreams (placeholder for future Socket.IO implementation)"""
-    return jsonify({
-        'success': True,
-        'broadcasts': [],
-        'total': 0,
-        'message': 'LiveStream feature coming soon - Socket.IO signaling server required'
-    })
 
 # ============================================================================
 # WNSP QUANTUM ENCRYPTION TEST API
