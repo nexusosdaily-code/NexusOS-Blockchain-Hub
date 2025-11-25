@@ -60,7 +60,23 @@ socket.on('phone_registered', (data) => {
 });
 
 socket.on('broadcast_available', (data) => {
-    console.log('📡 New broadcast available:', data.title);
+    console.log('📡 New broadcast available:', data.title, data);
+    
+    // Visual alert that broadcast was received
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; padding: 15px 25px; border-radius: 10px; font-weight: bold; z-index: 10000; animation: fadeOut 5s forwards;';
+    alertDiv.innerHTML = `🔴 LIVE: ${data.title || 'New Broadcast'} - Scroll down to watch!`;
+    document.body.appendChild(alertDiv);
+    
+    // Remove after 5 seconds
+    setTimeout(() => alertDiv.remove(), 5000);
+    
+    // Scroll to broadcasts section
+    const broadcastSection = document.getElementById('broadcastsList');
+    if (broadcastSection) {
+        broadcastSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
     addBroadcastToList(data);
 });
 
