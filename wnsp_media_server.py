@@ -1528,6 +1528,7 @@ def handle_start_broadcast(data):
     
     stream_type = "PUBLIC" if is_public else f"FRIENDS-ONLY ({len(allowed_friends)} friends)"
     print(f"📹 Starting broadcast: {title} ({category}) by {phone_number} [{stream_type}]")
+    print(f"🔍 DEBUG allowed_friends list: {allowed_friends}")
     
     # 💰 STEP 1: Reserve NXT for estimated streaming cost (10 minutes @ quality)
     if phone_number:
