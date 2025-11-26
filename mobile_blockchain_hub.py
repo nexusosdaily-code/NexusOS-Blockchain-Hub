@@ -1303,18 +1303,92 @@ def render_p2p_hub_tab():
             </div>
             """, unsafe_allow_html=True)
             
-            # Optional: Link phone number to wallet for friend discovery
+            # Optional: Link phone number to wallet for friend discovery (with SMS verification)
             if not st.session_state.p2p_phone:
                 st.markdown("---")
-                st.markdown("**📞 Optional: Add Phone for Friend Discovery**")
-                st.caption("Link a phone number so friends can find you on the mesh network")
-                phone = st.text_input("📱 Phone Number (optional)", placeholder="+1234567890", key="p2p_phone_link")
-                if st.button("🔗 Link Phone to Wallet", key="link_phone"):
-                    if phone and len(phone) >= 10:
-                        st.session_state.p2p_phone = phone
-                        st.success(f"✅ Phone linked to your wallet!")
+                st.markdown("**📞 Verify Phone for Friend Discovery**")
+                st.caption("Verify your phone number so friends can find you on the mesh network")
+                
+                # Import verification service
+                try:
+                    from twilio_verification import send_verification, verify_phone
+                    sms_available = True
+                except ImportError:
+                    sms_available = False
+                
+                # Initialize verification state
+                if 'phone_verification_pending' not in st.session_state:
+                    st.session_state.phone_verification_pending = False
+                if 'phone_to_verify' not in st.session_state:
+                    st.session_state.phone_to_verify = None
+                
+                if not st.session_state.phone_verification_pending:
+                    # Step 1: Enter phone and request code
+                    phone = st.text_input("📱 Your Phone Number", placeholder="+1234567890", key="p2p_phone_link")
+                    if st.button("📤 Send Verification Code", key="send_code", type="primary"):
+                        if phone and len(phone) >= 10:
+                            if sms_available:
+                                result = send_verification(phone, 'user_self', st.session_state.active_address)
+                                if result.get('success'):
+                                    st.session_state.phone_verification_pending = True
+                                    st.session_state.phone_to_verify = phone
+                                    if 'demo_code' in result:
+                                        st.info(f"📱 Demo: Your code is **{result['demo_code']}**")
+                                    else:
+                                        st.success(result.get('message', 'Code sent!'))
+                                    st.rerun()
+                                else:
+                                    st.error(result.get('error', 'Failed to send code'))
+                            else:
+                                st.session_state.p2p_phone = phone
+                                st.success("✅ Phone linked (verification unavailable)")
+                                st.rerun()
+                        else:
+                            st.error("Please enter a valid phone number")
+                else:
+                    # Step 2: Enter verification code
+                    st.info(f"📱 Code sent to {st.session_state.phone_to_verify}")
+                    code = st.text_input("🔢 Enter 6-digit code", max_chars=6, key="verify_code_input")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("✅ Verify", key="verify_btn", type="primary", use_container_width=True):
+                            if code and len(code) == 6:
+                                if sms_available:
+                                    result = verify_phone(st.session_state.phone_to_verify, code)
+                                    if result.get('success'):
+                                        st.session_state.p2p_phone = st.session_state.phone_to_verify
+                                        st.session_state.phone_verification_pending = False
+                                        st.session_state.phone_to_verify = None
+                                        st.success("✅ Phone verified and linked!")
+                                        st.balloons()
+                                        st.rerun()
+                                    else:
+                                        st.error(result.get('error', 'Verification failed'))
+                                else:
+                                    st.session_state.p2p_phone = st.session_state.phone_to_verify
+                                    st.session_state.phone_verification_pending = False
+                                    st.rerun()
+                            else:
+                                st.error("Please enter the 6-digit code")
+                    with col2:
+                        if st.button("🔄 Resend Code", key="resend_btn", use_container_width=True):
+                            if sms_available:
+                                result = send_verification(st.session_state.phone_to_verify, 'user_self', st.session_state.active_address)
+                                if result.get('success'):
+                                    if 'demo_code' in result:
+                                        st.info(f"📱 Demo: Your code is **{result['demo_code']}**")
+                                    else:
+                                        st.success("Code resent!")
+                                else:
+                                    st.warning(result.get('error', 'Wait before resending'))
+                    
+                    if st.button("← Cancel", key="cancel_verify"):
+                        st.session_state.phone_verification_pending = False
+                        st.session_state.phone_to_verify = None
                         st.rerun()
             else:
+                st.markdown(f"**✅ Verified Phone:** {st.session_state.p2p_phone}")
                 if st.button("🔓 Unlink Phone", key="p2p_unlink_phone"):
                     st.session_state.p2p_phone = None
                     st.rerun()

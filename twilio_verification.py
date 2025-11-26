@@ -219,10 +219,12 @@ class TwilioVerificationService:
                 else:
                     return {
                         'success': True,
-                        'message': f'Demo mode: Your code is {code}',
+                        'message': f'Twilio SMS not configured. Code displayed for testing only.',
                         'demo_code': code,
+                        'demo_mode': True,
                         'verification_id': verification_id,
-                        'expires_in': self.CODE_EXPIRY_MINUTES
+                        'expires_in': self.CODE_EXPIRY_MINUTES,
+                        'warning': 'Demo mode - SMS not sent. Configure Twilio phone number for production.'
                     }
                     
         except Exception as e:
