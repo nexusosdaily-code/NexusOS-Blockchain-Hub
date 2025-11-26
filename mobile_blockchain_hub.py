@@ -931,47 +931,165 @@ def render_p2p_hub_tab():
     if 'p2p_friends' not in st.session_state:
         st.session_state.p2p_friends = []
     
+    # Get wallet reference from session (initialized by init_wallet_session in main hub)
+    # This ensures we use the same wallet instance as other tabs
+    wallet = st.session_state.get('nexus_wallet')
+    if wallet is None:
+        # Fallback: initialize if not already done (shouldn't normally happen)
+        try:
+            init_wallet_session()
+            wallet = st.session_state.get('nexus_wallet')
+        except Exception as e:
+            st.error(f"Unable to initialize wallet system. Please try refreshing the page.")
+            return
+    
+    if wallet is None:
+        st.error("Wallet system unavailable. Please refresh the page or try again later.")
+        return
+    
+    has_wallet = st.session_state.get('active_address') is not None
+    
     # P2P Sub-tabs
     p2p_tabs = st.tabs([
-        "🔐 Register",
+        "🔐 Connect",
         "👥 Friends",
         "📹 Live Stream",
         "📁 Media Share",
         "🌐 Mesh Network"
     ])
     
-    # TAB 1: Phone Registration
+    # TAB 1: Connect (Unified Wallet Access)
     with p2p_tabs[0]:
-        st.markdown("### 🔐 Phone Number Registration")
-        st.info("""
-        **Your phone number is your identity on the mesh network.**
-        Register to access P2P broadcasting, friend-only streams, and mesh messaging.
-        """)
+        st.markdown("### 🔐 Connect to P2P Network")
         
-        if st.session_state.p2p_phone:
-            st.success(f"✅ **Registered as:** {st.session_state.p2p_phone}")
-            st.markdown(f"**Wallet Balance:** 5.00 NXT (500,000,000 units)")
+        # UNIFIED WALLET: Check if user already has a wallet
+        if has_wallet:
+            # User already has a wallet - they're ready to use P2P!
+            address = st.session_state.active_address
             
-            if st.button("🔓 Logout", key="p2p_logout"):
-                st.session_state.p2p_phone = None
-                st.session_state.p2p_friends = []
-                st.rerun()
-        else:
-            phone = st.text_input("📱 Enter Phone Number", placeholder="+1234567890", key="p2p_phone_input")
+            # Safe balance retrieval with error handling
+            try:
+                balance = wallet.get_balance(address) if wallet else {'balance_nxt': 0, 'balance_units': 0}
+                nxt_balance = balance.get('balance_nxt', 0)
+                units_balance = balance.get('balance_units', 0)
+            except Exception:
+                nxt_balance = 0
+                units_balance = 0
             
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("✨ Register & Create Wallet", type="primary", key="p2p_register"):
+            st.success("✅ **Wallet Connected!** You're ready to use P2P features.")
+            
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        padding: 20px; border-radius: 12px; border: 1px solid #667eea;">
+                <h4 style="color: #00d4ff; margin-bottom: 10px;">📱 Your P2P Identity</h4>
+                <p style="color: #e2e8f0;"><strong>Wallet Address:</strong> <code>{address[:20]}...</code></p>
+                <p style="color: #e2e8f0;"><strong>Balance:</strong> {nxt_balance:,.8f} NXT ({units_balance:,.0f} units)</p>
+                {"<p style='color: #e2e8f0;'><strong>Phone:</strong> " + st.session_state.p2p_phone + "</p>" if st.session_state.p2p_phone else ""}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Optional: Link phone number to wallet for friend discovery
+            if not st.session_state.p2p_phone:
+                st.markdown("---")
+                st.markdown("**📞 Optional: Add Phone for Friend Discovery**")
+                st.caption("Link a phone number so friends can find you on the mesh network")
+                phone = st.text_input("📱 Phone Number (optional)", placeholder="+1234567890", key="p2p_phone_link")
+                if st.button("🔗 Link Phone to Wallet", key="link_phone"):
                     if phone and len(phone) >= 10:
                         st.session_state.p2p_phone = phone
-                        st.success(f"✅ Registered! Wallet created with 5 NXT")
+                        st.success(f"✅ Phone linked to your wallet!")
                         st.rerun()
-                    else:
-                        st.error("Please enter a valid phone number")
+            else:
+                if st.button("🔓 Unlink Phone", key="p2p_unlink_phone"):
+                    st.session_state.p2p_phone = None
+                    st.rerun()
+            
+            st.markdown("---")
+            st.markdown("""
+            **🔋 E=hf Energy Economics:**
+            - Text message: ~0.0001 NXT
+            - Image share: ~0.01-0.05 NXT  
+            - 1 min video stream: ~0.5-1 NXT
+            - 1 hour broadcast: ~20-30 NXT
+            """)
+        else:
+            # No wallet - offer quick creation right here
+            st.info("""
+            **🔐 Create Your Wallet to Start**
+            
+            Your wallet is your identity on the mesh network. Create one now to unlock all P2P features!
+            """)
             
             st.markdown("""
-            ---
-            **🔋 E=hf Energy Economics:**
+            <div style="background: linear-gradient(135deg, #2d1b4e 0%, #1a1a2e 100%); 
+                        padding: 20px; border-radius: 12px; border: 1px solid #9945ff; margin: 10px 0;">
+                <h4 style="color: #9945ff;">💎 Quick Wallet Setup</h4>
+                <p style="color: #e2e8f0;">Create a secure wallet in seconds. Your wallet gives you:</p>
+                <ul style="color: #e2e8f0;">
+                    <li>P2P streaming & broadcasting</li>
+                    <li>Media sharing on the mesh</li>
+                    <li>Friend-to-friend messaging</li>
+                    <li>NXT token balance for E=hf energy costs</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Quick wallet creation form
+            with st.form("p2p_quick_wallet_form"):
+                st.markdown("**Create Your Wallet**")
+                
+                wallet_password = st.text_input(
+                    "🔐 Create Password", 
+                    type="password",
+                    help="Secure your wallet with a password"
+                )
+                confirm_password = st.text_input(
+                    "🔐 Confirm Password", 
+                    type="password"
+                )
+                phone_optional = st.text_input(
+                    "📱 Phone Number (optional)", 
+                    placeholder="+1234567890",
+                    help="Optional: Add for friend discovery"
+                )
+                
+                submit = st.form_submit_button("✨ Create Wallet & Connect", type="primary", use_container_width=True)
+                
+                if submit:
+                    if not wallet_password:
+                        st.error("Please enter a password")
+                    elif wallet_password != confirm_password:
+                        st.error("Passwords don't match")
+                    elif len(wallet_password) < 4:
+                        st.error("Password must be at least 4 characters")
+                    else:
+                        try:
+                            # Create actual wallet using the wallet system
+                            result = wallet.create_wallet(wallet_password)
+                            # create_wallet returns wallet data directly if successful
+                            if result and 'address' in result:
+                                # Set session state for unified access
+                                st.session_state.active_address = result['address']
+                                st.session_state.wallet_unlocked = result['address']
+                                
+                                # Link phone if provided
+                                if phone_optional and len(phone_optional) >= 10:
+                                    st.session_state.p2p_phone = phone_optional
+                                
+                                st.success(f"✅ Wallet created! You're ready to use P2P features!")
+                                st.balloons()
+                                st.rerun()
+                            else:
+                                st.error("Failed to create wallet. Please try again.")
+                        except Exception as e:
+                            st.error(f"Error creating wallet: {str(e)}")
+            
+            st.markdown("---")
+            st.caption("Already have a wallet? Go to the **Wallet** tab → **Unlock** to connect it.")
+            
+            st.markdown("---")
+            st.markdown("""
+            **🔋 E=hf Energy Economics (Preview):**
             - Text message: ~0.0001 NXT
             - Image share: ~0.01-0.05 NXT  
             - 1 min video stream: ~0.5-1 NXT
@@ -982,10 +1100,12 @@ def render_p2p_hub_tab():
     with p2p_tabs[1]:
         st.markdown("### 👥 Friend Management")
         
-        if not st.session_state.p2p_phone:
-            st.warning("🔐 Please register your phone number first")
+        if not has_wallet:
+            st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
         else:
-            st.markdown(f"**Your ID:** {st.session_state.p2p_phone}")
+            # Show wallet address as primary ID, phone as secondary if linked
+            user_id = st.session_state.p2p_phone if st.session_state.p2p_phone else f"{st.session_state.active_address[:16]}..."
+            st.markdown(f"**Your ID:** {user_id}")
             
             col1, col2 = st.columns([2, 1])
             with col1:
@@ -1018,8 +1138,8 @@ def render_p2p_hub_tab():
     with p2p_tabs[2]:
         st.markdown("### 📹 P2P Live Streaming")
         
-        if not st.session_state.p2p_phone:
-            st.warning("🔐 Please register your phone number first")
+        if not has_wallet:
+            st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
         else:
             st.markdown("""
             <div class="module-card">
@@ -1076,8 +1196,8 @@ def render_p2p_hub_tab():
     with p2p_tabs[3]:
         st.markdown("### 📁 Media Propagation Engine")
         
-        if not st.session_state.p2p_phone:
-            st.warning("🔐 Please register your phone number first")
+        if not has_wallet:
+            st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
         else:
             st.markdown("""
             Share media across the mesh network with E=hf energy costs:
