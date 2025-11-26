@@ -31,6 +31,13 @@ from web3_wallet_dashboard import (
     init_wallet_session
 )
 
+# Import notification system
+from notification_system import (
+    NotificationCenter, NotificationType, NotificationPriority,
+    render_notification_bell, render_notification_panel, render_notification_toast,
+    get_notification_center
+)
+
 
 def render_mobile_blockchain_hub():
     """
@@ -513,14 +520,42 @@ def render_mobile_blockchain_hub():
         </script>
     """, unsafe_allow_html=True)
     
-    # Main header
-    st.markdown("""
-        <div class="main-header">
-            <h1>📱 NexusOS Blockchain Hub</h1>
-            <p style="font-size: 18px; margin-top: 10px;">Your Phone IS the Blockchain Node</p>
-            <p style="font-size: 14px; margin-top: 5px; opacity: 0.9;">Mobile-First • Quantum-Resistant • Physics-Based</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # Initialize notification center
+    notif_center = get_notification_center()
+    unread_count = notif_center.get_unread_count()
+    
+    # Main header with notification bell
+    header_col1, header_col2 = st.columns([4, 1])
+    with header_col1:
+        st.markdown("""
+            <div class="main-header">
+                <h1>📱 NexusOS Blockchain Hub</h1>
+                <p style="font-size: 18px; margin-top: 10px;">Your Phone IS the Blockchain Node</p>
+                <p style="font-size: 14px; margin-top: 5px; opacity: 0.9;">Mobile-First • Quantum-Resistant • Physics-Based</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with header_col2:
+        # Notification bell
+        badge_text = f" ({unread_count})" if unread_count > 0 else ""
+        badge_style = "background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;" if unread_count > 0 else ""
+        st.markdown(f"""
+            <div style="text-align: center; padding: 20px 0;">
+                <span style="font-size: 32px;">🔔</span>
+                {f'<span style="{badge_style}">{unread_count}</span>' if unread_count > 0 else ''}
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("View Alerts", key="open_notifications", use_container_width=True):
+            st.session_state.show_notifications = True
+            st.rerun()
+    
+    # Show notification panel if requested
+    if st.session_state.get('show_notifications', False):
+        with st.expander("🔔 Notifications", expanded=True):
+            render_notification_panel()
+            if st.button("Close", key="close_notif_panel"):
+                st.session_state.show_notifications = False
+                st.rerun()
+        st.divider()
     
     # Wallet status bar (always visible)
     if st.session_state.active_address:
@@ -1556,8 +1591,132 @@ def render_p2p_hub_tab():
             st.rerun()
 
 
+def render_requested_module():
+    """
+    Show module preview and navigation guidance.
+    Most full dashboards require standalone page rendering, 
+    so we provide helpful navigation hints instead of inline loading.
+    """
+    module_name = st.session_state.get('nav_request', '')
+    
+    # Back button
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("← Back", key="back_to_explore", use_container_width=True):
+            st.session_state.nav_request = None
+            st.rerun()
+    with col2:
+        st.markdown(f"### {module_name}")
+    
+    st.divider()
+    
+    # Module descriptions and quick actions
+    MODULE_INFO = {
+        "DAG Messaging": {
+            "icon": "💬",
+            "desc": "Send quantum-encrypted messages using E=hf physics pricing. Each message has wavelength validation.",
+            "features": ["Quantum encryption", "Physics-based fees", "DAG validation", "Spectral signatures"]
+        },
+        "DEX": {
+            "icon": "💱",
+            "desc": "Decentralized exchange with automated market maker. Trade tokens with liquidity pool rewards.",
+            "features": ["Token swaps", "Liquidity pools", "LP farming", "Price charts"]
+        },
+        "Governance": {
+            "icon": "🗳️",
+            "desc": "Community-driven governance with proposal voting. Shape the future of NexusOS.",
+            "features": ["Create proposals", "Vote on changes", "Validator campaigns", "Community initiatives"]
+        },
+        "Mesh Network": {
+            "icon": "🌐",
+            "desc": "Peer-to-peer internet without WiFi or cellular. Connect directly to other nodes.",
+            "features": ["Direct P2P", "Offline messaging", "Mesh routing", "Node discovery"]
+        },
+        "WaveLang": {
+            "icon": "📝",
+            "desc": "Learn quantum programming with AI assistance. Write physics-based smart contracts.",
+            "features": ["AI tutor", "Code generation", "Quantum analysis", "Visual builder"]
+        },
+        "Service Pools": {
+            "icon": "🏗️",
+            "desc": "Real-world infrastructure funding. Supply chain pools for electricity, water, food, and more.",
+            "features": ["8 supply chains", "Lottery system", "Bonus rewards", "Carbon credits"]
+        },
+        "Validator": {
+            "icon": "🏛️",
+            "desc": "Stake NXT to become a validator. Earn rewards for securing the network.",
+            "features": ["Stake 1K-10K NXT", "Earn rewards", "Delegation", "Slashing protection"]
+        }
+    }
+    
+    # Find matching module info
+    matched_info = None
+    for key, info in MODULE_INFO.items():
+        if key.lower() in module_name.lower():
+            matched_info = info
+            break
+    
+    if matched_info:
+        st.markdown(f"""
+        <div class="module-card">
+            <h2>{matched_info['icon']} {module_name}</h2>
+            <p style="font-size: 16px; margin: 15px 0;">{matched_info['desc']}</p>
+            <h4>Key Features:</h4>
+            <ul>
+                {''.join(f'<li>{f}</li>' for f in matched_info['features'])}
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="module-card">
+            <h2>{module_name}</h2>
+            <p>This module provides specialized functionality within the NexusOS ecosystem.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # Navigation guidance
+    st.markdown("### 🚀 How to Access Full Module")
+    
+    st.info("""
+    **To access the complete module with all features:**
+    
+    1. Look for the **sidebar menu** on the left (tap ☰ on mobile)
+    2. Find the module selector dropdown
+    3. Select this module from the list
+    4. The full dashboard will load with all interactive features
+    """)
+    
+    # Quick action: Send demo notification
+    notif_center = get_notification_center()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔔 Test Notification", key="test_notif", use_container_width=True):
+            notif_center.notify(
+                title=f"Module Ready",
+                message=f"{module_name} is available in the sidebar menu",
+                notification_type=NotificationType.INFO,
+                priority=NotificationPriority.NORMAL
+            )
+            st.success("Notification sent! Check the bell icon.")
+            st.rerun()
+    
+    with col2:
+        if st.button("📋 Copy Module Name", key="copy_name", use_container_width=True):
+            st.code(module_name, language=None)
+            st.caption("Use this name to find the module in the sidebar")
+
+
 def render_explore_ecosystem_tab():
-    """Explore all NexusOS ecosystem modules via dropdown"""
+    """Explore all NexusOS ecosystem modules via dropdown with inline rendering"""
+    
+    # Check if there's a navigation request to render a module inline
+    if st.session_state.get('nav_request'):
+        render_requested_module()
+        return
     
     st.subheader("🧭 Explore NexusOS Ecosystem")
     st.markdown("**Trial & test all modules** - Select from dropdown to access any feature")
