@@ -45,21 +45,63 @@ def render_mobile_blockchain_hub():
     init_wallet_session()
     wallet = st.session_state.nexus_wallet
     
-    # Mobile-optimized CSS with WHITE TEXT
+    # Mobile-optimized CSS with IMPROVED CONTRAST
     st.markdown("""
         <style>
-        /* WHITE TEXT for entire Mobile Blockchain Hub dashboard */
-        .stApp main p,
-        .stApp main span,
-        .stApp main div,
-        .stApp main label,
+        /* Dark background for main content area */
+        .stApp > header + div > div > div > div > section > div {
+            background-color: #0f0f23 !important;
+        }
+        
+        /* Clear readable text - default to light text on dark backgrounds */
         .stApp main h1,
         .stApp main h2,
-        .stApp main h3,
-        .stApp main li,
-        .stApp main td,
-        .stApp main th {
-            color: #ffffff !important;
+        .stApp main h3 {
+            color: #00d4ff !important;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+        
+        .stApp main p,
+        .stApp main span,
+        .stApp main label,
+        .stApp main li {
+            color: #e2e8f0 !important;
+        }
+        
+        /* Ensure input fields are readable - dark text on light background */
+        .stApp input,
+        .stApp textarea,
+        .stApp select,
+        .stApp [data-testid="stTextInput"] input,
+        .stApp [data-testid="textInput"] input {
+            background-color: #ffffff !important;
+            color: #1a1a2e !important;
+            border: 2px solid #667eea !important;
+            border-radius: 8px !important;
+        }
+        
+        .stApp input::placeholder {
+            color: #6b7280 !important;
+        }
+        
+        /* Metric values - bright and readable */
+        .stApp [data-testid="stMetricValue"] {
+            color: #10b981 !important;
+            font-weight: bold !important;
+        }
+        
+        .stApp [data-testid="stMetricLabel"] {
+            color: #94a3b8 !important;
+        }
+        
+        /* Tab labels - clear and readable */
+        .stApp button[data-baseweb="tab"] {
+            color: #e2e8f0 !important;
+        }
+        
+        .stApp button[data-baseweb="tab"][aria-selected="true"] {
+            color: #00d4ff !important;
+            border-bottom-color: #00d4ff !important;
         }
         
         /* Mobile-first responsive design */
@@ -67,25 +109,34 @@ def render_mobile_blockchain_hub():
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 25px;
             border-radius: 15px;
-            color: white !important;
             text-align: center;
             margin-bottom: 25px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
         }
         
+        .main-header h1,
+        .main-header p {
+            color: #ffffff !important;
+        }
+        
         .module-card {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
             border-radius: 12px;
             padding: 20px;
             margin: 10px 0;
             transition: all 0.3s ease;
         }
         
+        .module-card h3,
+        .module-card h4 {
+            color: #00d4ff !important;
+        }
+        
         .module-card p,
         .module-card span,
-        .module-card div {
-            color: #ffffff !important;
+        .module-card li {
+            color: #e2e8f0 !important;
         }
         
         .module-card:hover {
@@ -96,39 +147,88 @@ def render_mobile_blockchain_hub():
         
         .wallet-status-active {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
             padding: 15px;
             border-radius: 10px;
             margin: 15px 0;
+        }
+        
+        .wallet-status-active strong,
+        .wallet-status-active code,
+        .wallet-status-active span {
+            color: #ffffff !important;
         }
         
         .wallet-status-locked {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
             padding: 15px;
             border-radius: 10px;
             margin: 15px 0;
         }
         
+        .wallet-status-locked strong {
+            color: #ffffff !important;
+        }
+        
+        /* Streamlit info/warning/success boxes */
+        .stApp [data-testid="stAlert"] {
+            background-color: rgba(16, 185, 129, 0.1) !important;
+            border: 1px solid rgba(16, 185, 129, 0.3) !important;
+        }
+        
+        .stApp [data-testid="stAlert"] p {
+            color: #10b981 !important;
+        }
+        
         /* Mobile-friendly touch targets */
-        button, a, [data-testid="stButton"] button {
+        .stApp button,
+        .stApp [data-testid="stButton"] button {
             font-size: 16px !important;
             padding: 12px 24px !important;
             min-height: 48px !important;
             cursor: pointer !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 8px !important;
+        }
+        
+        .stApp button:hover,
+        .stApp [data-testid="stButton"] button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s ease;
         }
         
         @media (max-width: 768px) {
-            button, [data-testid="stButton"] button {
+            .stApp button,
+            .stApp [data-testid="stButton"] button {
                 font-size: 18px !important;
                 padding: 14px 28px !important;
                 min-height: 52px !important;
             }
         }
         
-        button:hover {
-            transform: translateY(-2px);
-            transition: all 0.2s ease;
+        /* Dividers */
+        .stApp hr {
+            border-color: rgba(102, 126, 234, 0.3) !important;
+        }
+        
+        /* Radio buttons and checkboxes */
+        .stApp [data-testid="stRadio"] label,
+        .stApp [data-testid="stCheckbox"] label {
+            color: #e2e8f0 !important;
+        }
+        
+        /* File uploader */
+        .stApp [data-testid="stFileUploader"] {
+            background-color: #1a1a2e !important;
+            border: 2px dashed #667eea !important;
+            border-radius: 12px !important;
+        }
+        
+        .stApp [data-testid="stFileUploader"] p,
+        .stApp [data-testid="stFileUploader"] span {
+            color: #e2e8f0 !important;
         }
         </style>
     """, unsafe_allow_html=True)
