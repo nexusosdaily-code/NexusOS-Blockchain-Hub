@@ -1537,7 +1537,8 @@ def render_p2p_hub_tab():
         "👥 Friends",
         "📹 Live Stream",
         "📁 Media Share",
-        "🌐 Mesh Network"
+        "🌐 Mesh Network",
+        "⚛️ v4 Quantum"
     ])
     
     # TAB 1: Connect (Unified Wallet Access)
@@ -2187,6 +2188,179 @@ def render_p2p_hub_tab():
             if st.button("🚀 Open Full Mesh Dashboard", key="open_mesh"):
                 st.session_state.nav_request = "🌐 Offline Mesh Network"
                 st.rerun()
+    
+    # TAB 6: v4 Quantum Entanglement Consensus
+    with p2p_tabs[5]:
+        st.markdown("### ⚛️ WNSP v4 Quantum Consensus")
+        st.caption("50% Byzantine fault tolerance • 10ms confirmations • Bell's theorem validation")
+        
+        if not has_wallet:
+            st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
+        else:
+            # Initialize v4 consensus
+            try:
+                from wnsp_v4_quantum_consensus import (
+                    get_v4_consensus, QuantumTransaction, ConsensusResult,
+                    PLANCK_CONSTANT, BELL_CLASSICAL_LIMIT, BELL_QUANTUM_LIMIT
+                )
+                consensus = get_v4_consensus()
+                stats = consensus.get_network_stats()
+                
+                # Header metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("⚛️ Validators", stats['active_validators'])
+                with col2:
+                    st.metric("⚡ Avg Confirmation", f"{stats['avg_confirmation_ms']:.1f}ms")
+                with col3:
+                    st.metric("🛡️ Fault Tolerance", stats['fault_tolerance'])
+                with col4:
+                    st.metric("📊 TX Validated", stats['total_transactions'])
+                
+                st.divider()
+                
+                # Quantum Consensus Demo
+                st.markdown("#### 🔬 Live Quantum Consensus Demo")
+                
+                with st.form("quantum_consensus_demo"):
+                    demo_amount = st.number_input(
+                        "Transaction Amount (NXT)",
+                        min_value=0.01,
+                        max_value=10000.0,
+                        value=100.0,
+                        step=1.0
+                    )
+                    
+                    submit_demo = st.form_submit_button("⚛️ Validate with Quantum Consensus", type="primary")
+                    
+                    if submit_demo:
+                        # Create test transaction
+                        import secrets
+                        tx = QuantumTransaction(
+                            tx_id=f"qtx_{secrets.token_hex(8)}",
+                            sender=st.session_state.active_address,
+                            receiver="quantum_test_receiver",
+                            amount=demo_amount
+                        )
+                        
+                        # Run quantum consensus
+                        result, record = consensus.validate_transaction(tx)
+                        
+                        # Display results
+                        if result == ConsensusResult.CONFIRMED:
+                            st.success(f"✅ **CONFIRMED** via Quantum Entanglement Consensus")
+                        elif result == ConsensusResult.REJECTED:
+                            st.error(f"❌ **REJECTED** - Bell inequality not satisfied")
+                        elif result == ConsensusResult.BYZANTINE_DETECTED:
+                            st.warning(f"⚠️ **BYZANTINE NODE DETECTED** - Transaction still processed")
+                        
+                        # Detailed results
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("Bell S Parameter", f"{record['bell_S']:.4f}")
+                            st.caption(f"Threshold: {record['threshold_S']:.4f} (Classical limit: {BELL_CLASSICAL_LIMIT})")
+                        with col2:
+                            st.metric("Confirmation Time", f"{record['confirmation_ms']:.2f}ms")
+                            st.caption(f"Energy: {record['total_energy_nxt']:.2e} NXT")
+                        
+                        # Show validator measurements
+                        with st.expander("📊 Validator Measurements"):
+                            for m in record['measurements']:
+                                st.markdown(f"- **{m['validator']}**: {m['result']} ({m['basis']} basis)")
+                
+                st.divider()
+                
+                # Physics explanation
+                with st.expander("🔬 How Quantum Consensus Works"):
+                    st.markdown(f"""
+                    **Bell's Theorem & EPR Pairs**
+                    
+                    WNSP v4 uses quantum entanglement for consensus:
+                    
+                    1. **EPR Pairs**: Each validator holds an entangled photon pair
+                    2. **Measurement**: All validators measure the transaction simultaneously  
+                    3. **Bell Inequality**: Honest validators show quantum correlations (S > {BELL_CLASSICAL_LIMIT})
+                    4. **Byzantine Detection**: Cheaters show classical correlations (S ≤ {BELL_CLASSICAL_LIMIT})
+                    
+                    **Physics Constants:**
+                    - Planck constant: h = {PLANCK_CONSTANT:.2e} J⋅s
+                    - Classical limit: S ≤ {BELL_CLASSICAL_LIMIT}
+                    - Quantum limit: S ≤ {BELL_QUANTUM_LIMIT:.4f} (Tsirelson bound)
+                    
+                    **Advantages over v3:**
+                    | Feature | v3 | v4 |
+                    |---------|----|----|
+                    | Fault Tolerance | 33% | **50%** |
+                    | Confirmation | 5s | **10ms** |
+                    | Consensus | Proof of Spectrum | **Proof of Entanglement** |
+                    """)
+                
+                # Network status
+                st.markdown("#### 📡 Quantum Network Status")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Energy", f"{stats['total_energy_nxt']:.2e} NXT")
+                with col2:
+                    st.metric("Temporal Chain", stats['temporal_chain_length'])
+                with col3:
+                    byzantine_count = stats['byzantine_detected']
+                    color = "🟢" if byzantine_count == 0 else "🔴"
+                    st.metric(f"{color} Byzantine Detected", byzantine_count)
+                
+                st.divider()
+                
+                # Real-time validator monitoring
+                st.markdown("#### 🔭 Real-Time Validator Monitoring")
+                
+                # Import spectral summary function
+                from wnsp_v4_quantum_consensus import get_v4_spectral_summary, get_v4_comparison_metrics
+                
+                # Spectral distribution
+                spectral_summary = get_v4_spectral_summary(consensus)
+                
+                st.markdown("**Spectral Distribution:**")
+                spectral_cols = st.columns(6)
+                tier_colors = {
+                    'GAMMA': '🟣', 'X_RAY': '🔵', 'ULTRAVIOLET': '🟡',
+                    'VISIBLE': '🟢', 'INFRARED': '🟠', 'MICROWAVE': '🔴'
+                }
+                
+                for i, (tier, data) in enumerate(spectral_summary.items()):
+                    if data['count'] > 0:
+                        with spectral_cols[i]:
+                            st.markdown(f"**{tier_colors.get(tier, '')} {tier}**")
+                            st.caption(f"{data['count']} validators")
+                            st.caption(f"{data['total_stake']:,.0f} NXT")
+                
+                # Show v3 vs v4 comparison
+                with st.expander("📊 v3 vs v4 Comparison"):
+                    comparison = get_v4_comparison_metrics()
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**v3 (Proof of Spectrum)**")
+                        st.markdown(f"- Fault Tolerance: {comparison['v3_fault_tolerance']}")
+                        st.markdown(f"- Confirmation: {comparison['v3_confirmation_time']}")
+                        st.markdown(f"- Detection: {comparison['v3_byzantine_detection']}")
+                    
+                    with col2:
+                        st.markdown("**v4 (Proof of Entanglement)**")
+                        st.markdown(f"- Fault Tolerance: {comparison['v4_fault_tolerance']} (+51.5%)")
+                        st.markdown(f"- Confirmation: {comparison['v4_confirmation_time']} (500x faster)")
+                        st.markdown(f"- Detection: {comparison['v4_byzantine_detection']}")
+                    
+                    st.success(f"✅ Backward compatible - validators can opt-in to v4")
+                
+                # Recent consensus history
+                if consensus.consensus_history:
+                    st.markdown("**📜 Recent Consensus History:**")
+                    for record in consensus.consensus_history[-3:]:
+                        status = "✅" if record['consensus'] else "❌"
+                        st.markdown(f"- {status} `{record['tx_id'][:16]}...` | Bell S: {record['bell_S']:.3f} | {record['confirmation_ms']:.1f}ms")
+                
+            except Exception as e:
+                st.error(f"Quantum consensus initialization error: {str(e)}")
+                st.info("The v4 quantum consensus module is being initialized...")
 
 
 def render_requested_module():
