@@ -524,24 +524,35 @@ def render_mobile_blockchain_hub():
     notif_center = get_notification_center()
     unread_count = notif_center.get_unread_count()
     
-    # Main header with notification bell in top right
+    # Main header with notification bell inline next to tagline
+    badge_html = f'<span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 12px; position: relative; top: -8px;">{unread_count}</span>' if unread_count > 0 else ''
+    bell_style = "cursor: pointer; font-size: 24px; margin-left: 10px;" + (" animation: bell-ring 0.5s ease-in-out;" if unread_count > 0 else "")
+    
     st.markdown(f"""
-        <div style="position: relative;">
-            <div class="main-header">
-                <h1>📱 NexusOS Blockchain Hub</h1>
-                <p style="font-size: 18px; margin-top: 10px;">Your Phone IS the Blockchain Node</p>
-                <p style="font-size: 14px; margin-top: 5px; opacity: 0.9;">Mobile-First • Quantum-Resistant • Physics-Based</p>
-            </div>
+        <style>
+            @keyframes bell-ring {{
+                0%, 100% {{ transform: rotate(0deg); }}
+                25% {{ transform: rotate(15deg); }}
+                50% {{ transform: rotate(-15deg); }}
+                75% {{ transform: rotate(10deg); }}
+            }}
+            .bell-icon:hover {{ transform: scale(1.2); transition: transform 0.2s; }}
+        </style>
+        <div class="main-header">
+            <h1>📱 NexusOS Blockchain Hub</h1>
+            <p style="font-size: 18px; margin-top: 10px;">
+                Your Phone IS the Blockchain Node 
+                <span class="bell-icon" style="{bell_style}">🔔</span>{badge_html}
+            </p>
+            <p style="font-size: 14px; margin-top: 5px; opacity: 0.9;">Mobile-First • Quantum-Resistant • Physics-Based</p>
         </div>
     """, unsafe_allow_html=True)
     
-    # Notification bell button - positioned in top right of the tab area
-    bell_col1, bell_col2, bell_col3 = st.columns([6, 1, 1])
-    with bell_col3:
-        # Bell with badge showing unread count
-        bell_label = f"🔔 {unread_count}" if unread_count > 0 else "🔔"
-        bell_type = "primary" if unread_count > 0 else "secondary"
-        if st.button(bell_label, key="bell_toggle", type=bell_type, help="Tap to view notifications"):
+    # Bell tap button (small, centered)
+    col1, col2, col3 = st.columns([3, 2, 3])
+    with col2:
+        bell_label = f"🔔 Tap for Alerts ({unread_count})" if unread_count > 0 else "🔔 Tap for Alerts"
+        if st.button(bell_label, key="bell_toggle", type="primary" if unread_count > 0 else "secondary", use_container_width=True):
             st.session_state.show_notifications = not st.session_state.get('show_notifications', False)
             if st.session_state.show_notifications:
                 notif_center.mark_all_read()
