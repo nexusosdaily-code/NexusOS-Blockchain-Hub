@@ -1422,32 +1422,151 @@ def render_p2p_hub_tab():
             user_id = st.session_state.p2p_phone if st.session_state.p2p_phone else f"{st.session_state.active_address[:16]}..."
             st.markdown(f"**Your ID:** {user_id}")
             
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                friend_phone = st.text_input("Add friend's phone number", key="add_friend_input")
-            with col2:
-                if st.button("➕ Add Friend", key="add_friend_btn"):
-                    if friend_phone and friend_phone not in st.session_state.p2p_friends:
-                        st.session_state.p2p_friends.append(friend_phone)
-                        st.success(f"✅ Added {friend_phone}")
-                        st.rerun()
+            # Import friend manager for database persistence
+            try:
+                from friend_manager import get_friend_manager
+                fm = get_friend_manager()
+            except Exception:
+                fm = None
+            
+            # Add friend form with expanded fields
+            with st.expander("➕ Add New Friend", expanded=True):
+                st.markdown("**Friend Details for Mesh Media Sharing**")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    friend_name = st.text_input("👤 Friend's Name", key="friend_name_input", placeholder="John Doe")
+                with col2:
+                    friend_phone = st.text_input("📱 Phone Number", key="add_friend_input", placeholder="+1234567890")
+                
+                col3, col4 = st.columns(2)
+                with col3:
+                    friend_country = st.selectbox(
+                        "🌍 Country",
+                        options=["", "United States", "United Kingdom", "Canada", "Australia", 
+                                "Germany", "France", "Japan", "South Korea", "India", "Brazil",
+                                "Mexico", "South Africa", "Nigeria", "Kenya", "Other"],
+                        key="friend_country_input"
+                    )
+                with col4:
+                    friend_state = st.text_input("📍 State/Region", key="friend_state_input", placeholder="California")
+                
+                col5, col6 = st.columns(2)
+                with col5:
+                    friend_sim = st.text_input(
+                        "📶 SIM ID (Optional)", 
+                        key="friend_sim_input",
+                        placeholder="Last 4 digits only",
+                        help="Optional: Last 4 digits of SIM for mesh routing. Never share full SIM numbers."
+                    )
+                with col6:
+                    can_share_media = st.checkbox("📁 Allow Media Sharing", value=True, key="friend_can_share")
+                
+                st.caption("🔒 **Privacy**: Friend data is stored locally on your device. SIM IDs are optional and only used for mesh network optimization.")
+                
+                if st.button("✅ Add Friend", key="add_friend_btn", type="primary", use_container_width=True):
+                    if not friend_name:
+                        st.error("Please enter friend's name")
+                    elif not friend_phone:
+                        st.error("Please enter friend's phone number")
+                    else:
+                        # Add to database if available
+                        if fm:
+                            result = fm.add_friend(
+                                user_id=st.session_state.active_address,
+                                friend_name=friend_name,
+                                friend_contact=friend_phone,
+                                country=friend_country if friend_country else None,
+                                state_region=friend_state if friend_state else None,
+                                sim_number=friend_sim if friend_sim else None,
+                                can_share_media=can_share_media
+                            )
+                            if result['success']:
+                                st.success(f"✅ Added {friend_name} ({friend_phone})")
+                                st.rerun()
+                            else:
+                                st.error(f"Failed: {result.get('error', 'Unknown error')}")
+                        else:
+                            # Fallback to session state
+                            friend_data = {
+                                'name': friend_name,
+                                'contact': friend_phone,
+                                'country': friend_country,
+                                'state_region': friend_state,
+                                'sim_number': friend_sim,
+                                'can_share_media': can_share_media
+                            }
+                            st.session_state.p2p_friends.append(friend_data)
+                            st.success(f"✅ Added {friend_name}")
+                            st.rerun()
             
             st.divider()
             
-            if st.session_state.p2p_friends:
-                st.markdown("**📋 Your Friends:**")
-                for i, friend in enumerate(st.session_state.p2p_friends):
-                    col1, col2, col3 = st.columns([2, 1, 1])
-                    with col1:
-                        st.markdown(f"👤 **{friend}**")
-                    with col2:
-                        st.markdown("🟢 Online")
-                    with col3:
-                        if st.button("❌", key=f"remove_{i}"):
-                            st.session_state.p2p_friends.remove(friend)
-                            st.rerun()
+            # Load friends from database or session
+            friends_list = []
+            if fm:
+                try:
+                    friends_list = fm.get_friends(st.session_state.active_address)
+                except Exception as e:
+                    st.warning(f"Could not load friends from database")
+                    friends_list = st.session_state.p2p_friends
             else:
-                st.info("No friends added yet. Add friends to enable private broadcasts!")
+                friends_list = st.session_state.p2p_friends
+            
+            if friends_list:
+                st.markdown(f"**📋 Your Friends ({len(friends_list)}):**")
+                for i, friend in enumerate(friends_list):
+                    # Handle both dict format and old string format
+                    if isinstance(friend, dict):
+                        name = friend.get('name', 'Unknown')
+                        contact = friend.get('contact', '')
+                        country = friend.get('country', '')
+                        state = friend.get('state_region', '')
+                        sim = friend.get('sim_number', '')
+                        can_share = friend.get('can_share_media', True)
+                        friend_id = friend.get('id')
+                    else:
+                        # Old string format
+                        name = friend
+                        contact = friend
+                        country = ''
+                        state = ''
+                        sim = ''
+                        can_share = True
+                        friend_id = None
+                    
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                                    padding: 15px; border-radius: 10px; margin: 5px 0; 
+                                    border-left: 4px solid {'#10b981' if can_share else '#6b7280'};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="color: #00d4ff; font-size: 16px;">👤 {name}</strong>
+                                    <span style="color: #10b981; margin-left: 10px;">🟢 Online</span>
+                                </div>
+                            </div>
+                            <p style="color: #94a3b8; margin: 5px 0;">📱 {contact}</p>
+                            {f'<p style="color: #94a3b8; margin: 2px 0;">🌍 {country}{", " + state if state else ""}</p>' if country else ''}
+                            {f'<p style="color: #94a3b8; margin: 2px 0;">📶 SIM: {sim[:8]}...</p>' if sim else ''}
+                            <p style="color: {'#10b981' if can_share else '#ef4444'}; margin: 2px 0;">
+                                {'📁 Media sharing enabled' if can_share else '🚫 Media sharing disabled'}
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        col1, col2 = st.columns([3, 1])
+                        with col2:
+                            if st.button("❌ Remove", key=f"remove_{i}_{contact}"):
+                                if fm and friend_id:
+                                    fm.remove_friend(st.session_state.active_address, friend_id)
+                                elif isinstance(friend, str):
+                                    st.session_state.p2p_friends.remove(friend)
+                                else:
+                                    st.session_state.p2p_friends = [f for f in st.session_state.p2p_friends if f.get('contact') != contact]
+                                st.rerun()
+            else:
+                st.info("No friends added yet. Add friends to enable private broadcasts and media sharing!")
     
     # TAB 3: Live Streaming
     with p2p_tabs[2]:

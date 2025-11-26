@@ -38,28 +38,61 @@ class FriendManager:
                         friend_name VARCHAR(255) NOT NULL,
                         friend_contact VARCHAR(255) NOT NULL,
                         device_id VARCHAR(255),
+                        country VARCHAR(100),
+                        state_region VARCHAR(100),
+                        sim_number VARCHAR(50),
+                        can_share_media BOOLEAN DEFAULT TRUE,
                         added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(user_id, friend_contact)
                     )
                 """)
+                
+                # Add columns if they don't exist (for existing tables)
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                      WHERE table_name='friends' AND column_name='country') THEN
+                            ALTER TABLE friends ADD COLUMN country VARCHAR(100);
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                      WHERE table_name='friends' AND column_name='state_region') THEN
+                            ALTER TABLE friends ADD COLUMN state_region VARCHAR(100);
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                      WHERE table_name='friends' AND column_name='sim_number') THEN
+                            ALTER TABLE friends ADD COLUMN sim_number VARCHAR(50);
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                      WHERE table_name='friends' AND column_name='can_share_media') THEN
+                            ALTER TABLE friends ADD COLUMN can_share_media BOOLEAN DEFAULT TRUE;
+                        END IF;
+                    END $$;
+                """)
+                
                 conn.commit()
-                print("✅ Friends table initialized")
+                print("✅ Friends table initialized with country/state/SIM fields")
         except Exception as e:
             print(f"❌ Database initialization error: {e}")
             conn.rollback()
         finally:
             conn.close()
     
-    def add_friend(self, user_id: str, friend_name: str, friend_contact: str, device_id: Optional[str] = None) -> Dict:
-        """Add a new friend"""
+    def add_friend(self, user_id: str, friend_name: str, friend_contact: str, 
+                   device_id: Optional[str] = None, country: Optional[str] = None,
+                   state_region: Optional[str] = None, sim_number: Optional[str] = None,
+                   can_share_media: bool = True) -> Dict:
+        """Add a new friend with location and media sharing info"""
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO friends (user_id, friend_name, friend_contact, device_id)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO friends (user_id, friend_name, friend_contact, device_id, 
+                                        country, state_region, sim_number, can_share_media)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id, added_at
-                """, (user_id, friend_name, friend_contact, device_id))
+                """, (user_id, friend_name, friend_contact, device_id, 
+                      country, state_region, sim_number, can_share_media))
                 
                 result = cur.fetchone()
                 conn.commit()
@@ -77,6 +110,10 @@ class FriendManager:
                         'name': friend_name,
                         'contact': friend_contact,
                         'device_id': device_id,
+                        'country': country,
+                        'state_region': state_region,
+                        'sim_number': sim_number,
+                        'can_share_media': can_share_media,
                         'added_at': result[1].isoformat()
                     }
                 }
@@ -96,12 +133,13 @@ class FriendManager:
             conn.close()
     
     def get_friends(self, user_id: str) -> List[Dict]:
-        """Get all friends for a user"""
+        """Get all friends for a user with location and media sharing info"""
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, friend_name, friend_contact, device_id, added_at
+                    SELECT id, friend_name, friend_contact, device_id, 
+                           country, state_region, sim_number, can_share_media, added_at
                     FROM friends
                     WHERE user_id = %s
                     ORDER BY added_at DESC
@@ -114,7 +152,11 @@ class FriendManager:
                         'name': row[1],
                         'contact': row[2],
                         'device_id': row[3],
-                        'added_at': row[4].isoformat() if row[4] else None
+                        'country': row[4],
+                        'state_region': row[5],
+                        'sim_number': row[6],
+                        'can_share_media': row[7] if row[7] is not None else True,
+                        'added_at': row[8].isoformat() if row[8] else None
                     })
                 
                 return friends
