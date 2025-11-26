@@ -1866,40 +1866,23 @@ def render_p2p_hub_tab():
         if not has_wallet:
             st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
         else:
-            # FORCE reload friends from database for this tab
-            streaming_friends = []
-            active_addr = st.session_state.get('active_address')
-            debug_info = []
-            debug_info.append(f"Wallet Address: {active_addr}")
+            # Load friends from session state (populated on wallet unlock)
+            streaming_friends = st.session_state.get('p2p_friends', [])
             
-            if active_addr:
-                try:
-                    from friend_manager import get_friend_manager
-                    fm = get_friend_manager()
-                    debug_info.append(f"Friend Manager: {'OK' if fm else 'FAILED'}")
-                    if fm:
-                        db_friends = fm.get_friends(active_addr)
-                        debug_info.append(f"DB Query Result: {len(db_friends) if db_friends else 0} friends")
-                        if db_friends:
-                            streaming_friends = [
-                                {
-                                    'id': f.get('id'),
-                                    'name': f.get('name', f.get('friend_name', 'Unknown')),
-                                    'contact': f.get('contact', f.get('friend_contact', '')),
-                                }
-                                for f in db_friends
-                            ]
-                            st.session_state.p2p_friends = streaming_friends
-                            debug_info.append(f"Loaded friends: {[f['name'] for f in streaming_friends]}")
-                except Exception as e:
-                    debug_info.append(f"Error: {e}")
-            else:
-                debug_info.append("No active wallet address - unlock wallet first!")
-            
-            # Show debug info
-            with st.expander("🔧 Debug: Friend Loading", expanded=True):
-                for info in debug_info:
-                    st.text(info)
+            # If no friends in session, try loading from database
+            if not streaming_friends:
+                active_addr = st.session_state.get('active_address')
+                if active_addr:
+                    try:
+                        from friend_manager import get_friend_manager
+                        fm = get_friend_manager()
+                        if fm:
+                            db_friends = fm.get_friends(active_addr)
+                            if db_friends:
+                                streaming_friends = db_friends
+                                st.session_state.p2p_friends = db_friends
+                    except Exception:
+                        pass
             
             st.markdown("""
             <div class="module-card">
@@ -1914,8 +1897,9 @@ def render_p2p_hub_tab():
             </div>
             """, unsafe_allow_html=True)
             
-            # Show friend count for debugging
-            st.caption(f"👥 {len(streaming_friends)} friends available for private streaming")
+            # Show friend count
+            if streaming_friends:
+                st.success(f"👥 {len(streaming_friends)} friends available for private streaming")
             
             broadcast_type = st.radio(
                 "Broadcast Type:",
@@ -1923,13 +1907,17 @@ def render_p2p_hub_tab():
                 key="broadcast_type"
             )
             
+            selected_friends = []
             if broadcast_type == "👥 Friends Only":
                 if streaming_friends:
-                    # Create display-friendly options
-                    friend_options = {
-                        f"{f.get('name', 'Unknown')} ({f.get('contact', 'No contact')})": f 
-                        for f in streaming_friends
-                    }
+                    # Create display-friendly options from database friends
+                    friend_options = {}
+                    for f in streaming_friends:
+                        name = f.get('name', f.get('friend_name', 'Unknown'))
+                        contact = f.get('contact', f.get('friend_contact', 'No contact'))
+                        display_key = f"{name} ({contact})"
+                        friend_options[display_key] = f
+                    
                     selected_display = st.multiselect(
                         "Select friends who can view:",
                         options=list(friend_options.keys()),
@@ -1944,28 +1932,37 @@ def render_p2p_hub_tab():
             
             stream_title = st.text_input("Stream Title", placeholder="My NexusOS Stream", key="stream_title")
             
+            # Streaming controls
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🔴 Start Broadcasting", type="primary", key="start_stream"):
-                    st.success("🔴 **LIVE** - Broadcasting started!")
+                can_start = broadcast_type == "🌍 Public (Anyone)" or len(selected_friends) > 0
+                if st.button("🔴 Start Broadcasting", type="primary", key="start_stream", disabled=not can_start):
+                    if broadcast_type == "👥 Friends Only":
+                        friend_names = [f.get('name', f.get('friend_name', 'Unknown')) for f in selected_friends]
+                        st.success(f"🔴 **LIVE** - Private broadcast to: {', '.join(friend_names)}")
+                    else:
+                        st.success("🔴 **LIVE** - Public broadcast started!")
                     st.info("⚡ Energy cost: ~0.5 NXT/minute")
+                    st.session_state.stream_active = True
             with col2:
                 if st.button("⏹️ Stop Broadcast", key="stop_stream"):
                     st.info("Broadcast ended. Energy finalized.")
+                    st.session_state.stream_active = False
             
             st.divider()
             
-            st.markdown("### 📺 Active Broadcasts")
-            st.markdown("""
-            <div class="module-card" style="border: 2px solid #ef4444;">
-                <span style="background: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 12px;">🔴 LIVE</span>
-                <h4 style="margin-top: 10px;">Demo Stream - NexusOS Testing</h4>
-                <p>👤 Broadcaster: +1234567890 | 👁️ 3 viewers</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button("📺 Watch This Stream", key="watch_demo"):
-                st.info("Connecting to stream via WebRTC mesh...")
+            # Show active streams (real data would come from mesh network)
+            st.markdown("### 📺 Available Streams")
+            if st.session_state.get('stream_active'):
+                st.markdown(f"""
+                <div class="module-card" style="border: 2px solid #ef4444;">
+                    <span style="background: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 12px;">🔴 LIVE</span>
+                    <h4 style="margin-top: 10px;">{stream_title or 'My Stream'}</h4>
+                    <p>👤 You are broadcasting | 👁️ Awaiting viewers</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.info("No active broadcasts. Start streaming or check back later!")
     
     # TAB 4: Media Sharing
     with p2p_tabs[3]:
