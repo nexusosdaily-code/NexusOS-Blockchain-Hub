@@ -279,6 +279,7 @@ def render_mobile_blockchain_hub():
         "💱 Trading",
         "🏛️ Staking",
         "📱 P2P Hub",
+        "🧭 Explore",
         "📊 Info"
     ])
     
@@ -298,12 +299,16 @@ def render_mobile_blockchain_hub():
     with tab[3]:
         render_staking_tab()
     
-    # TAB 5: P2P HUB (NEW!)
+    # TAB 5: P2P HUB
     with tab[4]:
         render_p2p_hub_tab()
     
-    # TAB 6: INFO
+    # TAB 6: EXPLORE ECOSYSTEM
     with tab[5]:
+        render_explore_ecosystem_tab()
+    
+    # TAB 7: INFO
+    with tab[6]:
         render_info_tab()
 
 
@@ -754,6 +759,182 @@ def render_p2p_hub_tab():
         if st.button("🚀 Open Full Mesh Dashboard", key="open_mesh"):
             st.session_state.nav_request = "🌐 Offline Mesh Network"
             st.rerun()
+
+
+def render_explore_ecosystem_tab():
+    """Explore all NexusOS ecosystem modules via dropdown"""
+    
+    st.subheader("🧭 Explore NexusOS Ecosystem")
+    st.markdown("**Trial & test all modules** - Select from dropdown to access any feature")
+    
+    st.divider()
+    
+    # Module categories with dropdown access
+    ECOSYSTEM_MODULES = {
+        "🌐 Core Blockchain": {
+            "💬 Mobile DAG Messaging": "Quantum-encrypted messaging with E=hf physics pricing",
+            "🔗 Blockchain Explorer": "Live block and transaction visualization",
+            "🔍 Transaction Search Explorer": "Search addresses and transactions with physics metrics",
+            "⚙️ Nexus Consensus Dashboard": "Unified GhostDAG + Proof of Spectrum consensus engine",
+            "👻 GhostDAG Visualization": "Parallel block processing visualization",
+            "🌈 Proof of Spectrum": "Wavelength-based validation eliminating 51% attacks"
+        },
+        "💰 Economics & Trading": {
+            "💱 DEX (Decentralized Exchange)": "Automated market maker with liquidity pools",
+            "🏛️ Validator Economics": "Staking, rewards, and validator performance",
+            "⚛️ Wavelength Economics": "Physics-based validation and wave economics",
+            "🔄 Economic Loop Dashboard": "5-milestone economic flow visualization",
+            "💎 Pool Ecosystem": "Reserve pools and service pool management",
+            "📊 Long-term Supply Dashboard": "Tokenomics simulation and supply analysis"
+        },
+        "🏛️ Governance & AI": {
+            "🗳️ Civic Governance": "Community campaigns and voting system",
+            "🤖 AI Management Dashboard": "Centralized AI governance control",
+            "💬 Talk to Nexus AI": "Conversational AI for governance reports",
+            "⚖️ AI Arbitration Dashboard": "Dispute resolution and penalty appeals",
+            "🛡️ Security Dashboard": "Multi-layered defense monitoring"
+        },
+        "📡 Network & Mesh": {
+            "🌐 Offline Mesh Network": "Peer-to-peer internet without WiFi/cellular",
+            "📱 Mobile Connectivity": "Phone-as-node connection management",
+            "🛜 WNSP v2.0 Dashboard": "Optical mesh networking protocol",
+            "🔬 WNSP v3.0 Architecture": "Hardware abstraction and adaptive encoding",
+            "⚛️ WNSP v4.0 Quantum": "Quantum entanglement consensus layer",
+            "🌍 Unified Mesh Stack": "4-layer decentralized knowledge infrastructure"
+        },
+        "🔧 Developer Tools": {
+            "🚀 Napp Deployment Center": "Deploy NexusOS Apps with physics contracts",
+            "📝 WaveLang AI Teacher": "Learn quantum programming with AI",
+            "💻 Wavelength Code Generator": "Generate physics-based code",
+            "🔬 Quantum Wavelang Analyzer": "Analyze code with wave properties",
+            "⚡ Quantum Energy Dashboard": "Environmental energy and randomness systems"
+        },
+        "📚 Economics Theory": {
+            "🧪 Avogadro Economics": "Blockchain economics using Avogadro's Number",
+            "🔄 Orbital Transition Engine": "Quantum orbital burns replacing token burns",
+            "📈 Monte Carlo Analysis": "Economic simulation and risk analysis",
+            "🌱 Regenerative Economy": "Self-sustaining economic models"
+        }
+    }
+    
+    # Category selector
+    selected_category = st.selectbox(
+        "📂 Select Category",
+        options=list(ECOSYSTEM_MODULES.keys()),
+        key="explore_category"
+    )
+    
+    st.divider()
+    
+    # Get modules for selected category
+    modules = ECOSYSTEM_MODULES[selected_category]
+    
+    # Module selector dropdown
+    selected_module = st.selectbox(
+        "🎯 Select Module to Explore",
+        options=list(modules.keys()),
+        format_func=lambda x: x,
+        key="explore_module"
+    )
+    
+    # Show module description
+    if selected_module:
+        st.markdown(f"""
+        <div class="module-card">
+            <h3>{selected_module}</h3>
+            <p>{modules[selected_module]}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            if st.button(f"🚀 Launch {selected_module}", type="primary", use_container_width=True, key="launch_module"):
+                st.session_state.nav_request = selected_module
+                st.success(f"✅ Opening {selected_module}...")
+                st.rerun()
+        with col2:
+            st.caption("💡 Full feature access")
+    
+    st.divider()
+    
+    # Quick access grid for popular modules
+    st.markdown("### ⚡ Quick Access - Popular Modules")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div class="module-card" style="text-align: center;">
+            <h4>💬 DAG Messaging</h4>
+            <p style="font-size: 12px;">Send quantum messages</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open", key="quick_dag", use_container_width=True):
+            st.session_state.nav_request = "💬 Mobile DAG Messaging"
+            st.rerun()
+    
+    with col2:
+        st.markdown("""
+        <div class="module-card" style="text-align: center;">
+            <h4>💱 DEX Trading</h4>
+            <p style="font-size: 12px;">Trade on AMM</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open", key="quick_dex", use_container_width=True):
+            st.session_state.nav_request = "💱 DEX (Decentralized Exchange)"
+            st.rerun()
+    
+    with col3:
+        st.markdown("""
+        <div class="module-card" style="text-align: center;">
+            <h4>🤖 Talk to AI</h4>
+            <p style="font-size: 12px;">Get AI guidance</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open", key="quick_ai", use_container_width=True):
+            st.session_state.nav_request = "💬 Talk to Nexus AI"
+            st.rerun()
+    
+    col4, col5, col6 = st.columns(3)
+    
+    with col4:
+        st.markdown("""
+        <div class="module-card" style="text-align: center;">
+            <h4>🌐 Mesh Network</h4>
+            <p style="font-size: 12px;">P2P internet</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open", key="quick_mesh", use_container_width=True):
+            st.session_state.nav_request = "🌐 Offline Mesh Network"
+            st.rerun()
+    
+    with col5:
+        st.markdown("""
+        <div class="module-card" style="text-align: center;">
+            <h4>🗳️ Governance</h4>
+            <p style="font-size: 12px;">Vote on proposals</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open", key="quick_gov", use_container_width=True):
+            st.session_state.nav_request = "🗳️ Civic Governance"
+            st.rerun()
+    
+    with col6:
+        st.markdown("""
+        <div class="module-card" style="text-align: center;">
+            <h4>📝 WaveLang</h4>
+            <p style="font-size: 12px;">Learn quantum code</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open", key="quick_wave", use_container_width=True):
+            st.session_state.nav_request = "📝 WaveLang AI Teacher"
+            st.rerun()
+    
+    st.divider()
+    
+    # Module count summary
+    total_modules = sum(len(m) for m in ECOSYSTEM_MODULES.values())
+    st.caption(f"🌟 **{total_modules} modules** across **{len(ECOSYSTEM_MODULES)} categories** available to explore")
 
 
 def render_info_tab():
