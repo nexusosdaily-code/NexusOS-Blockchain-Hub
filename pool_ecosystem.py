@@ -55,6 +55,16 @@ class PoolType(Enum):
     PRODUCT_SERVICE_POOL = "product_service_pool"
     COMMUNITY_POOL = "community_pool"
     INNOVATION_POOL = "innovation_pool"
+    
+    # Real-World Supply Chain Pools (funded by Reserve → F_floor)
+    ELECTRICITY_POOL = "electricity_pool"
+    WATER_DESALINATION_POOL = "water_desalination_pool"
+    FOOD_SUPPLY_POOL = "food_supply_pool"
+    AGRICULTURE_POOL = "agriculture_pool"
+    HORTICULTURE_POOL = "horticulture_pool"
+    AQUACULTURE_POOL = "aquaculture_pool"
+    MANUFACTURING_POOL = "manufacturing_pool"
+    CARBON_CREDITS_POOL = "carbon_credits_pool"
 
 
 class PoolLayer(Enum):
@@ -178,7 +188,10 @@ class PoolEcosystem:
             supports=[
                 "DEX_POOL", "INVESTMENT_POOL", "STAKING_POOL", "BONUS_POOL",
                 "LOTTERY_POOL", "ENVIRONMENTAL_POOL", "RECYCLING_POOL",
-                "PRODUCT_SERVICE_POOL", "COMMUNITY_POOL", "INNOVATION_POOL"
+                "PRODUCT_SERVICE_POOL", "COMMUNITY_POOL", "INNOVATION_POOL",
+                "ELECTRICITY_POOL", "WATER_DESALINATION_POOL", "FOOD_SUPPLY_POOL",
+                "AGRICULTURE_POOL", "HORTICULTURE_POOL", "AQUACULTURE_POOL",
+                "MANUFACTURING_POOL", "CARBON_CREDITS_POOL"
             ]
         )
         
@@ -270,6 +283,79 @@ class PoolEcosystem:
             pool_layer=PoolLayer.SERVICE,
             name="Innovation & R&D Pool",
             description="Research, development, and innovation funding, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        # Real-World Supply Chain Pools
+        self.create_pool(
+            pool_id="ELECTRICITY_POOL",
+            pool_type=PoolType.ELECTRICITY_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Electricity & Energy Pool",
+            description="Sustainable electricity generation and distribution, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        self.create_pool(
+            pool_id="WATER_DESALINATION_POOL",
+            pool_type=PoolType.WATER_DESALINATION_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Water Desalination Pool",
+            description="Clean water through desalination and purification, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        self.create_pool(
+            pool_id="FOOD_SUPPLY_POOL",
+            pool_type=PoolType.FOOD_SUPPLY_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Food Supply Chain Pool",
+            description="Food production and distribution networks, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        self.create_pool(
+            pool_id="AGRICULTURE_POOL",
+            pool_type=PoolType.AGRICULTURE_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Sustainable Agriculture Pool",
+            description="Sustainable farming and crop production, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        self.create_pool(
+            pool_id="HORTICULTURE_POOL",
+            pool_type=PoolType.HORTICULTURE_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Horticulture Pool",
+            description="Fruits, vegetables, and plant cultivation, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        self.create_pool(
+            pool_id="AQUACULTURE_POOL",
+            pool_type=PoolType.AQUACULTURE_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Aquaculture & Fisheries Pool",
+            description="Sustainable fish farming and marine resources, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        self.create_pool(
+            pool_id="MANUFACTURING_POOL",
+            pool_type=PoolType.MANUFACTURING_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Manufacturing Pool",
+            description="Industrial manufacturing and production, enabled by F_floor",
+            supported_by="F_FLOOR_POOL"
+        )
+        
+        self.create_pool(
+            pool_id="CARBON_CREDITS_POOL",
+            pool_type=PoolType.CARBON_CREDITS_POOL,
+            pool_layer=PoolLayer.SERVICE,
+            name="Carbon Credits & Offsets Pool",
+            description="Carbon offset trading and environmental credits, enabled by F_floor",
             supported_by="F_FLOOR_POOL"
         )
     

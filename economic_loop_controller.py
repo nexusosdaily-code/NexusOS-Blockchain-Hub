@@ -338,12 +338,30 @@ def get_flow_controller(token_system: NativeTokenSystem) -> MessagingFlowControl
 
 @dataclass
 class SupplyChainDemand:
-    """Supply chain industry demand metrics for liquidity weighting"""
-    manufacturing: float = 0.35  # 35% weight
-    logistics: float = 0.25       # 25% weight
-    services: float = 0.20        # 20% weight
-    agriculture: float = 0.15     # 15% weight
-    technology: float = 0.05      # 5% weight
+    """
+    Supply chain industry demand metrics for liquidity weighting.
+    
+    Weights represent proportion of reserve allocated to each sector,
+    ensuring real-world supply chains are funded by the ecosystem.
+    All pools are sustained by F_floor.
+    """
+    # Core Infrastructure (40% total)
+    electricity: float = 0.12          # 12% - Power generation & grid
+    water_desalination: float = 0.08   # 8% - Clean water production
+    manufacturing: float = 0.12        # 12% - Industrial production
+    logistics: float = 0.08            # 8% - Supply chain transport
+    
+    # Food & Agriculture (35% total)
+    food_supply: float = 0.10          # 10% - Food distribution networks
+    agriculture: float = 0.10          # 10% - Sustainable farming
+    horticulture: float = 0.08         # 8% - Plant/vegetable cultivation
+    aquaculture: float = 0.07          # 7% - Fish farming & marine
+    
+    # Services & Sustainability (25% total)
+    services: float = 0.10             # 10% - General services
+    technology: float = 0.05           # 5% - Tech & innovation
+    carbon_credits: float = 0.05       # 5% - Environmental offsets
+    environmental: float = 0.05        # 5% - Sustainability programs
 
 
 class ReserveLiquidityAllocator:
@@ -390,11 +408,21 @@ class ReserveLiquidityAllocator:
         # Use supply chain weights if no custom weights provided
         if pool_weights is None:
             pool_weights = {
+                # Core Infrastructure
+                'NXT-ELECTRICITY': self.supply_chain_weights.electricity,
+                'NXT-WATER': self.supply_chain_weights.water_desalination,
                 'NXT-MANUFACTURING': self.supply_chain_weights.manufacturing,
                 'NXT-LOGISTICS': self.supply_chain_weights.logistics,
-                'NXT-SERVICES': self.supply_chain_weights.services,
+                # Food & Agriculture
+                'NXT-FOOD': self.supply_chain_weights.food_supply,
                 'NXT-AGRICULTURE': self.supply_chain_weights.agriculture,
-                'NXT-TECHNOLOGY': self.supply_chain_weights.technology
+                'NXT-HORTICULTURE': self.supply_chain_weights.horticulture,
+                'NXT-AQUACULTURE': self.supply_chain_weights.aquaculture,
+                # Services & Sustainability
+                'NXT-SERVICES': self.supply_chain_weights.services,
+                'NXT-TECHNOLOGY': self.supply_chain_weights.technology,
+                'NXT-CARBON': self.supply_chain_weights.carbon_credits,
+                'NXT-ENVIRONMENTAL': self.supply_chain_weights.environmental
             }
         
         # Normalize weights to sum to 1.0

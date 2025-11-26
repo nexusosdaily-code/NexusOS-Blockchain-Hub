@@ -1300,7 +1300,10 @@ def render_explore_ecosystem_tab():
             "⚛️ Wavelength Economics": "Physics-based validation and wave economics",
             "🔄 Economic Loop Dashboard": "5-milestone economic flow visualization",
             "💎 Pool Ecosystem": "Reserve pools and service pool management",
-            "📊 Long-term Supply Dashboard": "Tokenomics simulation and supply analysis"
+            "📊 Long-term Supply Dashboard": "Tokenomics simulation and supply analysis",
+            "🏗️ Service Pools": "Supply chain funding, lottery, bonus rewards, carbon credits",
+            "🎰 Lottery System": "Quantum randomness lottery with F_floor sustainability",
+            "🏆 Bonus Rewards": "Performance-based rewards distribution"
         },
         "🏛️ Governance & AI": {
             "🗳️ Civic Governance": "Community campaigns and voting system",
@@ -1329,6 +1332,16 @@ def render_explore_ecosystem_tab():
             "🔄 Orbital Transition Engine": "Quantum orbital burns replacing token burns",
             "📈 Monte Carlo Analysis": "Economic simulation and risk analysis",
             "🌱 Regenerative Economy": "Self-sustaining economic models"
+        },
+        "🏭 Real-World Supply Chains": {
+            "⚡ Electricity Pool": "Sustainable power generation and distribution",
+            "💧 Water Desalination": "Clean water through desalination and purification",
+            "🍽️ Food Supply Chain": "Food production and distribution networks",
+            "🌾 Agriculture Pool": "Sustainable farming and crop production",
+            "🌿 Horticulture": "Fruits, vegetables, and plant cultivation",
+            "🐟 Aquaculture": "Fish farming and marine resources",
+            "🏭 Manufacturing": "Industrial production funded by F_floor",
+            "🌍 Carbon Credits": "Environmental offsets and sustainability trading"
         }
     }
     
