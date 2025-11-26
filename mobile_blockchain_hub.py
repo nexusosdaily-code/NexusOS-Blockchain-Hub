@@ -1851,6 +1851,29 @@ def render_p2p_hub_tab():
         if not has_wallet:
             st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
         else:
+            # FORCE reload friends from database for this tab
+            streaming_friends = []
+            active_addr = st.session_state.get('active_address')
+            if active_addr:
+                try:
+                    from friend_manager import get_friend_manager
+                    fm = get_friend_manager()
+                    if fm:
+                        db_friends = fm.get_friends(active_addr)
+                        if db_friends:
+                            streaming_friends = [
+                                {
+                                    'id': f.get('id'),
+                                    'name': f.get('name', f.get('friend_name', 'Unknown')),
+                                    'contact': f.get('contact', f.get('friend_contact', '')),
+                                }
+                                for f in db_friends
+                            ]
+                            # Also update session state
+                            st.session_state.p2p_friends = streaming_friends
+                except Exception as e:
+                    st.error(f"Error loading friends: {e}")
+            
             st.markdown("""
             <div class="module-card">
                 <h3>🔴 WebRTC Live Broadcasting</h3>
@@ -1864,6 +1887,9 @@ def render_p2p_hub_tab():
             </div>
             """, unsafe_allow_html=True)
             
+            # Show friend count for debugging
+            st.caption(f"👥 {len(streaming_friends)} friends available for private streaming")
+            
             broadcast_type = st.radio(
                 "Broadcast Type:",
                 ["🌍 Public (Anyone)", "👥 Friends Only"],
@@ -1871,11 +1897,11 @@ def render_p2p_hub_tab():
             )
             
             if broadcast_type == "👥 Friends Only":
-                if st.session_state.p2p_friends:
+                if streaming_friends:
                     # Create display-friendly options
                     friend_options = {
                         f"{f.get('name', 'Unknown')} ({f.get('contact', 'No contact')})": f 
-                        for f in st.session_state.p2p_friends
+                        for f in streaming_friends
                     }
                     selected_display = st.multiselect(
                         "Select friends who can view:",
