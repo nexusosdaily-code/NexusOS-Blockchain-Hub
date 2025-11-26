@@ -1339,24 +1339,82 @@ def render_staking_tab():
         else:
             st.info("Stake tokens to see projections")
     
-    # TAB 4: Validators Overview
+    # TAB 4: Validators Overview with Physics-Based Spectral Information
     with staking_tabs[3]:
         st.markdown("### 🔍 Top Validators")
         
+        # System Health from NexusEngine (Real-time S(t))
+        try:
+            from nexus_consensus import NexusConsensusEngine
+            engine = NexusConsensusEngine()
+            system_health = engine.current_system_health
+            
+            # Display system health with physics context
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                health_color = "🟢" if system_health >= 0.7 else ("🟡" if system_health >= 0.4 else "🔴")
+                st.metric(f"{health_color} System Health S(t)", f"{system_health:.1%}")
+            with col2:
+                st.metric("🌊 Block Reward Multiplier", f"{system_health:.2f}x")
+            with col3:
+                st.metric("⚡ Network Energy", f"{engine.total_network_value:,.0f}")
+            
+            # Physics explanation
+            st.caption("S(t) = λ_E·E + λ_N·(N/N₀) + λ_H·(H/H₀) + λ_M·(M/M₀) — Higher system health = higher validator rewards")
+        except Exception as e:
+            st.caption("System health monitoring initializing...")
+        
+        st.divider()
+        
+        # Validators with spectral information
         validators = economy.get_validator_rankings()[:5]
         
+        # Spectral tier colors
+        spectral_icons = {
+            'GAMMA': '🟣',       # Highest energy
+            'X_RAY': '🔵',
+            'ULTRAVIOLET': '🟤',
+            'VISIBLE': '🟡',
+            'INFRARED': '🟠',
+            'MICROWAVE': '⚪'    # Lowest energy
+        }
+        
         for v in validators:
-            col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+            # Update spectral region for display
+            v.update_spectral_region()
+            spectral_icon = spectral_icons.get(v.spectral_region, '⚪')
+            
+            col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
             with col1:
                 status = "🟢" if not v.is_jailed else "🔴"
-                st.markdown(f"**{status} {v.address[:18]}...**")
+                st.markdown(f"**{status} {v.address[:15]}...**")
             with col2:
                 st.metric("Stake", f"{v.get_total_stake():,.0f}")
             with col3:
                 st.metric("Fee", f"{v.commission_rate*100:.0f}%")
             with col4:
                 st.metric("Rep", f"{v.reputation_score:.0f}")
+            with col5:
+                # Spectral region with reward multiplier
+                st.metric(f"{spectral_icon} Tier", f"{v.get_spectral_multiplier():.2f}x")
             st.divider()
+        
+        # Spectral tier legend
+        with st.expander("📊 Spectral Reward Tiers (E=hf Physics)"):
+            st.markdown("""
+            **Physics-Based Validator Rewards**: Higher stake = higher frequency = more energy = larger reward multiplier
+            
+            | Tier | Min Stake | Multiplier | Energy Level |
+            |------|-----------|------------|--------------|
+            | 🟣 Gamma | 50,000 NXT | 1.50x | Highest |
+            | 🔵 X-Ray | 20,000 NXT | 1.30x | Very High |
+            | 🟤 Ultraviolet | 10,000 NXT | 1.20x | High |
+            | 🟡 Visible | 5,000 NXT | 1.10x | Medium |
+            | 🟠 Infrared | 2,000 NXT | 1.05x | Low |
+            | ⚪ Microwave | 0 NXT | 1.00x | Base |
+            
+            *Formula: E = h × f where h = 6.62607015×10⁻³⁴ J⋅s (Planck constant)*
+            """)
         
         if st.button("🔍 View All Validators", use_container_width=True, key="view_all_validators"):
             st.session_state.nav_request = "🏛️ Validator Economics"

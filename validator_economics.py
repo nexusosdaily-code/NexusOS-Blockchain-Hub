@@ -1,6 +1,11 @@
 """
 Validator Economics Module
 Staking, delegation, reward distribution, slashing, and reputation system for blockchain validators
+
+Physics-Based Spectral Weighting:
+- Validators are assigned spectral regions based on their total stake
+- Higher stake = higher frequency = higher energy = larger reward multiplier
+- This aligns with E=hf (Planck's equation): more "massive" validators operate at higher energy levels
 """
 
 import time
@@ -9,6 +14,78 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import random
+
+# Planck constant (CODATA 2018 exact value)
+PLANCK_CONSTANT = 6.62607015e-34  # J⋅s (exact by SI definition)
+
+# Spectral regions for validator reward multipliers
+# Higher frequency = higher energy = higher reward multiplier
+# This creates physics-aligned incentives: larger validators contribute more security, earn more rewards
+VALIDATOR_SPECTRAL_TIERS = {
+    'GAMMA':      {'frequency_hz': 3e19,  'multiplier': 1.50, 'min_stake': 50_000},   # 50%+ bonus for top validators
+    'X_RAY':      {'frequency_hz': 3e17,  'multiplier': 1.30, 'min_stake': 20_000},   # 30% bonus
+    'ULTRAVIOLET':{'frequency_hz': 1e16,  'multiplier': 1.20, 'min_stake': 10_000},   # 20% bonus
+    'VISIBLE':    {'frequency_hz': 5e14,  'multiplier': 1.10, 'min_stake': 5_000},    # 10% bonus
+    'INFRARED':   {'frequency_hz': 3e13,  'multiplier': 1.05, 'min_stake': 2_000},    # 5% bonus
+    'MICROWAVE':  {'frequency_hz': 3e10,  'multiplier': 1.00, 'min_stake': 0},        # Base rewards
+}
+
+
+def assign_validator_spectral_region(total_stake: float) -> str:
+    """
+    Assign spectral region to a validator based on total stake.
+    
+    Physics Rationale:
+    - Stake represents "mass" in economic terms
+    - More massive validators operate at higher energy levels (E=hf)
+    - This mirrors how larger atoms have higher energy electron transitions
+    
+    Returns: spectral region name
+    """
+    if total_stake >= 50_000:
+        return 'GAMMA'
+    elif total_stake >= 20_000:
+        return 'X_RAY'
+    elif total_stake >= 10_000:
+        return 'ULTRAVIOLET'
+    elif total_stake >= 5_000:
+        return 'VISIBLE'
+    elif total_stake >= 2_000:
+        return 'INFRARED'
+    else:
+        return 'MICROWAVE'
+
+
+def calculate_spectral_reward(base_reward: float, spectral_region: str) -> Tuple[float, float, dict]:
+    """
+    Calculate physics-based reward using spectral region multiplier.
+    
+    Args:
+        base_reward: The base block reward in NXT
+        spectral_region: The validator's assigned spectral region
+        
+    Returns:
+        (final_reward, energy_joules, breakdown_dict)
+    """
+    tier = VALIDATOR_SPECTRAL_TIERS.get(spectral_region.upper(), VALIDATOR_SPECTRAL_TIERS['MICROWAVE'])
+    
+    # Calculate quantum energy: E = hf
+    energy_joules = PLANCK_CONSTANT * tier['frequency_hz']
+    
+    # Apply spectral multiplier
+    final_reward = base_reward * tier['multiplier']
+    
+    breakdown = {
+        'spectral_region': spectral_region.upper(),
+        'frequency_hz': tier['frequency_hz'],
+        'energy_joules': energy_joules,
+        'base_reward': base_reward,
+        'multiplier': tier['multiplier'],
+        'final_reward': final_reward,
+        'physics_formula': f"E = h × f = {PLANCK_CONSTANT:.2e} × {tier['frequency_hz']:.2e} = {energy_joules:.2e} J"
+    }
+    
+    return final_reward, energy_joules, breakdown
 
 
 class SlashingType(Enum):
@@ -65,7 +142,14 @@ class Delegation:
 
 @dataclass
 class ValidatorEconomics:
-    """Extended validator with economic metrics"""
+    """
+    Extended validator with economic metrics and physics-based spectral rewards.
+    
+    Physics Integration:
+    - Each validator is assigned a spectral region based on total stake
+    - Higher stake = higher frequency = higher energy (E=hf)
+    - Spectral region determines reward multiplier (1.0x to 1.5x)
+    """
     address: str
     stake: float  # Self-bonded stake
     commission_rate: float = 0.10  # 10% commission
@@ -79,6 +163,10 @@ class ValidatorEconomics:
     blocks_validated: int = 0
     uptime_percentage: float = 100.0
     reputation_score: float = 100.0
+    
+    # Physics-based spectral economics
+    spectral_region: str = 'MICROWAVE'  # Default to lowest tier
+    total_energy_processed: float = 0.0  # Cumulative E=hf energy in Joules
     
     # Rewards
     total_rewards_earned: float = 0.0
@@ -95,6 +183,10 @@ class ValidatorEconomics:
     activated_at: float = field(default_factory=time.time)
     last_active: float = field(default_factory=time.time)
     
+    def __post_init__(self):
+        """Initialize spectral region based on initial stake"""
+        self.spectral_region = assign_validator_spectral_region(self.get_total_stake())
+    
     def get_total_stake(self) -> float:
         """Get total stake (self + delegated)"""
         return self.stake + self.total_delegated
@@ -106,25 +198,56 @@ class ValidatorEconomics:
         return (self.get_total_stake() / total_network_stake) * 100
     
     def add_delegation(self, delegation: Delegation):
-        """Add new delegation"""
+        """Add new delegation and update spectral region"""
         self.delegations.append(delegation)
         self.total_delegated += delegation.amount
+        # Update spectral region after stake change
+        self.update_spectral_region()
     
     def remove_delegation(self, delegation: Delegation):
-        """Remove delegation after unbonding"""
+        """Remove delegation after unbonding and update spectral region"""
         if delegation in self.delegations:
             self.delegations.remove(delegation)
             self.total_delegated -= delegation.amount
+            # Update spectral region after stake change
+            self.update_spectral_region()
+    
+    def update_spectral_region(self):
+        """
+        Update spectral region based on current total stake.
+        Called after stake changes to ensure reward alignment.
+        """
+        self.spectral_region = assign_validator_spectral_region(self.get_total_stake())
+    
+    def get_spectral_multiplier(self) -> float:
+        """Get the current spectral reward multiplier"""
+        tier = VALIDATOR_SPECTRAL_TIERS.get(self.spectral_region.upper(), VALIDATOR_SPECTRAL_TIERS['MICROWAVE'])
+        return tier['multiplier']
     
     def distribute_rewards(self, block_reward: float):
-        """Distribute block rewards to validator and delegators"""
-        # Validator commission
-        commission = block_reward * self.commission_rate
+        """
+        Distribute block rewards to validator and delegators with spectral weighting.
+        
+        Physics-Based Reward Calculation:
+        1. Update spectral region based on current stake
+        2. Apply spectral multiplier to base reward (E=hf principle)
+        3. Track energy processed for this block
+        4. Distribute according to stake proportions
+        """
+        # Update spectral region based on current stake
+        self.update_spectral_region()
+        
+        # Apply physics-based spectral multiplier
+        spectral_reward, energy_joules, _ = calculate_spectral_reward(block_reward, self.spectral_region)
+        self.total_energy_processed += energy_joules
+        
+        # Validator commission (from spectral-adjusted reward)
+        commission = spectral_reward * self.commission_rate
         self.total_commission_earned += commission
         self.total_rewards_earned += commission
         
         # Remaining rewards distributed proportionally
-        remaining_rewards = block_reward - commission
+        remaining_rewards = spectral_reward - commission
         total_stake = self.get_total_stake()
         
         if total_stake > 0:
@@ -178,6 +301,9 @@ class ValidatorEconomics:
         
         # Impact reputation
         self.reputation_score = max(0, self.reputation_score - (slash_percentage * 2))
+        
+        # Update spectral region after stake reduction
+        self.update_spectral_region()
     
     def jail(self, duration_seconds: float = 86400.0):
         """Jail validator temporarily (default 24 hours)"""
@@ -211,7 +337,8 @@ class ValidatorEconomics:
         ))
     
     def to_dict(self) -> dict:
-        """Convert to dictionary"""
+        """Convert to dictionary with physics-based spectral information"""
+        tier = VALIDATOR_SPECTRAL_TIERS.get(self.spectral_region.upper(), VALIDATOR_SPECTRAL_TIERS['MICROWAVE'])
         return {
             'address': self.address[:10] + "...",
             'self_stake': self.stake,
@@ -224,7 +351,12 @@ class ValidatorEconomics:
             'reputation': f"{self.reputation_score:.1f}",
             'total_rewards': self.total_rewards_earned,
             'is_jailed': self.is_jailed,
-            'slashing_events': len(self.slashing_events)
+            'slashing_events': len(self.slashing_events),
+            # Physics-based spectral information
+            'spectral_region': self.spectral_region,
+            'spectral_multiplier': f"{tier['multiplier']:.2f}x",
+            'spectral_frequency_hz': tier['frequency_hz'],
+            'total_energy_processed_j': self.total_energy_processed
         }
 
 

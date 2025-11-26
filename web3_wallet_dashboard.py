@@ -442,7 +442,7 @@ def render_unlock_wallet_tab(wallet):
 
 
 def render_send_nxt_tab(wallet):
-    """Send NXT tokens"""
+    """Send NXT tokens with physics-based cost preview"""
     
     st.header("💸 Send NXT Tokens")
     
@@ -482,7 +482,53 @@ def render_send_nxt_tab(wallet):
             help="Your wallet password"
         )
         
-        st.caption("💡 **Fee:** 0.01 NXT (auto-deducted)")
+        # Transaction cost preview with physics context
+        st.divider()
+        st.markdown("#### ⚡ Transaction Cost Preview")
+        
+        # Current fee structure
+        network_fee = 0.01  # Flat network fee
+        total_cost = amount + network_fee
+        
+        # Show actual costs
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("💸 Amount", f"{amount:.4f} NXT")
+        with col2:
+            st.metric("⚡ Network Fee", f"{network_fee:.4f} NXT")
+        with col3:
+            st.metric("📊 Total Cost", f"{total_cost:.4f} NXT")
+        
+        # Physics-based spectral classification (informational)
+        PLANCK_CONSTANT = 6.62607015e-34  # J⋅s (CODATA 2018 exact value)
+        
+        # Classify transaction by spectral tier (for informational display)
+        if amount >= 10000:
+            spectral = ('GAMMA', 3e19, '🟣', 'Massive')
+        elif amount >= 1000:
+            spectral = ('X_RAY', 3e17, '🔵', 'Large')
+        elif amount >= 100:
+            spectral = ('ULTRAVIOLET', 1e16, '🟤', 'Medium')
+        elif amount >= 10:
+            spectral = ('VISIBLE', 5e14, '🟡', 'Small')
+        else:
+            spectral = ('INFRARED', 3e13, '🟠', 'Micro')
+        
+        region, frequency, icon, size = spectral
+        energy_joules = PLANCK_CONSTANT * frequency
+        
+        with st.expander(f"{icon} Transaction Physics: {region} tier ({size} transaction)"):
+            st.markdown(f"""
+            **Quantum Energy Classification (E=hf)**
+            - **Spectral Region:** {region}
+            - **Frequency:** {frequency:.2e} Hz
+            - **Energy:** {energy_joules:.2e} J
+            - **Formula:** E = h × f = {PLANCK_CONSTANT:.2e} × {frequency:.2e}
+            
+            *Higher value transactions are classified at higher energy levels in the electromagnetic spectrum.*
+            """)
+        
+        st.divider()
         
         submit = st.form_submit_button("📤 Send Transaction", type="primary", width="stretch")
         
