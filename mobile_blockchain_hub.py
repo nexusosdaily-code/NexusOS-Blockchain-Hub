@@ -38,6 +38,12 @@ from notification_system import (
     get_notification_center
 )
 
+# Import achievements system
+from achievements_system import (
+    AchievementsManager, trigger_achievement, get_user_badges, get_user_progress,
+    check_balance_badges, BADGE_DEFINITIONS, RARITY_COLORS, CATEGORY_INFO
+)
+
 
 def render_mobile_blockchain_hub():
     """
@@ -578,11 +584,36 @@ def render_mobile_blockchain_hub():
         # Balance is already in smallest units (100M units = 1 NXT, like Bitcoin satoshis)
         units = balance['balance_units']
         nxt = balance['balance_nxt']
+        
+        # Check for balance-based badges
+        check_balance_badges(st.session_state.active_address, nxt)
+        
+        # Get user achievements summary
+        progress = get_user_progress(st.session_state.active_address)
+        level = progress.get('level', 1)
+        points = progress.get('total_points', 0)
+        earned_count = progress.get('earned_count', 0)
+        recent_badges = progress.get('recent_badges', [])[:3]
+        
+        # Display recent badges inline
+        badges_html = ""
+        for badge in recent_badges:
+            rarity_color = RARITY_COLORS.get(badge.get('rarity', 'common'), '#9ca3af')
+            badges_html += f'<span title="{badge["name"]}" style="font-size: 20px; margin-right: 3px; filter: drop-shadow(0 0 3px {rarity_color});">{badge["icon"]}</span>'
+        
+        if not badges_html:
+            badges_html = '<span style="opacity: 0.5; font-size: 14px;">No badges yet</span>'
+        
         st.markdown(f"""
             <div class="wallet-status-active">
-                <strong>🔓 Wallet Active</strong><br/>
+                <strong>🔓 Wallet Active</strong> 
+                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                             padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 8px;">
+                    Level {level} • {points} pts
+                </span><br/>
                 Address: <code>{st.session_state.active_address[:24]}...</code><br/>
-                Balance: <strong>{nxt:,.8f} NXT</strong> <span style="opacity: 0.7; font-size: 14px;">({units:,.0f} units)</span>
+                Balance: <strong>{nxt:,.8f} NXT</strong> <span style="opacity: 0.7; font-size: 14px;">({units:,.0f} units)</span><br/>
+                <span style="font-size: 12px; opacity: 0.8;">Badges: </span>{badges_html}
             </div>
         """, unsafe_allow_html=True)
         
@@ -1918,6 +1949,133 @@ def render_requested_module():
             st.caption("Use this name to find the module in the sidebar")
 
 
+def render_achievements_showcase():
+    """Render the full achievements showcase with all badges and progress"""
+    
+    wallet_address = st.session_state.get('active_address')
+    if not wallet_address:
+        st.info("Unlock your wallet to view achievements")
+        return
+    
+    # Get user progress
+    progress = get_user_progress(wallet_address)
+    earned_badges = get_user_badges(wallet_address)
+    
+    # Level and points display
+    level = progress.get('level', 1)
+    points = progress.get('total_points', 0)
+    earned_count = progress.get('earned_count', 0)
+    total_count = progress.get('total_count', len(BADGE_DEFINITIONS))
+    completion = progress.get('completion_percentage', 0)
+    
+    # Progress header
+    st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                    padding: 20px; border-radius: 12px; border: 1px solid #667eea; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="color: #00d4ff; margin: 0;">Level {level}</h3>
+                    <p style="color: #e2e8f0; margin: 5px 0;">{points} total points earned</p>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 28px;">🏆</span>
+                    <p style="color: #e2e8f0; margin: 0;">{earned_count}/{total_count} badges</p>
+                </div>
+            </div>
+            <div style="background: #2d3748; border-radius: 8px; height: 12px; margin-top: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); 
+                            height: 100%; width: {completion}%; transition: width 0.5s;"></div>
+            </div>
+            <p style="color: #a0aec0; font-size: 12px; margin-top: 5px; text-align: center;">
+                {completion}% completion
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Category progress tabs
+    categories = progress.get('categories', {})
+    
+    cat_cols = st.columns(5)
+    for i, (cat_id, cat_data) in enumerate(categories.items()):
+        with cat_cols[i % 5]:
+            cat_info = CATEGORY_INFO.get(cat_id, {})
+            st.markdown(f"""
+                <div style="text-align: center; padding: 10px; background: #1a1a2e; 
+                            border-radius: 8px; border: 1px solid #374151;">
+                    <span style="font-size: 24px;">{cat_info.get('icon', '🎖️')}</span>
+                    <p style="color: #e2e8f0; font-size: 11px; margin: 2px 0;">{cat_info.get('name', cat_id)}</p>
+                    <p style="color: #00d4ff; font-weight: bold; margin: 0;">{cat_data.get('earned', 0)}/{cat_data.get('total', 0)}</p>
+                </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Badge display tabs
+    badge_tab1, badge_tab2 = st.tabs(["🏅 Earned Badges", "🎯 Available Badges"])
+    
+    with badge_tab1:
+        if earned_badges:
+            # Display earned badges in a grid
+            cols = st.columns(4)
+            for i, badge in enumerate(earned_badges):
+                with cols[i % 4]:
+                    rarity = badge.get('rarity', 'common')
+                    rarity_color = RARITY_COLORS.get(rarity, '#9ca3af')
+                    st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%); 
+                                    padding: 12px; border-radius: 10px; text-align: center; 
+                                    border: 2px solid {rarity_color}; margin-bottom: 10px;
+                                    box-shadow: 0 0 10px {rarity_color}40;">
+                            <span style="font-size: 32px; filter: drop-shadow(0 0 5px {rarity_color});">
+                                {badge['icon']}
+                            </span>
+                            <p style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin: 5px 0 2px 0;">
+                                {badge['name']}
+                            </p>
+                            <p style="color: {rarity_color}; font-size: 10px; text-transform: uppercase; margin: 0;">
+                                {rarity} • {badge['points']} pts
+                            </p>
+                        </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.info("Complete actions to earn badges! Create a wallet, send transactions, add friends, and explore all features.")
+    
+    with badge_tab2:
+        # Show available badges to earn
+        manager = AchievementsManager(wallet_address)
+        available = manager.get_available_badges()
+        
+        if available:
+            # Group by category
+            for cat_id, cat_info in CATEGORY_INFO.items():
+                cat_badges = [b for b in available if b['category'] == cat_id]
+                if cat_badges:
+                    st.markdown(f"**{cat_info['icon']} {cat_info['name']}** - {cat_info['description']}")
+                    cols = st.columns(4)
+                    for i, badge in enumerate(cat_badges[:4]):  # Show max 4 per category
+                        with cols[i % 4]:
+                            rarity = badge.get('rarity', 'common')
+                            rarity_color = RARITY_COLORS.get(rarity, '#9ca3af')
+                            st.markdown(f"""
+                                <div style="background: #1a1a2e; padding: 10px; border-radius: 8px; 
+                                            text-align: center; border: 1px dashed #374151; 
+                                            margin-bottom: 10px; opacity: 0.7;">
+                                    <span style="font-size: 24px; filter: grayscale(50%);">
+                                        {badge['icon']}
+                                    </span>
+                                    <p style="color: #a0aec0; font-size: 11px; margin: 3px 0;">
+                                        {badge['name']}
+                                    </p>
+                                    <p style="color: #6b7280; font-size: 9px; margin: 0;">
+                                        {badge['description'][:30]}...
+                                    </p>
+                                </div>
+                            """, unsafe_allow_html=True)
+                    st.markdown("")
+        else:
+            st.success("🎉 Amazing! You've earned all available badges!")
+
+
 def render_explore_ecosystem_tab():
     """Explore all NexusOS ecosystem modules via dropdown with inline rendering"""
     
@@ -1928,6 +2086,11 @@ def render_explore_ecosystem_tab():
     
     st.subheader("🧭 Explore NexusOS Ecosystem")
     st.markdown("**Trial & test all modules** - Select from dropdown to access any feature")
+    
+    # Achievements showcase section
+    if st.session_state.get('active_address'):
+        with st.expander("🏆 **Your Achievements & Badges**", expanded=False):
+            render_achievements_showcase()
     
     st.divider()
     
