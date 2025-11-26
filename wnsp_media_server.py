@@ -271,8 +271,32 @@ def get_friends():
     """Get all friends for current user"""
     from friend_manager import get_friend_manager
     
-    # Get user ID from request (in production, this would come from auth token)
-    user_id = request.args.get('user_id', 'default_user')
+    # Support both user_id (wallet address) and phone_number lookups
+    user_id = request.args.get('user_id')
+    phone_number = request.args.get('phone_number')
+    
+    # If phone_number provided, try to find associated wallet address
+    if phone_number and not user_id:
+        try:
+            from nexus_native_wallet import NexusNativeWallet
+            from sqlalchemy import text
+            wallet = NexusNativeWallet()
+            # Look up wallet address by phone number
+            phone_lookup = wallet.db.execute(
+                text("SELECT nexus_address FROM nexus_phone_links WHERE phone_number = :phone AND is_verified = true"),
+                {"phone": phone_number}
+            ).fetchone()
+            if phone_lookup:
+                user_id = phone_lookup[0]
+            else:
+                # Fallback: use phone number as user_id for compatibility
+                user_id = phone_number
+        except Exception as e:
+            print(f"Phone lookup error: {e}")
+            user_id = phone_number if phone_number else 'default_user'
+    
+    if not user_id:
+        user_id = 'default_user'
     
     manager = get_friend_manager()
     if not manager:

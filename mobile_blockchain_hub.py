@@ -1413,6 +1413,29 @@ def render_p2p_hub_tab():
     if 'p2p_friends' not in st.session_state:
         st.session_state.p2p_friends = []
     
+    # Load friends from database if wallet is active (ensures friends persist across sessions)
+    if st.session_state.get('active_address'):
+        try:
+            from friend_manager import get_friend_manager
+            fm = get_friend_manager()
+            if fm:
+                db_friends = fm.get_friends(st.session_state.active_address)
+                if db_friends:
+                    # Convert database friends to display format for streaming selector
+                    st.session_state.p2p_friends = [
+                        {
+                            'id': f.get('id'),
+                            'name': f.get('name', f.get('friend_name', 'Unknown')),
+                            'contact': f.get('contact', f.get('friend_contact', '')),
+                            'country': f.get('country', ''),
+                            'state': f.get('state_region', ''),
+                            'can_share': f.get('can_share_media', True)
+                        }
+                        for f in db_friends
+                    ]
+        except Exception as e:
+            pass  # Keep existing friends if database load fails
+    
     # Get wallet reference from session (initialized by init_wallet_session in main hub)
     # This ensures we use the same wallet instance as other tabs
     wallet = st.session_state.get('nexus_wallet')
@@ -1847,12 +1870,24 @@ def render_p2p_hub_tab():
                 key="broadcast_type"
             )
             
-            if broadcast_type == "👥 Friends Only" and st.session_state.p2p_friends:
-                selected_friends = st.multiselect(
-                    "Select friends who can view:",
-                    st.session_state.p2p_friends,
-                    key="selected_viewers"
-                )
+            if broadcast_type == "👥 Friends Only":
+                if st.session_state.p2p_friends:
+                    # Create display-friendly options
+                    friend_options = {
+                        f"{f.get('name', 'Unknown')} ({f.get('contact', 'No contact')})": f 
+                        for f in st.session_state.p2p_friends
+                    }
+                    selected_display = st.multiselect(
+                        "Select friends who can view:",
+                        options=list(friend_options.keys()),
+                        key="selected_viewers"
+                    )
+                    selected_friends = [friend_options[name] for name in selected_display]
+                    
+                    if not selected_display:
+                        st.info("👆 Select at least one friend to start private streaming")
+                else:
+                    st.warning("📭 No friends added yet. Go to the **Friends** tab to add friends first!")
             
             stream_title = st.text_input("Stream Title", placeholder="My NexusOS Stream", key="stream_title")
             
