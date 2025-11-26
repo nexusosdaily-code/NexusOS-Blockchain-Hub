@@ -50,6 +50,7 @@ from wavelang_compiler import render_wavelang_compiler_dashboard
 from quantum_wavelang_analyzer import render_quantum_wavelang_analyzer
 from civic_governance_dashboard import main as civic_governance_main
 from mobile_blockchain_hub import render_mobile_blockchain_hub
+from mobile_hub_v2 import render_mobile_hub
 from economic_loop_dashboard import render_economic_loop_dashboard
 from avogadro_economics_dashboard import main as avogadro_economics_main
 from napp_deployment_center import render_napp_deployment_center
@@ -777,8 +778,8 @@ def main():
                         st.rerun()
     
     elif module == "📱 Mobile Blockchain Hub":
-        # Mobile blockchain hub - unified interface
-        render_mobile_blockchain_hub()
+        # Mobile blockchain hub v2 - redesigned mobile-first interface
+        render_mobile_hub()
     
     elif module == "💫 Economic Loop Dashboard":
         # Economic loop system
