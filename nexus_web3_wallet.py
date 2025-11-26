@@ -24,7 +24,13 @@ from decimal import Decimal
 
 # Web3 imports
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+try:
+    from web3.middleware import geth_poa_middleware
+except ImportError:
+    try:
+        from web3.middleware import ExtraDataToPOAMiddleware as geth_poa_middleware
+    except ImportError:
+        geth_poa_middleware = None
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from hexbytes import HexBytes

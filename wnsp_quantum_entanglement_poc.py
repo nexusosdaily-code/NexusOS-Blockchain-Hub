@@ -380,6 +380,88 @@ class QuantumEnergyAwareConsensus(QuantumEntanglementConsensus):
 
 
 # ============================================================================
+# Hybrid Consensus: Combines v3 PoS with v4 Quantum Entanglement
+# ============================================================================
+
+class HybridConsensus:
+    """
+    Hybrid consensus combining traditional PoS with quantum entanglement.
+    
+    Fallback Architecture:
+    - v4 Quantum: Used when EPR hardware available (50% fault tolerance)
+    - v3 PoS: Fallback when quantum hardware unavailable (33% fault tolerance)
+    """
+    
+    def __init__(self, validators: List[QuantumValidator], use_quantum: bool = True):
+        """
+        Initialize hybrid consensus.
+        
+        Args:
+            validators: List of validator nodes
+            use_quantum: Whether to attempt quantum consensus first
+        """
+        self.validators = validators
+        self.use_quantum = use_quantum
+        self.quantum_engine = QuantumEnergyAwareConsensus(validators)
+        self.fallback_count = 0
+        self.quantum_success_count = 0
+    
+    def validate_transaction(self, tx: Transaction) -> Tuple[bool, Dict]:
+        """
+        Validate transaction using hybrid approach.
+        
+        Tries quantum first, falls back to classical PoS if needed.
+        """
+        if self.use_quantum:
+            try:
+                is_valid, record = self.quantum_engine.validate_with_energy_awareness(tx)
+                
+                if record.get('bell_violation', 0) > 2.0:
+                    self.quantum_success_count += 1
+                    record['consensus_type'] = 'quantum_v4'
+                    return is_valid, record
+                else:
+                    self.fallback_count += 1
+                    return self._classical_fallback(tx)
+                    
+            except Exception as e:
+                self.fallback_count += 1
+                return self._classical_fallback(tx)
+        else:
+            return self._classical_fallback(tx)
+    
+    def _classical_fallback(self, tx: Transaction) -> Tuple[bool, Dict]:
+        """Classical PoS consensus fallback"""
+        votes = sum(1 for v in self.validators if self._validator_approves(v, tx))
+        threshold = len(self.validators) * 2 // 3 + 1
+        
+        is_valid = votes >= threshold
+        
+        return is_valid, {
+            'consensus_type': 'classical_pos_v3',
+            'votes': votes,
+            'threshold': threshold,
+            'validators_count': len(self.validators),
+            'is_valid': is_valid
+        }
+    
+    def _validator_approves(self, validator: QuantumValidator, tx: Transaction) -> bool:
+        """Simulate classical validator approval"""
+        tx_hash = hashlib.sha256(f"{tx.tx_id}{validator.node_id}".encode()).digest()
+        return int.from_bytes(tx_hash[:4], 'big') % 100 < 80
+    
+    def get_stats(self) -> Dict:
+        """Get hybrid consensus statistics"""
+        total = self.quantum_success_count + self.fallback_count
+        return {
+            'quantum_success_count': self.quantum_success_count,
+            'fallback_count': self.fallback_count,
+            'quantum_success_rate': self.quantum_success_count / total if total > 0 else 0,
+            'total_validations': total
+        }
+
+
+# ============================================================================
 # DEMONSTRATION: How it works
 # ============================================================================
 

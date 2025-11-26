@@ -1510,3 +1510,23 @@ class NexusNativeWallet:
                 'is_valid': False,
                 'errors': [f'IO verification failed: {str(e)}']
             }
+
+
+# ============================================================================
+# Global Token System Accessor
+# ============================================================================
+
+_token_system = None
+
+def get_token_system():
+    """
+    Get singleton NativeTokenSystem instance for service pool integration.
+    
+    Returns:
+        NativeTokenSystem from native_token module
+    """
+    global _token_system
+    if _token_system is None:
+        from native_token import NativeTokenSystem
+        _token_system = NativeTokenSystem()
+    return _token_system

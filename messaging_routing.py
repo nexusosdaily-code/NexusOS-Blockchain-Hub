@@ -377,3 +377,7 @@ def get_ai_message_router() -> AIMessageRouter:
     if _ai_router is None:
         _ai_router = AIMessageRouter()
     return _ai_router
+
+
+# Alias for backward compatibility
+MessageRouter = AIMessageRouter
