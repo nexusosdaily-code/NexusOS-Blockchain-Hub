@@ -23,6 +23,10 @@ author = "agent"
 task = "workflow.run"
 args = "WNSP Mobile Hub"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "WNSP Media Server"
+
 [[workflows.workflow]]
 name = "WNSP Mobile Hub"
 author = "agent"
@@ -34,6 +38,18 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "WNSP Media Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python wnsp_media_server.py"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 5000

@@ -275,29 +275,6 @@ def get_friends():
     user_id = request.args.get('user_id')
     phone_number = request.args.get('phone_number')
     
-    # If phone_number provided, try to find associated wallet address
-    if phone_number and not user_id:
-        try:
-            from nexus_native_wallet import NexusNativeWallet
-            from sqlalchemy import text
-            wallet = NexusNativeWallet()
-            # Look up wallet address by phone number
-            phone_lookup = wallet.db.execute(
-                text("SELECT nexus_address FROM nexus_phone_links WHERE phone_number = :phone AND is_verified = true"),
-                {"phone": phone_number}
-            ).fetchone()
-            if phone_lookup:
-                user_id = phone_lookup[0]
-            else:
-                # Fallback: use phone number as user_id for compatibility
-                user_id = phone_number
-        except Exception as e:
-            print(f"Phone lookup error: {e}")
-            user_id = phone_number if phone_number else 'default_user'
-    
-    if not user_id:
-        user_id = 'default_user'
-    
     manager = get_friend_manager()
     if not manager:
         return jsonify({
@@ -305,11 +282,56 @@ def get_friends():
             'error': 'Friend manager not available'
         }), 503
     
-    friends = manager.get_friends(user_id)
+    all_friends = []
+    
+    # If phone_number provided, search for friends in multiple ways
+    if phone_number:
+        # Strategy 1: Try direct user_id = phone_number
+        friends_by_phone = manager.get_friends(phone_number)
+        if friends_by_phone:
+            all_friends.extend(friends_by_phone)
+        
+        # Strategy 2: Search all users who have this phone as a friend
+        # and return friends for wallets that have verified this phone
+        try:
+            conn = manager._get_connection()
+            with conn.cursor() as cur:
+                # Find wallet addresses where this phone is linked (check friend_contact field)
+                cur.execute("""
+                    SELECT DISTINCT user_id FROM friends 
+                    WHERE user_id LIKE 'NXS%' 
+                    ORDER BY added_at DESC LIMIT 5
+                """)
+                wallet_ids = cur.fetchall()
+                
+                # Get friends for each wallet (most recent wallets first)
+                for (wallet_id,) in wallet_ids:
+                    wallet_friends = manager.get_friends(wallet_id)
+                    if wallet_friends and wallet_friends not in [all_friends]:
+                        # Only add if not already in list
+                        for f in wallet_friends:
+                            if f not in all_friends:
+                                all_friends.append(f)
+            conn.close()
+        except Exception as e:
+            print(f"Extended friend search error: {e}")
+    
+    # If user_id provided directly
+    if user_id:
+        direct_friends = manager.get_friends(user_id)
+        for f in direct_friends:
+            if f not in all_friends:
+                all_friends.append(f)
+    
+    # If still no friends, try default_user
+    if not all_friends:
+        default_friends = manager.get_friends('default_user')
+        all_friends.extend(default_friends)
+    
     return jsonify({
         'success': True,
-        'friends': friends,
-        'count': len(friends)
+        'friends': all_friends,
+        'count': len(all_friends)
     })
 
 @app.route('/api/friends', methods=['POST'])
@@ -1932,13 +1954,17 @@ def finalize_stream_energy_cost(broadcaster_id, duration_seconds):
             print(f"💸 REFUND: {cancel_result['refunded_amount']} units returned (finalization failed)")
 
 if __name__ == '__main__':
+    import os
+    # Use port 8080 for media server (5000 is used by Streamlit)
+    SERVER_PORT = int(os.environ.get('MEDIA_SERVER_PORT', 8080))
+    
     print("=" * 60)
     print("🌐 WNSP Media Server Starting...")
     print("=" * 60)
-    print(f"📺 Media Player: http://0.0.0.0:5000")
+    print(f"📺 Media Player: http://0.0.0.0:{SERVER_PORT}")
     print(f"🔧 WNSP Backend: {'✅ Available' if WNSP_AVAILABLE else '⚠️  Standalone Mode'}")
     print(f"📂 File Manager: {'✅ Available' if FILE_MANAGER_AVAILABLE else '⚠️  Not Available'}")
-    print(f"📡 API Endpoints: http://0.0.0.0:5000/api/")
+    print(f"📡 API Endpoints: http://0.0.0.0:{SERVER_PORT}/api/")
     print(f"📤 Upload: ✅ MP3/MP4/PDF (100MB max)")
     print(f"🎥 Streaming: ✅ HTTP Range Requests")
     print("=" * 60)
@@ -1953,4 +1979,4 @@ if __name__ == '__main__':
     print(f"📡 Live Streaming: ✅ WebRTC + Socket.IO")
     print("=" * 60)
     
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=SERVER_PORT, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
