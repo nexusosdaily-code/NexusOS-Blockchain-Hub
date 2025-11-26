@@ -231,6 +231,14 @@ class ValidatorEconomics:
 class StakingEconomy:
     """Blockchain staking economy manager"""
     
+    # Whale Protection: Staking Limits
+    # With 1M total supply, these limits ensure decentralization
+    TOTAL_SUPPLY = 1_000_000  # 1 million NXT total supply
+    MIN_VALIDATOR_STAKE = 1_000  # Minimum 1,000 NXT to become validator
+    MAX_VALIDATOR_STAKE = 10_000  # Maximum 10,000 NXT per validator (1% of supply)
+    MIN_DELEGATION = 10  # Minimum 10 NXT to delegate
+    MAX_DELEGATION_PER_VALIDATOR = 50_000  # Max total delegations per validator (5% of supply)
+    
     def __init__(self, block_reward: float = 2.0, inflation_rate: float = 0.05):
         """
         Initialize staking economy
@@ -261,10 +269,22 @@ class StakingEconomy:
             SlashingType.NETWORK_ATTACK: 100.0,  # Complete slash
         }
     
-    def register_validator(self, address: str, self_stake: float, commission_rate: float = 0.10) -> bool:
-        """Register new validator"""
+    def register_validator(self, address: str, self_stake: float, commission_rate: float = 0.10) -> Tuple[bool, str]:
+        """
+        Register new validator with whale protection limits
+        
+        Returns:
+            Tuple[bool, str]: (success, message)
+        """
         if address in self.validators:
-            return False
+            return False, "Validator already registered"
+        
+        # Whale Protection: Enforce staking limits
+        if self_stake < self.MIN_VALIDATOR_STAKE:
+            return False, f"Minimum stake is {self.MIN_VALIDATOR_STAKE:,} NXT"
+        
+        if self_stake > self.MAX_VALIDATOR_STAKE:
+            return False, f"Maximum stake is {self.MAX_VALIDATOR_STAKE:,} NXT (1% of supply for decentralization)"
         
         validator = ValidatorEconomics(
             address=address,
@@ -274,20 +294,31 @@ class StakingEconomy:
         self.validators[address] = validator
         self.total_staked += self_stake
         
-        return True
+        return True, f"Validator registered with {self_stake:,} NXT stake"
     
     def delegate(self, delegator: str, validator_address: str, amount: float) -> Tuple[bool, str]:
-        """Delegate stake to validator"""
+        """Delegate stake to validator with whale protection limits"""
         if validator_address not in self.validators:
             return False, "Validator not found"
         
         if amount <= 0:
             return False, "Invalid amount"
         
+        # Whale Protection: Minimum delegation
+        if amount < self.MIN_DELEGATION:
+            return False, f"Minimum delegation is {self.MIN_DELEGATION} NXT"
+        
         validator = self.validators[validator_address]
         
         if validator.is_jailed:
             return False, "Validator is jailed"
+        
+        # Whale Protection: Check if validator would exceed max delegation cap
+        if validator.total_delegated + amount > self.MAX_DELEGATION_PER_VALIDATOR:
+            remaining = self.MAX_DELEGATION_PER_VALIDATOR - validator.total_delegated
+            if remaining <= 0:
+                return False, f"Validator has reached max delegation cap ({self.MAX_DELEGATION_PER_VALIDATOR:,} NXT)"
+            return False, f"Validator can only accept {remaining:,} more NXT (5% supply cap)"
         
         # Create delegation
         delegation = Delegation(
@@ -306,7 +337,7 @@ class StakingEconomy:
         
         self.total_staked += amount
         
-        return True, f"Delegated {amount} to {validator_address[:10]}..."
+        return True, f"Delegated {amount:,} NXT to {validator_address[:10]}..."
     
     def undelegate(self, delegator: str, validator_address: str, amount: float) -> Tuple[bool, str]:
         """Start undelegation process"""
@@ -517,4 +548,20 @@ class StakingEconomy:
             'pending_rewards': pending_rewards,
             'total_claimed': total_claimed,
             'delegations': delegation_list
+        }
+    
+    def get_staking_limits(self) -> dict:
+        """Get staking limits for UI display - Whale Protection Info"""
+        return {
+            'total_supply': self.TOTAL_SUPPLY,
+            'min_validator_stake': self.MIN_VALIDATOR_STAKE,
+            'max_validator_stake': self.MAX_VALIDATOR_STAKE,
+            'min_delegation': self.MIN_DELEGATION,
+            'max_delegation_per_validator': self.MAX_DELEGATION_PER_VALIDATOR,
+            'min_validators_for_security': self.TOTAL_SUPPLY // self.MAX_VALIDATOR_STAKE,
+            'description': (
+                f"Whale Protection: Max {self.MAX_VALIDATOR_STAKE:,} NXT per validator (1% of supply). "
+                f"This ensures minimum {self.TOTAL_SUPPLY // self.MAX_VALIDATOR_STAKE} validators "
+                f"are needed to secure the network, preventing centralization."
+            )
         }
