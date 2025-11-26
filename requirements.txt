@@ -55,3 +55,4 @@ python-socketio==5.14.3
 socketio
 python-docx
 python-docx
+twilio
