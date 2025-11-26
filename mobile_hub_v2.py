@@ -21,13 +21,14 @@ import time
 
 from ui_theme import (
     inject_theme, render_hero_balance, render_physics_metrics,
-    render_floor_status, render_section_header, render_card, Colors
+    render_floor_status, render_section_header, render_card, Colors,
+    render_achievement_badge, render_level_progress, render_achievement_unlock_notification
 )
 from nexus_native_wallet import NexusNativeWallet
 from bhls_floor_system import BHLSFloorSystem
 from native_token import token_system
 from web3_wallet_dashboard import init_wallet_session
-from notification_system import get_notification_center
+from achievement_system import get_achievement_system
 
 
 @dataclass
@@ -336,6 +337,42 @@ def render_home_view(wallet_data: Dict, bhls_data: Dict):
             if st.button(f"Open {feature['title']}", key=f"open_{feature['view']}"):
                 st.session_state.current_view = feature['view']
                 st.rerun()
+    
+    st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+    
+    render_section_header("Achievements", "Your progress and badges")
+    
+    wallet_address = wallet_data.get('address')
+    if wallet_address:
+        achievement_sys = get_achievement_system()
+        level_info = achievement_sys.get_user_level_info(wallet_address)
+        render_level_progress(level_info)
+        
+        achievements = achievement_sys.get_user_achievements(wallet_address)
+        unlocked = [a for a in achievements if a.get('is_unlocked')]
+        
+        if unlocked:
+            st.markdown("<div style='display: flex; flex-wrap: wrap; gap: 4px;'>", unsafe_allow_html=True)
+            for ach in unlocked[:6]:
+                render_achievement_badge(ach, compact=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            if len(unlocked) > 6:
+                st.caption(f"+{len(unlocked) - 6} more badges")
+        else:
+            st.markdown("""
+                <div style="text-align: center; padding: 20px; color: #64748b;">
+                    <span style="font-size: 2rem;">🎯</span>
+                    <p style="margin-top: 8px;">Complete actions to earn badges!</p>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        if st.button("View All Achievements", key="view_achievements", use_container_width=True):
+            st.session_state.current_view = 'more'
+            st.session_state.more_section = 'achievements'
+            st.rerun()
+    else:
+        st.info("Create or unlock a wallet to start earning achievements!")
 
 
 def render_wallet_view(wallet_data: Dict):
@@ -443,6 +480,15 @@ def render_wallet_view(wallet_data: Dict):
                     if wallet and hasattr(wallet, 'send_transaction'):
                         if wallet.send_transaction(recipient, amount):
                             st.success(f"Sent {amount} NXT to {recipient[:16]}...")
+                            
+                            achievement_sys = get_achievement_system()
+                            newly_unlocked = achievement_sys.record_action(
+                                wallet_data['address'], 
+                                'transaction_sent', 
+                                amount
+                            )
+                            for ach in newly_unlocked:
+                                render_achievement_unlock_notification(ach)
                         else:
                             st.error("Transaction failed")
                     else:
@@ -537,11 +583,24 @@ def render_dex_view():
             </div>
         """, unsafe_allow_html=True)
     
+    wallet = st.session_state.get('nexus_wallet')
+    wallet_address = wallet.get_address() if wallet and wallet.is_unlocked() else None
+    
     if st.button("Swap Tokens", key="btn_swap", use_container_width=True):
         if from_amount > 0:
             with st.spinner("Processing swap..."):
                 time.sleep(1)
                 st.success(f"Swapped {from_amount} {from_token} successfully!")
+                
+                if wallet_address:
+                    achievement_sys = get_achievement_system()
+                    newly_unlocked = achievement_sys.record_action(
+                        wallet_address, 
+                        'swap', 
+                        from_amount
+                    )
+                    for ach in newly_unlocked:
+                        render_achievement_unlock_notification(ach)
         else:
             st.warning("Enter an amount to swap")
 
@@ -606,13 +665,26 @@ def render_governance_view():
                 </div>
             """, unsafe_allow_html=True)
             
+            wallet = st.session_state.get('nexus_wallet')
+            wallet_address = wallet.get_address() if wallet and wallet.is_unlocked() else None
+            
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Vote For", key=f"vote_for_{prop['id']}", use_container_width=True):
                     st.success("Vote recorded!")
+                    if wallet_address:
+                        achievement_sys = get_achievement_system()
+                        newly_unlocked = achievement_sys.record_action(wallet_address, 'vote')
+                        for ach in newly_unlocked:
+                            render_achievement_unlock_notification(ach)
             with col2:
                 if st.button("Vote Against", key=f"vote_against_{prop['id']}", use_container_width=True):
                     st.success("Vote recorded!")
+                    if wallet_address:
+                        achievement_sys = get_achievement_system()
+                        newly_unlocked = achievement_sys.record_action(wallet_address, 'vote')
+                        for ach in newly_unlocked:
+                            render_achievement_unlock_notification(ach)
     
     with tab2:
         st.info("Your voting history will appear here")
@@ -633,12 +705,93 @@ def render_governance_view():
         
         if st.button("Submit Proposal", key="btn_submit_prop", use_container_width=True):
             st.success("Proposal submitted for community review!")
+            wallet = st.session_state.get('nexus_wallet')
+            if wallet and wallet.is_unlocked():
+                wallet_address = wallet.get_address()
+                achievement_sys = get_achievement_system()
+                newly_unlocked = achievement_sys.record_action(wallet_address, 'proposal')
+                for ach in newly_unlocked:
+                    render_achievement_unlock_notification(ach)
 
 
 def render_more_view():
-    """Render the more/settings view"""
+    """Render the more/settings view with achievements section"""
     
     render_section_header("More", "Additional features and settings")
+    
+    more_section = st.session_state.get('more_section', None)
+    if more_section:
+        st.session_state.more_section = None
+    
+    with st.expander("🏆 Achievements & Badges", expanded=(more_section == 'achievements')):
+        wallet = st.session_state.get('nexus_wallet')
+        if wallet and wallet.is_unlocked():
+            wallet_address = wallet.get_address()
+            achievement_sys = get_achievement_system()
+            
+            level_info = achievement_sys.get_user_level_info(wallet_address)
+            render_level_progress(level_info)
+            
+            achievements = achievement_sys.get_user_achievements(wallet_address)
+            
+            categories = ['genesis', 'wavelength', 'economic', 'community', 'explorer']
+            category_names = {
+                'genesis': '✨ Genesis',
+                'wavelength': '🌈 Wavelength',
+                'economic': '💰 Economic',
+                'community': '👥 Community',
+                'explorer': '🔍 Explorer'
+            }
+            
+            selected_cat = st.selectbox(
+                "Filter by category",
+                options=['all'] + categories,
+                format_func=lambda x: 'All Achievements' if x == 'all' else category_names.get(x, x),
+                key="achievement_category"
+            )
+            
+            filtered = achievements if selected_cat == 'all' else [
+                a for a in achievements if a.get('category') == selected_cat
+            ]
+            
+            unlocked = [a for a in filtered if a.get('is_unlocked')]
+            locked = [a for a in filtered if not a.get('is_unlocked')]
+            
+            if unlocked:
+                st.markdown("#### Unlocked")
+                for ach in unlocked:
+                    render_achievement_badge(ach)
+            
+            if locked:
+                st.markdown("#### In Progress")
+                for ach in sorted(locked, key=lambda x: x.get('progress', 0), reverse=True):
+                    render_achievement_badge(ach)
+            
+            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+            
+            st.markdown("#### Leaderboard")
+            leaderboard = achievement_sys.get_leaderboard(5)
+            if leaderboard:
+                for i, user in enumerate(leaderboard, 1):
+                    medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
+                    st.markdown(f"""
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding: 8px 12px;
+                            background: rgba(255,255,255,0.05);
+                            border-radius: 8px;
+                            margin-bottom: 4px;
+                        ">
+                            <span>{medal} {user['wallet_address']}</span>
+                            <span style="color: #00d4ff;">Lvl {user['level']} • {user['xp']:,} XP</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.caption("Be the first on the leaderboard!")
+        else:
+            st.info("Unlock your wallet to view achievements")
     
     features = [
         {'icon': '&#128172;', 'title': 'DAG Messaging', 'desc': 'Quantum-secured messaging'},

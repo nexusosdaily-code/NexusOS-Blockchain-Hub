@@ -875,3 +875,212 @@ def render_section_header(title: str, subtitle: str = "") -> None:
             {f'<p class="nexus-subtitle">{subtitle}</p>' if subtitle else ''}
         </div>
     """, unsafe_allow_html=True)
+
+
+def get_rarity_colors(rarity: str) -> dict:
+    """Get colors for achievement rarity"""
+    colors = {
+        'common': {'bg': 'rgba(148, 163, 184, 0.15)', 'border': '#94a3b8', 'text': '#94a3b8'},
+        'uncommon': {'bg': 'rgba(16, 185, 129, 0.15)', 'border': '#10b981', 'text': '#10b981'},
+        'rare': {'bg': 'rgba(59, 130, 246, 0.15)', 'border': '#3b82f6', 'text': '#3b82f6'},
+        'epic': {'bg': 'rgba(139, 92, 246, 0.15)', 'border': '#8b5cf6', 'text': '#8b5cf6'},
+        'legendary': {'bg': 'rgba(251, 191, 36, 0.15)', 'border': '#fbbf24', 'text': '#fbbf24'},
+    }
+    return colors.get(rarity, colors['common'])
+
+
+def render_achievement_badge(achievement: dict, compact: bool = False) -> None:
+    """Render a single achievement badge"""
+    rarity_colors = get_rarity_colors(achievement.get('rarity', 'common'))
+    is_unlocked = achievement.get('is_unlocked', False)
+    progress = achievement.get('progress', 0)
+    
+    opacity = '1' if is_unlocked else '0.5'
+    icon = achievement.get('icon', '🏆')
+    name = achievement.get('name', 'Achievement')
+    description = achievement.get('description', '')
+    xp = achievement.get('xp_reward', 0)
+    
+    if compact:
+        st.markdown(f"""
+            <div style="
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                background: {rarity_colors['bg']};
+                border: 1px solid {rarity_colors['border']};
+                border-radius: 20px;
+                opacity: {opacity};
+                margin: 4px;
+            ">
+                <span style="font-size: 1.25rem;">{icon}</span>
+                <span style="color: {rarity_colors['text']}; font-size: 0.8rem; font-weight: 500;">{name}</span>
+                {'<span style="color: #10b981; font-size: 0.7rem;">✓</span>' if is_unlocked else ''}
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        progress_bar = ""
+        if not is_unlocked and progress > 0:
+            progress_bar = f"""
+                <div style="
+                    width: 100%;
+                    height: 4px;
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 2px;
+                    margin-top: 8px;
+                    overflow: hidden;
+                ">
+                    <div style="
+                        width: {progress}%;
+                        height: 100%;
+                        background: linear-gradient(90deg, {rarity_colors['border']}, {rarity_colors['text']});
+                        border-radius: 2px;
+                    "></div>
+                </div>
+                <span style="color: #64748b; font-size: 0.65rem;">{progress:.0f}% complete</span>
+            """
+        
+        st.markdown(f"""
+            <div style="
+                background: {rarity_colors['bg']};
+                border: 1px solid {rarity_colors['border']};
+                border-radius: 12px;
+                padding: 16px;
+                opacity: {opacity};
+                margin-bottom: 12px;
+            ">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="
+                        font-size: 2rem;
+                        width: 48px;
+                        height: 48px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: rgba(0,0,0,0.2);
+                        border-radius: 12px;
+                    ">{icon}</div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: white; font-weight: 600; font-size: 0.95rem;">{name}</span>
+                            {'<span style="color: #10b981; font-size: 0.8rem;">✓ Unlocked</span>' if is_unlocked else ''}
+                        </div>
+                        <p style="color: #94a3b8; font-size: 0.8rem; margin: 4px 0;">{description}</p>
+                        <span style="
+                            color: {rarity_colors['text']};
+                            font-size: 0.7rem;
+                            text-transform: uppercase;
+                            font-weight: 500;
+                        ">{achievement.get('rarity', 'common')} • +{xp} XP</span>
+                        {progress_bar}
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+
+def render_level_progress(level_info: dict) -> None:
+    """Render user level and XP progress bar"""
+    level = level_info.get('level', 1)
+    xp = level_info.get('xp', 0)
+    progress = level_info.get('progress', 0)
+    xp_to_next = level_info.get('xp_to_next', 500)
+    achievements_unlocked = level_info.get('achievements_unlocked', 0)
+    
+    st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        ">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="
+                        width: 56px;
+                        height: 56px;
+                        background: linear-gradient(135deg, #667eea, #764ba2);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                        color: white;
+                        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                    ">{level}</div>
+                    <div>
+                        <div style="color: white; font-weight: 600; font-size: 1.1rem;">Level {level}</div>
+                        <div style="color: #94a3b8; font-size: 0.8rem;">{xp:,} Total XP</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #00d4ff; font-size: 1.25rem; font-weight: 600;">🏆 {achievements_unlocked}</div>
+                    <div style="color: #64748b; font-size: 0.7rem;">Badges Earned</div>
+                </div>
+            </div>
+            <div style="
+                width: 100%;
+                height: 8px;
+                background: rgba(255,255,255,0.1);
+                border-radius: 4px;
+                overflow: hidden;
+            ">
+                <div style="
+                    width: {progress}%;
+                    height: 100%;
+                    background: linear-gradient(90deg, #00d4ff, #8b5cf6);
+                    border-radius: 4px;
+                    transition: width 0.3s ease;
+                "></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+                <span style="color: #64748b; font-size: 0.7rem;">{xp_to_next} XP to Level {level + 1}</span>
+                <span style="color: #00d4ff; font-size: 0.7rem;">{progress:.0f}%</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+
+def render_achievement_unlock_notification(achievement: dict) -> None:
+    """Render achievement unlock notification popup"""
+    rarity_colors = get_rarity_colors(achievement.get('rarity', 'common'))
+    
+    st.markdown(f"""
+        <div style="
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, {rarity_colors['bg']}, rgba(10, 10, 26, 0.95));
+            border: 2px solid {rarity_colors['border']};
+            border-radius: 16px;
+            padding: 16px 24px;
+            z-index: 10000;
+            animation: slideDown 0.5s ease-out, fadeOut 0.5s ease-in 3s forwards;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        ">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 2rem;">{achievement.get('icon', '🏆')}</span>
+                <div>
+                    <div style="color: {rarity_colors['text']}; font-size: 0.7rem; text-transform: uppercase; font-weight: 600;">
+                        Achievement Unlocked!
+                    </div>
+                    <div style="color: white; font-weight: 600; font-size: 1rem;">{achievement.get('name', 'Achievement')}</div>
+                    <div style="color: #10b981; font-size: 0.8rem;">+{achievement.get('xp_reward', 0)} XP</div>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes slideDown {{
+                from {{ transform: translateX(-50%) translateY(-100px); opacity: 0; }}
+                to {{ transform: translateX(-50%) translateY(0); opacity: 1; }}
+            }}
+            @keyframes fadeOut {{
+                from {{ opacity: 1; }}
+                to {{ opacity: 0; visibility: hidden; }}
+            }}
+        </style>
+    """, unsafe_allow_html=True)
