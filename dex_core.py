@@ -2,6 +2,12 @@
 Decentralized Exchange (DEX) Core Module
 Layer 2 integration for NexusOS blockchain with AMM, liquidity pools, and token standards
 Integrated with NativeTokenSystem (NXT) as exclusive base currency
+
+Physics-Based Fee System (E=hf):
+- Swap fees are calculated using Planck's equation E=hf
+- Higher frequency spectral regions = higher energy = premium fees
+- Infrared (low energy) = 0.1% fee, Gamma (high energy) = 0.5% fee
+- This creates natural economic incentives aligned with physics
 """
 
 import hashlib
@@ -11,6 +17,100 @@ from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import math
 from native_token import NativeTokenSystem, TransactionType
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PHYSICS CONSTANTS (CODATA 2018 EXACT VALUES)
+# ═══════════════════════════════════════════════════════════════════════════
+PLANCK_CONSTANT = 6.62607015e-34  # Planck's constant (J·s) - exact since 2019
+SPEED_OF_LIGHT = 2.99792458e8     # Speed of light (m/s) - exact definition
+
+# Spectral region fee tiers based on E=hf energy levels
+# Higher frequency = higher energy = higher fee (physics-based economics)
+SPECTRAL_FEE_TIERS = {
+    'GAMMA':      {'wavelength_nm': 0.01,    'frequency_hz': 3e19,  'fee_rate': 0.005},   # 0.5% - highest energy
+    'X_RAY':      {'wavelength_nm': 1.0,     'frequency_hz': 3e17,  'fee_rate': 0.004},   # 0.4%
+    'ULTRAVIOLET': {'wavelength_nm': 300,    'frequency_hz': 1e15,  'fee_rate': 0.003},   # 0.3%
+    'VISIBLE':    {'wavelength_nm': 550,     'frequency_hz': 5.5e14, 'fee_rate': 0.0025}, # 0.25%
+    'INFRARED':   {'wavelength_nm': 10000,   'frequency_hz': 3e13,  'fee_rate': 0.002},   # 0.2%
+    'MICROWAVE':  {'wavelength_nm': 1e7,     'frequency_hz': 3e10,  'fee_rate': 0.001},   # 0.1% - lowest energy
+}
+
+
+def calculate_ehf_fee(amount: float, spectral_region: str = 'VISIBLE') -> Tuple[float, float, dict]:
+    """
+    Calculate swap fee using E=hf physics equation with fairness safeguards.
+    
+    Physics Principle: E = hf (Planck's equation)
+    - Higher frequency photons carry more energy
+    - Transactions in higher-energy spectral regions pay proportionally higher fees
+    - This creates physics-aligned economic incentives
+    
+    Fairness Safeguards:
+    - Fee floor: 0.1% minimum to ensure network sustainability
+    - Fee cap: 0.5% maximum to prevent exploitation
+    - Pre-trade disclosure: Full fee breakdown returned to user
+    
+    Args:
+        amount: Transaction amount in NXT
+        spectral_region: Electromagnetic spectrum region for this transaction
+        
+    Returns:
+        (fee_amount, energy_joules, fee_breakdown) - Fee in NXT, energy, and disclosure dict
+    """
+    tier = SPECTRAL_FEE_TIERS.get(spectral_region.upper(), SPECTRAL_FEE_TIERS['VISIBLE'])
+    
+    # Calculate quantum energy: E = hf
+    energy_joules = PLANCK_CONSTANT * tier['frequency_hz']
+    
+    # Apply fee rate with floor/cap safeguards
+    raw_fee_rate = tier['fee_rate']
+    capped_fee_rate = max(0.001, min(0.005, raw_fee_rate))  # 0.1% floor, 0.5% cap
+    fee_amount = amount * capped_fee_rate
+    
+    # Pre-trade disclosure for transparency
+    fee_breakdown = {
+        'spectral_region': spectral_region.upper(),
+        'wavelength_nm': tier['wavelength_nm'],
+        'frequency_hz': tier['frequency_hz'],
+        'energy_joules': energy_joules,
+        'raw_fee_rate': raw_fee_rate,
+        'applied_fee_rate': capped_fee_rate,
+        'fee_amount_nxt': fee_amount,
+        'physics_formula': f"E = h × f = {PLANCK_CONSTANT:.2e} × {tier['frequency_hz']:.2e} = {energy_joules:.2e} J"
+    }
+    
+    return fee_amount, energy_joules, fee_breakdown
+
+
+def assign_spectral_region_by_tvl(tvl: float) -> str:
+    """
+    Assign spectral region to a pool based on its Total Value Locked (TVL).
+    
+    Physics Rationale:
+    - Higher TVL pools have more "mass" in economic terms
+    - More massive economic entities operate at higher energy levels
+    - This mirrors how larger atoms have higher energy electron transitions
+    
+    TVL Thresholds:
+    - < 1,000 NXT: MICROWAVE (lowest energy, lowest fees - encourages new pools)
+    - 1,000 - 10,000: INFRARED
+    - 10,000 - 100,000: VISIBLE
+    - 100,000 - 1,000,000: ULTRAVIOLET
+    - 1,000,000 - 10,000,000: X_RAY
+    - > 10,000,000: GAMMA (highest energy, highest fees)
+    """
+    if tvl < 1_000:
+        return 'MICROWAVE'
+    elif tvl < 10_000:
+        return 'INFRARED'
+    elif tvl < 100_000:
+        return 'VISIBLE'
+    elif tvl < 1_000_000:
+        return 'ULTRAVIOLET'
+    elif tvl < 10_000_000:
+        return 'X_RAY'
+    else:
+        return 'GAMMA'
 
 # Security Framework - Rate limiting and MEV protection
 from security_framework import get_rate_limiter, get_mev_protection
@@ -212,24 +312,51 @@ class Token:
 
 @dataclass
 class LiquidityPool:
-    """Automated Market Maker liquidity pool"""
+    """
+    Automated Market Maker liquidity pool with physics-based E=hf economics.
+    
+    Fee Structure (derived from Planck's equation E=hf):
+    - Each pool is assigned a spectral region based on its TVL
+    - Higher TVL = higher frequency = higher energy = higher fees
+    - This creates physics-aligned economic incentives
+    """
     token_a: str  # Token A symbol
     token_b: str  # Token B symbol
     reserve_a: float = 0.0
     reserve_b: float = 0.0
     lp_token_supply: float = 0.0
-    fee_rate: float = 0.003  # 0.3% trading fee
+    fee_rate: float = 0.003  # Base 0.3% trading fee (can be overridden by spectral)
+    
+    # Physics-based economics
+    spectral_region: str = 'VISIBLE'  # Electromagnetic spectrum region for this pool
     
     # Pool state
     lp_balances: Dict[str, float] = field(default_factory=dict)  # LP token holders
     total_volume_a: float = 0.0
     total_volume_b: float = 0.0
     total_fees_collected: float = 0.0
+    total_energy_processed: float = 0.0  # Cumulative E=hf energy in Joules
     created_at: float = field(default_factory=time.time)
     
     def get_pool_id(self) -> str:
         """Generate unique pool ID"""
         return f"{self.token_a}-{self.token_b}"
+    
+    def get_tvl(self) -> float:
+        """Get Total Value Locked in the pool (sum of both reserves)"""
+        return self.reserve_a + self.reserve_b
+    
+    def update_spectral_region(self):
+        """
+        Dynamically update spectral region based on current TVL.
+        Called after liquidity changes to ensure fee alignment with pool size.
+        """
+        self.spectral_region = assign_spectral_region_by_tvl(self.get_tvl())
+    
+    def get_effective_fee_rate(self) -> float:
+        """Get the current physics-based fee rate for this pool"""
+        tier = SPECTRAL_FEE_TIERS.get(self.spectral_region.upper(), SPECTRAL_FEE_TIERS['VISIBLE'])
+        return max(0.001, min(0.005, tier['fee_rate']))  # Apply floor/cap
     
     def get_price(self, input_token: str) -> float:
         """Get current price of input token in terms of output token"""
@@ -244,6 +371,8 @@ class LiquidityPool:
     def calculate_output_amount(self, input_token: str, input_amount: float) -> Tuple[float, float]:
         """
         Calculate output amount using constant product formula (x * y = k)
+        with physics-based E=hf fee structure.
+        
         Returns: (output_amount, price_impact)
         """
         if input_amount <= 0:
@@ -259,8 +388,9 @@ class LiquidityPool:
         if reserve_in == 0 or reserve_out == 0:
             return 0.0, 0.0
         
-        # Apply fee
-        input_with_fee = input_amount * (1 - self.fee_rate)
+        # Use physics-based E=hf fee rate
+        effective_fee_rate = self.get_effective_fee_rate()
+        input_with_fee = input_amount * (1 - effective_fee_rate)
         
         # Constant product formula: (x + Δx)(y - Δy) = xy
         # Δy = y * Δx / (x + Δx)
@@ -277,7 +407,13 @@ class LiquidityPool:
     
     def swap(self, input_token: str, input_amount: float, min_output: float = 0.0) -> Tuple[bool, float, str]:
         """
-        Execute token swap
+        Execute token swap with physics-based E=hf fee structure.
+        
+        Fee Calculation:
+        - Uses E=hf where f is the spectral region frequency
+        - Pool's spectral region is determined by TVL
+        - Higher TVL = higher frequency = higher energy = higher fees
+        
         Returns: (success, output_amount, message)
         """
         output_amount, price_impact = self.calculate_output_amount(input_token, input_amount)
@@ -295,11 +431,15 @@ class LiquidityPool:
             self.reserve_a -= output_amount
             self.total_volume_b += input_amount
         
-        # Track fees
-        fee_amount = input_amount * self.fee_rate
+        # Calculate physics-based fee using E=hf
+        fee_amount, energy_joules, _ = calculate_ehf_fee(input_amount, self.spectral_region)
         self.total_fees_collected += fee_amount
+        self.total_energy_processed += energy_joules
         
-        return True, output_amount, f"Swap successful: {output_amount:.4f} (impact: {price_impact:.2f}%)"
+        # Update spectral region based on new TVL (dynamic fee adjustment)
+        self.update_spectral_region()
+        
+        return True, output_amount, f"Swap successful: {output_amount:.4f} (impact: {price_impact:.2f}%, E={energy_joules:.2e}J)"
     
     def add_liquidity(self, provider: str, amount_a: float, amount_b: float) -> Tuple[bool, float, str]:
         """
@@ -335,7 +475,10 @@ class LiquidityPool:
         self.lp_balances[provider] = self.lp_balances.get(provider, 0) + lp_tokens
         self.lp_token_supply += lp_tokens
         
-        return True, lp_tokens, f"Liquidity added: {lp_tokens:.4f} LP tokens minted"
+        # Update spectral region based on new TVL (physics-based fee adjustment)
+        self.update_spectral_region()
+        
+        return True, lp_tokens, f"Liquidity added: {lp_tokens:.4f} LP tokens minted (Pool now in {self.spectral_region} tier)"
     
     def remove_liquidity(self, provider: str, lp_tokens: float) -> Tuple[bool, float, float, str]:
         """

@@ -180,9 +180,9 @@ class WavelengthMessagingSystem:
             modulation_type
         )
         
-        # 2. Calculate cost from quantum physics using simplified E=hf
-        PLANCK = 6.626e-34  # Planck's constant (J·s)
-        SPEED_OF_LIGHT = 3e8  # Speed of light (m/s)
+        # 2. Calculate cost from quantum physics using E=hf (CODATA 2018 exact values)
+        PLANCK = 6.62607015e-34  # Planck's constant (J·s) - exact definition since 2019
+        SPEED_OF_LIGHT = 2.99792458e8  # Speed of light (m/s) - exact definition
         
         # Calculate frequency from wavelength
         frequency = SPEED_OF_LIGHT / spectral_region.center_wavelength  # Hz
