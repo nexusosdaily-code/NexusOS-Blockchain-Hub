@@ -31,8 +31,8 @@ import math
 from dataclasses import dataclass, asdict
 from wnsp_frames import WnspFrame, WnspFrameMessage
 
-# Electromagnetic constants (theory-based)
-PLANCK_CONSTANT = 6.626e-34  # Joule-seconds
+# Electromagnetic constants (CODATA 2018 exact values)
+PLANCK_CONSTANT = 6.62607015e-34  # Joule-seconds (exact definition since 2019)
 SPEED_OF_LIGHT = 2.998e8     # meters/second
 ELECTRON_VOLT = 1.602e-19    # Joules
 

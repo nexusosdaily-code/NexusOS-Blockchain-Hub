@@ -252,8 +252,8 @@ class WnspEncoderV2:
         Returns:
             Dictionary with cost breakdown
         """
-        PLANCK = 6.626e-34  # Planck's constant (J·s)
-        SPEED_OF_LIGHT = 3e8  # Speed of light (m/s)
+        PLANCK = 6.62607015e-34  # Planck's constant (J·s) - CODATA 2018 exact
+        SPEED_OF_LIGHT = 2.99792458e8  # Speed of light (m/s) - exact definition
         
         # Calculate frequency from wavelength
         frequency = SPEED_OF_LIGHT / spectral_region.center_wavelength  # Hz

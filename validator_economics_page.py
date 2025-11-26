@@ -1013,8 +1013,8 @@ def render_staking_analytics(economy: StakingEconomy):
     import plotly.graph_objects as go
     import numpy as np
     
-    # Physics constants (scaled for visualization)
-    h = 6.626e-34  # Planck constant
+    # Physics constants (CODATA 2018 exact value)
+    h = 6.62607015e-34  # Planck constant (exact definition since 2019)
     
     # Generate wavelength-based reward curve
     frequencies = np.linspace(1e12, 1e15, 100)  # THz to PHz range

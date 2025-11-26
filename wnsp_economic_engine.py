@@ -14,8 +14,8 @@ from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 import json
 
-# Physics constants
-PLANCK_CONSTANT = 6.626e-34  # Joules·seconds
+# Physics constants (CODATA 2018 exact values)
+PLANCK_CONSTANT = 6.62607015e-34  # Joules·seconds (exact definition since 2019)
 SPEED_OF_LIGHT = 3e8  # meters/second
 BOLTZMANN_CONSTANT = 1.380649e-23  # Joules/Kelvin
 
