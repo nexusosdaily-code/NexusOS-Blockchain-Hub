@@ -150,12 +150,20 @@ class NexusWeb3Wallet:
     
     def __init__(self, database_url: Optional[str] = None):
         """Initialize wallet with database and quantum cryptography"""
-        # Database setup
-        db_url = database_url or os.getenv('DATABASE_URL', 'sqlite:///nexus_wallet.db')
-        self.engine = create_engine(db_url)
+        # PRODUCTION: Require PostgreSQL - no SQLite fallback for deployment
+        db_url = database_url or os.getenv('DATABASE_URL')
+        
+        if not db_url:
+            raise RuntimeError(
+                "DATABASE_URL environment variable is required. "
+                "NexusOS requires PostgreSQL for production deployment."
+            )
+        
+        self.engine = create_engine(db_url, pool_pre_ping=True)
         Base.metadata.create_all(self.engine)
         Session = sessionmaker(bind=self.engine)
         self.db = Session()
+        print(f"✅ Web3 Wallet database connected: PostgreSQL")
         
         # Quantum cryptography
         self.wavelength_validator = WavelengthValidator()

@@ -245,12 +245,17 @@ class NexusNativeWallet:
     
     def __init__(self, database_url: Optional[str] = None):
         """Initialize wallet with NexusOS core systems"""
-        # Database setup with fallback to SQLite
-        db_url = database_url or os.getenv('DATABASE_URL', 'sqlite:///nexus_native_wallet.db')
-        self._fallback_attempted = False
+        # PRODUCTION: Require PostgreSQL - no SQLite fallback for deployment
+        db_url = database_url or os.getenv('DATABASE_URL')
+        
+        if not db_url:
+            raise RuntimeError(
+                "DATABASE_URL environment variable is required. "
+                "NexusOS requires PostgreSQL for production deployment."
+            )
         
         try:
-            # Try to connect to the specified database with robust pooling
+            # Connect to PostgreSQL with robust pooling
             self.engine = create_engine(
                 db_url, 
                 pool_pre_ping=True,  # Test connections before using
@@ -272,23 +277,14 @@ class NexusNativeWallet:
                 test_session.close()
             
             # Log connection success WITHOUT exposing credentials
-            db_type = "PostgreSQL" if db_url.startswith('postgresql') else "SQLite"
-            print(f"✅ Database connected: {db_type}")
+            print(f"✅ Database connected: PostgreSQL")
             
         except Exception as e:
-            # If PostgreSQL fails, fall back to SQLite
-            if db_url != 'sqlite:///nexus_native_wallet.db':
-                print(f"⚠️  PostgreSQL connection failed ({str(e)[:50]}...)")
-                print("📂 Falling back to SQLite for data persistence")
-                
-                self._fallback_attempted = True
-                db_url = 'sqlite:///nexus_native_wallet.db'
-                self.engine = create_engine(db_url)
-                Base.metadata.create_all(self.engine)
-                self.SessionMaker = sessionmaker(bind=self.engine)
-            else:
-                # SQLite also failed - this is a critical error
-                raise RuntimeError(f"Failed to initialize database: {e}")
+            # PRODUCTION: No fallback - PostgreSQL is required
+            raise RuntimeError(
+                f"PostgreSQL connection failed: {str(e)[:100]}. "
+                "NexusOS requires PostgreSQL for production deployment."
+            )
         
         # NexusOS core components  
         self.wavelength_validator = WavelengthValidator()

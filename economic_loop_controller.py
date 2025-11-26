@@ -809,7 +809,12 @@ class CrisisDrainController:
         self.ledger = ledger
         self.bhls_system = bhls_system  # Will integrate with bhls_floor_system
         self.crisis_threshold_debt_coverage = 0.5  # 50% coverage minimum
-        self.f_floor_minimum = 500000.0  # BHLS minimum reserve NXT
+        
+        # F_floor RESERVE pool minimum (not per-citizen amount)
+        # Derived: 1,150 NXT/month per citizen × 1,000 target citizens × 0.5 (50% reserve buffer)
+        # = 575,000 NXT minimum reserve to maintain BHLS payments
+        self.f_floor_reserve_minimum = 575000.0  # BHLS minimum reserve pool NXT
+        
         self.drain_events: List[Dict] = []
         
     def check_crisis_conditions(self) -> Tuple[bool, List[str]]:
@@ -837,13 +842,13 @@ class CrisisDrainController:
         if self.bhls_system is not None:
             # Integrated with real BHLS system
             if hasattr(self.bhls_system, 'floor_reserve_pool'):
-                if self.bhls_system.floor_reserve_pool < self.f_floor_minimum:
-                    reasons.append(f"F_floor reserve critically low: {self.bhls_system.floor_reserve_pool:.2f} NXT")
+                if self.bhls_system.floor_reserve_pool < self.f_floor_reserve_minimum:
+                    reasons.append(f"F_floor reserve critically low: {self.bhls_system.floor_reserve_pool:.2f} NXT (minimum: {self.f_floor_reserve_minimum:.0f})")
         else:
             # Fallback to account check
             f_floor_account = self.token_system.get_account("F_FLOOR_RESERVE")
-            if f_floor_account and f_floor_account.balance < self.f_floor_minimum:
-                reasons.append("F_floor reserve below minimum")
+            if f_floor_account and f_floor_account.balance < self.f_floor_reserve_minimum:
+                reasons.append(f"F_floor reserve below minimum ({self.f_floor_reserve_minimum:.0f} NXT)")
         
         return (len(reasons) > 0, reasons)
     
