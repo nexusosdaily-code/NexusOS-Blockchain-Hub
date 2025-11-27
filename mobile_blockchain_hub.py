@@ -780,6 +780,7 @@ def render_mobile_blockchain_hub():
         "💱 Trading",
         "🏛️ Staking",
         "📱 P2P Hub",
+        "👥 Community",
         "🧭 Explore",
         "📊 Info"
     ])
@@ -804,12 +805,16 @@ def render_mobile_blockchain_hub():
     with tab[4]:
         render_p2p_hub_tab()
     
-    # TAB 6: EXPLORE ECOSYSTEM
+    # TAB 6: COMMUNITY
     with tab[5]:
+        render_community_tab()
+    
+    # TAB 7: EXPLORE ECOSYSTEM
+    with tab[6]:
         render_explore_ecosystem_tab()
     
-    # TAB 7: INFO
-    with tab[6]:
+    # TAB 8: INFO
+    with tab[7]:
         render_info_tab()
 
 
@@ -2806,6 +2811,382 @@ def render_explore_ecosystem_tab():
     # Module count summary
     total_modules = sum(len(m) for m in ECOSYSTEM_MODULES.values())
     st.caption(f"🌟 **{total_modules} modules** across **{len(ECOSYSTEM_MODULES)} categories** available to explore")
+
+
+def render_community_tab():
+    """NexusOS Community Hub - Connect, Learn, Govern"""
+    
+    st.subheader("👥 NexusOS Community")
+    st.markdown("**Connect with citizens • Learn the ecosystem • Shape the future**")
+    
+    st.divider()
+    
+    # Community sub-tabs
+    comm_tabs = st.tabs([
+        "🏠 Welcome",
+        "📡 Activity",
+        "🗳️ Governance",
+        "📚 Learn",
+        "🏆 Leaderboard",
+        "💬 Discuss"
+    ])
+    
+    # TAB 1: WELCOME
+    with comm_tabs[0]:
+        st.markdown("""
+        ### Welcome to the NexusOS Community!
+        
+        NexusOS is the world's first **physics-based blockchain** where the rules of nature 
+        govern civilization. Here's what makes us different:
+        """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        padding: 20px; border-radius: 12px; border: 1px solid #667eea; margin-bottom: 15px;">
+                <h4 style="color: #00d4ff; margin-top: 0;">Physics Over Politics</h4>
+                <p style="color: #e2e8f0; font-size: 14px;">
+                    Every transaction uses E=hf (Planck's equation). 
+                    Security comes from Maxwell equations, not just cryptography.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        padding: 20px; border-radius: 12px; border: 1px solid #9945ff; margin-bottom: 15px;">
+                <h4 style="color: #9945ff; margin-top: 0;">BHLS Guarantee</h4>
+                <p style="color: #e2e8f0; font-size: 14px;">
+                    Every citizen is guaranteed <strong>1,150 NXT/month</strong> as a basic living standard.
+                    No means testing, no bureaucracy.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        padding: 20px; border-radius: 12px; border: 1px solid #14f195; margin-bottom: 15px;">
+                <h4 style="color: #14f195; margin-top: 0;">WNSP v5.0</h4>
+                <p style="color: #e2e8f0; font-size: 14px;">
+                    7-band spectral architecture from Nano to Planck scale.
+                    Physical attestation for true security.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        padding: 20px; border-radius: 12px; border: 1px solid #ff6b6b; margin-bottom: 15px;">
+                <h4 style="color: #ff6b6b; margin-top: 0;">Community Owned</h4>
+                <p style="color: #e2e8f0; font-size: 14px;">
+                    GPL v3 licensed. No corporate exploitation.
+                    The community owns and governs NexusOS.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.markdown("### Quick Start Guide")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("""
+            <div style="text-align: center; padding: 15px;">
+                <div style="font-size: 48px;">1️⃣</div>
+                <h4 style="color: #00d4ff;">Create Wallet</h4>
+                <p style="color: #94a3b8; font-size: 13px;">Go to Wallet tab → Create</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div style="text-align: center; padding: 15px;">
+                <div style="font-size: 48px;">2️⃣</div>
+                <h4 style="color: #00d4ff;">Get NXT</h4>
+                <p style="color: #94a3b8; font-size: 13px;">Receive from friends or BHLS</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <div style="text-align: center; padding: 15px;">
+                <div style="font-size: 48px;">3️⃣</div>
+                <h4 style="color: #00d4ff;">Participate</h4>
+                <p style="color: #94a3b8; font-size: 13px;">Message, vote, stream, trade</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # TAB 2: ACTIVITY FEED
+    with comm_tabs[1]:
+        st.markdown("### 📡 Network Activity")
+        st.caption("Live updates from the NexusOS network")
+        
+        try:
+            from models import get_session, DAGMessage
+            session = get_session()
+            if session:
+                recent_messages = session.query(DAGMessage).order_by(
+                    DAGMessage.created_at.desc()
+                ).limit(10).all()
+                
+                if recent_messages:
+                    for msg in recent_messages:
+                        sender_short = msg.sender_address[:12] + "..." if msg.sender_address else "Unknown"
+                        time_str = msg.created_at.strftime("%H:%M") if msg.created_at else ""
+                        
+                        st.markdown(f"""
+                        <div style="background: #1a1a2e; padding: 12px; border-radius: 8px; 
+                                    margin-bottom: 8px; border-left: 3px solid #667eea;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #00d4ff; font-size: 12px;">{sender_short}</span>
+                                <span style="color: #64748b; font-size: 11px;">{time_str}</span>
+                            </div>
+                            <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 14px;">
+                                {msg.content[:100]}{'...' if len(msg.content or '') > 100 else ''}
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("No recent activity. Be the first to send a message!")
+                session.close()
+        except Exception as e:
+            st.info("Activity feed loading... Check back soon!")
+        
+        st.divider()
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Active Nodes", "Growing", help="Nodes running NexusOS")
+        with col2:
+            st.metric("Messages Today", "Live", help="DAG messages sent today")
+        with col3:
+            st.metric("BHLS Distributed", "1,150/mo", help="Per citizen guarantee")
+    
+    # TAB 3: GOVERNANCE
+    with comm_tabs[2]:
+        st.markdown("### 🗳️ Community Governance")
+        st.markdown("Shape the future of NexusOS through decentralized voting.")
+        
+        st.divider()
+        
+        st.markdown("#### Active Proposals")
+        
+        proposals = [
+            {
+                "title": "Increase BHLS Floor to 1,200 NXT",
+                "status": "Voting",
+                "votes_for": 67,
+                "votes_against": 33,
+                "ends": "3 days"
+            },
+            {
+                "title": "Add Zepto-band validators for planetary coordination",
+                "status": "Discussion",
+                "votes_for": 0,
+                "votes_against": 0,
+                "ends": "7 days"
+            }
+        ]
+        
+        for prop in proposals:
+            pct = prop["votes_for"]
+            st.markdown(f"""
+            <div style="background: #1a1a2e; padding: 16px; border-radius: 12px; 
+                        margin-bottom: 12px; border: 1px solid #334155;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4 style="color: #00d4ff; margin: 0;">{prop['title']}</h4>
+                    <span style="background: {'#14f195' if prop['status'] == 'Voting' else '#667eea'}; 
+                                 color: #0f0f23; padding: 4px 12px; border-radius: 20px; 
+                                 font-size: 12px; font-weight: bold;">{prop['status']}</span>
+                </div>
+                <div style="margin-top: 12px;">
+                    <div style="background: #334155; height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div style="background: #14f195; height: 100%; width: {pct}%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+                        <span style="color: #14f195; font-size: 12px;">✓ {prop['votes_for']}%</span>
+                        <span style="color: #64748b; font-size: 12px;">Ends in {prop['ends']}</span>
+                        <span style="color: #ff6b6b; font-size: 12px;">✗ {prop['votes_against']}%</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        if st.button("🗳️ Open Full Governance Dashboard", use_container_width=True):
+            st.session_state.nav_request = "🗳️ Civic Governance"
+            st.rerun()
+    
+    # TAB 4: LEARN
+    with comm_tabs[3]:
+        st.markdown("### 📚 Learning Center")
+        st.markdown("Master NexusOS technology and become a power user.")
+        
+        st.divider()
+        
+        lessons = [
+            {"title": "Understanding E=hf Economics", "level": "Beginner", "duration": "5 min", "icon": "⚛️"},
+            {"title": "WNSP Protocol Overview", "level": "Beginner", "duration": "10 min", "icon": "📡"},
+            {"title": "How BHLS Works", "level": "Beginner", "duration": "5 min", "icon": "💰"},
+            {"title": "7-Band Spectral Architecture", "level": "Intermediate", "duration": "15 min", "icon": "🌈"},
+            {"title": "PoSPECTRUM Consensus", "level": "Intermediate", "duration": "12 min", "icon": "🔐"},
+            {"title": "Running a Validator Node", "level": "Advanced", "duration": "20 min", "icon": "🖥️"},
+            {"title": "WaveLang Programming", "level": "Advanced", "duration": "30 min", "icon": "📝"},
+        ]
+        
+        for lesson in lessons:
+            level_color = {"Beginner": "#14f195", "Intermediate": "#fbbf24", "Advanced": "#ff6b6b"}[lesson["level"]]
+            st.markdown(f"""
+            <div style="background: #1a1a2e; padding: 14px 18px; border-radius: 10px; 
+                        margin-bottom: 10px; border: 1px solid #334155;
+                        display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">{lesson['icon']}</span>
+                    <div>
+                        <h4 style="color: #e2e8f0; margin: 0; font-size: 15px;">{lesson['title']}</h4>
+                        <span style="color: #64748b; font-size: 12px;">{lesson['duration']}</span>
+                    </div>
+                </div>
+                <span style="background: {level_color}; color: #0f0f23; padding: 3px 10px; 
+                             border-radius: 12px; font-size: 11px; font-weight: bold;">{lesson['level']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📝 Open WaveLang AI Teacher", use_container_width=True):
+                st.session_state.nav_request = "📝 WaveLang AI Teacher"
+                st.rerun()
+        with col2:
+            if st.button("📖 View Full Documentation", use_container_width=True):
+                st.info("Documentation available at github.com/nexusosdaily-code/WNSP-P2P-Hub")
+    
+    # TAB 5: LEADERBOARD
+    with comm_tabs[4]:
+        st.markdown("### 🏆 Community Leaderboard")
+        st.markdown("Top contributors and validators in the NexusOS ecosystem.")
+        
+        st.divider()
+        
+        st.markdown("#### Top Validators")
+        
+        validators = [
+            {"rank": 1, "name": "SpectralNode-Alpha", "stake": "50,000 NXT", "uptime": "99.9%"},
+            {"rank": 2, "name": "WavelengthValidator", "stake": "45,000 NXT", "uptime": "99.7%"},
+            {"rank": 3, "name": "PhotonGuardian", "stake": "42,000 NXT", "uptime": "99.5%"},
+            {"rank": 4, "name": "QuantumRelay", "stake": "38,000 NXT", "uptime": "99.3%"},
+            {"rank": 5, "name": "NexusPioneer", "stake": "35,000 NXT", "uptime": "99.1%"},
+        ]
+        
+        for v in validators:
+            medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(v["rank"], "🏅")
+            st.markdown(f"""
+            <div style="background: #1a1a2e; padding: 12px 16px; border-radius: 8px; 
+                        margin-bottom: 8px; display: flex; align-items: center; 
+                        justify-content: space-between; border: 1px solid #334155;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">{medal}</span>
+                    <span style="color: #00d4ff; font-weight: bold;">{v['name']}</span>
+                </div>
+                <div style="display: flex; gap: 20px;">
+                    <span style="color: #14f195;">{v['stake']}</span>
+                    <span style="color: #64748b;">{v['uptime']}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.markdown("#### Your Stats")
+        
+        if st.session_state.get('active_address'):
+            try:
+                progress = get_user_progress(st.session_state.active_address)
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Level", progress.get('level', 1))
+                with col2:
+                    st.metric("XP", f"{progress.get('xp', 0):,}")
+                with col3:
+                    st.metric("Badges", len(get_user_badges(st.session_state.active_address)))
+                with col4:
+                    st.metric("Rank", "Rising")
+            except Exception:
+                st.info("Unlock your wallet to see your stats!")
+        else:
+            st.info("🔐 Unlock your wallet to see your personal stats and leaderboard position.")
+    
+    # TAB 6: DISCUSS
+    with comm_tabs[5]:
+        st.markdown("### 💬 Community Discussion")
+        st.markdown("Connect with other NexusOS citizens.")
+        
+        st.divider()
+        
+        st.markdown("#### Discussion Channels")
+        
+        channels = [
+            {"name": "General", "icon": "💬", "desc": "General discussion about NexusOS", "members": "1.2K"},
+            {"name": "Developers", "icon": "👨‍💻", "desc": "Technical discussions, WaveLang, APIs", "members": "450"},
+            {"name": "Governance", "icon": "🗳️", "desc": "Proposals, voting, constitutional matters", "members": "380"},
+            {"name": "Validators", "icon": "🖥️", "desc": "Node operators and staking", "members": "290"},
+            {"name": "Help & Support", "icon": "🆘", "desc": "Get help from the community", "members": "890"},
+        ]
+        
+        for ch in channels:
+            st.markdown(f"""
+            <div style="background: #1a1a2e; padding: 14px 18px; border-radius: 10px; 
+                        margin-bottom: 10px; border: 1px solid #334155;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 24px;">{ch['icon']}</span>
+                        <div>
+                            <h4 style="color: #00d4ff; margin: 0;">{ch['name']}</h4>
+                            <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 13px;">{ch['desc']}</p>
+                        </div>
+                    </div>
+                    <span style="color: #64748b; font-size: 12px;">{ch['members']} members</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.markdown("#### External Links")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("""
+            <a href="https://github.com/nexusosdaily-code/WNSP-P2P-Hub" target="_blank" 
+               style="text-decoration: none;">
+                <div style="background: #1a1a2e; padding: 15px; border-radius: 10px; 
+                            text-align: center; border: 1px solid #334155;">
+                    <div style="font-size: 32px;">💻</div>
+                    <p style="color: #e2e8f0; margin: 8px 0 0 0;">GitHub</p>
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
+        with col2:
+            st.markdown("""
+            <div style="background: #1a1a2e; padding: 15px; border-radius: 10px; 
+                        text-align: center; border: 1px solid #334155;">
+                <div style="font-size: 32px;">📖</div>
+                <p style="color: #e2e8f0; margin: 8px 0 0 0;">Wiki</p>
+            </div>
+            """, unsafe_allow_html=True)
+        with col3:
+            st.markdown("""
+            <div style="background: #1a1a2e; padding: 15px; border-radius: 10px; 
+                        text-align: center; border: 1px solid #334155;">
+                <div style="font-size: 32px;">📺</div>
+                <p style="color: #e2e8f0; margin: 8px 0 0 0;">Tutorials</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 
 def render_info_tab():
