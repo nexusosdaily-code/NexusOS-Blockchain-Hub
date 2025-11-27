@@ -177,16 +177,18 @@ def render_mobile_blockchain_hub():
         }
         
         .stApp button[data-baseweb="tab"]:hover {
-            background: linear-gradient(135deg, #2d2d4a 0%, #1e2a4a 100%) !important;
-            border-color: #667eea !important;
+            background: linear-gradient(135deg, rgba(0, 80, 150, 0.4) 0%, rgba(0, 60, 120, 0.5) 100%) !important;
+            border-color: rgba(0, 200, 255, 0.5) !important;
             transform: translateY(-2px) !important;
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.2) !important;
         }
         
         .stApp button[data-baseweb="tab"][aria-selected="true"] {
             color: #ffffff !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            border-color: #667eea !important;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+            background: linear-gradient(135deg, rgba(0, 120, 200, 0.8) 0%, rgba(0, 80, 180, 0.9) 100%) !important;
+            border-color: rgba(0, 200, 255, 0.6) !important;
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.4), 0 4px 15px rgba(0, 100, 200, 0.3) !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
         }
         
         /* Hide the default underline indicator */
@@ -214,53 +216,85 @@ def render_mobile_blockchain_hub():
         }
         
         .module-card {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            border-radius: 12px;
+            background: linear-gradient(135deg, #0d0d1a 0%, #0a1628 100%);
+            border: 1px solid rgba(0, 180, 255, 0.25);
+            border-radius: 16px;
             padding: 20px;
             margin: 10px 0;
-            transition: all 0.3s ease;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.1), inset 0 0 20px rgba(0, 100, 200, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.5), transparent);
+            animation: energy-line 3s ease-in-out infinite;
+        }
+        
+        @keyframes energy-line {
+            0%, 100% { opacity: 0.3; transform: translateX(-100%); }
+            50% { opacity: 1; transform: translateX(100%); }
         }
         
         .module-card h3,
         .module-card h4 {
             color: #00d4ff !important;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
         }
         
         .module-card p,
         .module-card span,
         .module-card li {
-            color: #e2e8f0 !important;
+            color: #b8d4e8 !important;
         }
         
         .module-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
-            border-color: rgba(102, 126, 234, 0.5);
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(0, 180, 255, 0.3), 0 8px 20px rgba(0, 100, 200, 0.2);
+            border-color: rgba(0, 200, 255, 0.5);
         }
         
         .wallet-status-active {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            padding: 15px;
-            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(0, 200, 150, 0.15) 0%, rgba(0, 100, 100, 0.2) 100%);
+            border: 1px solid rgba(0, 255, 180, 0.4);
+            padding: 18px;
+            border-radius: 14px;
             margin: 15px 0;
+            box-shadow: 0 0 25px rgba(0, 255, 180, 0.15), inset 0 0 15px rgba(0, 200, 150, 0.1);
         }
         
         .wallet-status-active strong,
         .wallet-status-active code,
         .wallet-status-active span {
-            color: #ffffff !important;
+            color: #00ffb4 !important;
+            text-shadow: 0 0 8px rgba(0, 255, 180, 0.4);
+        }
+        
+        .wallet-status-active code {
+            background: rgba(0, 100, 100, 0.3) !important;
+            padding: 2px 6px !important;
+            border-radius: 4px !important;
         }
         
         .wallet-status-locked {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            padding: 15px;
-            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255, 180, 0, 0.1) 0%, rgba(200, 100, 0, 0.15) 100%);
+            border: 1px solid rgba(255, 200, 50, 0.4);
+            padding: 18px;
+            border-radius: 14px;
             margin: 15px 0;
+            box-shadow: 0 0 20px rgba(255, 180, 0, 0.1);
         }
         
         .wallet-status-locked strong {
-            color: #ffffff !important;
+            color: #ffd54f !important;
+            text-shadow: 0 0 8px rgba(255, 200, 50, 0.4);
         }
         
         /* Streamlit info/warning/success boxes */
@@ -273,24 +307,34 @@ def render_mobile_blockchain_hub():
             color: #10b981 !important;
         }
         
-        /* Mobile-friendly touch targets */
+        /* Mobile-friendly touch targets with energy glow */
         .stApp button,
         .stApp [data-testid="stButton"] button {
             font-size: 16px !important;
             padding: 12px 24px !important;
             min-height: 48px !important;
             cursor: pointer !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: linear-gradient(135deg, rgba(0, 120, 200, 0.8) 0%, rgba(0, 80, 180, 0.9) 100%) !important;
             color: #ffffff !important;
-            border: none !important;
-            border-radius: 8px !important;
+            border: 1px solid rgba(0, 200, 255, 0.3) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease !important;
         }
         
         .stApp button:hover,
         .stApp [data-testid="stButton"] button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            transition: all 0.2s ease;
+            transform: translateY(-3px) !important;
+            box-shadow: 0 0 25px rgba(0, 180, 255, 0.4), 0 8px 20px rgba(0, 100, 200, 0.3) !important;
+            border-color: rgba(0, 220, 255, 0.5) !important;
+            background: linear-gradient(135deg, rgba(0, 150, 220, 0.9) 0%, rgba(0, 100, 200, 1) 100%) !important;
+        }
+        
+        .stApp button:active,
+        .stApp [data-testid="stButton"] button:active {
+            transform: translateY(0) !important;
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
         }
         
         @media (max-width: 768px) {
@@ -615,6 +659,28 @@ def render_mobile_blockchain_hub():
     badge_html = f'<span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 12px; position: relative; top: -8px;">{unread_count}</span>' if unread_count > 0 else ''
     bell_style = "cursor: pointer; font-size: 24px; margin-left: 10px;" + (" animation: bell-ring 0.5s ease-in-out;" if unread_count > 0 else "")
     
+    # Fetch LIVE network data for the energy core
+    try:
+        from native_token import NativeTokenSystem
+        token_system = NativeTokenSystem()
+        total_supply_nxt = token_system.TOTAL_SUPPLY / token_system.UNITS_PER_NXT
+        circulating = token_system.get_circulating_supply() / token_system.UNITS_PER_NXT
+        
+        from database import get_session, DAGMessage
+        session = get_session()
+        message_count = session.query(DAGMessage).count() if session else 0
+        if session:
+            session.close()
+        
+        core_display = f"{message_count:,}"
+        core_label = "DAG Msgs"
+    except Exception as e:
+        import logging
+        logging.warning(f"Energy core data fetch failed: {e}")
+        core_display = "⚡ NXT"
+        core_label = "E=h·f"
+    
+    # PULSING ENERGY CORE - The Living Ecosystem Heart
     st.markdown(f"""
         <style>
             @keyframes bell-ring {{
@@ -624,14 +690,158 @@ def render_mobile_blockchain_hub():
                 75% {{ transform: rotate(10deg); }}
             }}
             .bell-icon:hover {{ transform: scale(1.2); transition: transform 0.2s; }}
+            
+            /* PULSING ENERGY CORE ANIMATIONS */
+            @keyframes pulse-ring {{
+                0% {{ transform: scale(0.95); opacity: 0.8; }}
+                50% {{ transform: scale(1.05); opacity: 1; }}
+                100% {{ transform: scale(0.95); opacity: 0.8; }}
+            }}
+            
+            @keyframes pulse-ring-slow {{
+                0% {{ transform: scale(0.98); opacity: 0.6; }}
+                50% {{ transform: scale(1.02); opacity: 0.9; }}
+                100% {{ transform: scale(0.98); opacity: 0.6; }}
+            }}
+            
+            @keyframes glow-pulse {{
+                0%, 100% {{ box-shadow: 0 0 30px rgba(0, 180, 255, 0.5), 0 0 60px rgba(0, 150, 255, 0.3), 0 0 90px rgba(0, 120, 255, 0.2); }}
+                50% {{ box-shadow: 0 0 50px rgba(0, 200, 255, 0.7), 0 0 100px rgba(0, 170, 255, 0.5), 0 0 150px rgba(0, 140, 255, 0.3); }}
+            }}
+            
+            @keyframes core-breathe {{
+                0%, 100% {{ transform: scale(1); }}
+                50% {{ transform: scale(1.08); }}
+            }}
+            
+            @keyframes data-flow {{
+                0% {{ opacity: 0.4; transform: translateY(5px); }}
+                50% {{ opacity: 1; transform: translateY(0); }}
+                100% {{ opacity: 0.4; transform: translateY(-5px); }}
+            }}
+            
+            .energy-core-container {{
+                position: relative;
+                width: 100%;
+                height: 280px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: radial-gradient(ellipse at center, rgba(0, 60, 120, 0.3) 0%, rgba(15, 15, 35, 1) 70%);
+                margin: -20px 0 20px 0;
+                overflow: hidden;
+            }}
+            
+            .core-outer-ring {{
+                position: absolute;
+                width: 240px;
+                height: 240px;
+                border-radius: 50%;
+                border: 2px solid rgba(0, 180, 255, 0.3);
+                animation: pulse-ring-slow 4s ease-in-out infinite;
+            }}
+            
+            .core-middle-ring {{
+                position: absolute;
+                width: 190px;
+                height: 190px;
+                border-radius: 50%;
+                border: 3px solid rgba(0, 200, 255, 0.5);
+                animation: pulse-ring 2.5s ease-in-out infinite;
+            }}
+            
+            .core-inner-ring {{
+                position: absolute;
+                width: 140px;
+                height: 140px;
+                border-radius: 50%;
+                border: 2px solid rgba(0, 220, 255, 0.7);
+                animation: pulse-ring 2s ease-in-out infinite 0.5s;
+            }}
+            
+            .core-center {{
+                position: absolute;
+                width: 100px;
+                height: 100px;
+                border-radius: 50%;
+                background: radial-gradient(circle at 40% 40%, rgba(120, 220, 255, 0.9) 0%, rgba(0, 150, 255, 0.8) 40%, rgba(0, 80, 180, 0.6) 70%, rgba(0, 40, 100, 0.4) 100%);
+                animation: core-breathe 3s ease-in-out infinite, glow-pulse 2s ease-in-out infinite;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }}
+            
+            .core-data {{
+                color: #ffffff;
+                font-weight: bold;
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+                animation: data-flow 2s ease-in-out infinite;
+            }}
+            
+            .core-data-primary {{
+                font-size: 22px;
+                line-height: 1;
+            }}
+            
+            .core-data-secondary {{
+                font-size: 11px;
+                opacity: 0.9;
+                margin-top: 4px;
+            }}
+            
+            .core-title {{
+                position: absolute;
+                bottom: 20px;
+                text-align: center;
+                width: 100%;
+            }}
+            
+            .core-title h2 {{
+                color: #00d4ff;
+                font-size: 20px;
+                margin: 0;
+                text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+            }}
+            
+            .core-title p {{
+                color: rgba(200, 230, 255, 0.8);
+                font-size: 12px;
+                margin: 5px 0 0 0;
+            }}
+            
+            /* Notification bell positioning */
+            .bell-container {{
+                position: absolute;
+                top: 15px;
+                right: 20px;
+            }}
         </style>
-        <div class="main-header">
-            <h1>📱 NexusOS Blockchain Hub</h1>
-            <p style="font-size: 18px; margin-top: 10px;">
-                Your Phone IS the Blockchain Node 
+        
+        <div class="energy-core-container">
+            <!-- Pulsing Concentric Rings -->
+            <div class="core-outer-ring"></div>
+            <div class="core-middle-ring"></div>
+            <div class="core-inner-ring"></div>
+            
+            <!-- Central Energy Core -->
+            <div class="core-center">
+                <div class="core-data">
+                    <div class="core-data-primary">{core_display}</div>
+                    <div class="core-data-secondary">{core_label}</div>
+                </div>
+            </div>
+            
+            <!-- Title Overlay -->
+            <div class="core-title">
+                <h2>NexusOS Blockchain Hub</h2>
+                <p>The Living Ecosystem • Your Phone IS the Node</p>
+            </div>
+            
+            <!-- Notification Bell -->
+            <div class="bell-container">
                 <span class="bell-icon" style="{bell_style}">🔔</span>{badge_html}
-            </p>
-            <p style="font-size: 14px; margin-top: 5px; opacity: 0.9;">Mobile-First • Quantum-Resistant • Physics-Based</p>
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -2925,7 +3135,7 @@ def render_community_tab():
         st.caption("Live updates from the NexusOS network")
         
         try:
-            from models import get_session, DAGMessage
+            from database import get_session, DAGMessage
             session = get_session()
             if session:
                 recent_messages = session.query(DAGMessage).order_by(
@@ -3247,7 +3457,7 @@ def render_info_tab():
         circulating = token_system.get_circulating_supply() / token_system.UNITS_PER_NXT
         
         # Get message count from database
-        from models import get_session, DAGMessage
+        from database import get_session, DAGMessage
         session = get_session()
         try:
             message_count = session.query(DAGMessage).count() if session else 0
