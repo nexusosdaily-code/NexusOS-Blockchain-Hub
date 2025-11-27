@@ -256,7 +256,7 @@ def render_visual_builder_tab(gen):
             height=400
         )
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         st.divider()
         
@@ -338,7 +338,7 @@ def render_energy_calculator_tab(gen):
                 'Energy (J)': inst.get_quantum_energy()
             })
         
-        df_costs = st.dataframe(costs_data, width="stretch")
+        df_costs = st.dataframe(costs_data, use_container_width=True)
         
         # Visualization
         fig = px.bar(
@@ -349,7 +349,7 @@ def render_energy_calculator_tab(gen):
             title="Instruction Costs (OOK Modulation, Amplitude=0.8)",
             color_continuous_scale='Reds'
         )
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         st.markdown("### Modulation Complexity Premium")
@@ -370,7 +370,7 @@ def render_energy_calculator_tab(gen):
                 'Cost (NXT)': inst.get_execution_cost_nxt()
             })
         
-        st.dataframe(modulation_comparison, width="stretch")
+        st.dataframe(modulation_comparison, use_container_width=True)
         
         # Show impact
         ook_cost = modulation_comparison[0]['Cost (NXT)']
@@ -556,7 +556,7 @@ def render_comparison_tab():
         ]
     }
     
-    df = st.dataframe(comparison, width="stretch")
+    df = st.dataframe(comparison, use_container_width=True)
     
     st.divider()
     
@@ -656,7 +656,7 @@ def render_my_programs_tab(gen):
                     'Region': inst['spectral_region'],
                     'Cost': f"{inst['execution_cost_nxt']:.6f} NXT"
                 })
-            st.dataframe(insts, width="stretch")
+            st.dataframe(insts, use_container_width=True)
 
 
 def get_spectral_region(wavelength_nm):

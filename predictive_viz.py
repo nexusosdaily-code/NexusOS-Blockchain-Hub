@@ -296,12 +296,12 @@ def render_predictive_analytics_dashboard():
             
             with col1:
                 trend_chart = create_trend_summary_chart(summary)
-                st.plotly_chart(trend_chart, width="stretch")
+                st.plotly_chart(trend_chart, use_container_width=True)
             
             with col2:
                 growth_chart = create_growth_rate_chart(summary)
                 if growth_chart:
-                    st.plotly_chart(growth_chart, width="stretch")
+                    st.plotly_chart(growth_chart, use_container_width=True)
             
             st.divider()
             
@@ -342,7 +342,7 @@ def render_predictive_analytics_dashboard():
                     with st.expander(f"📈 {metric_name}", expanded=True):
                         # Prediction chart
                         fig = create_prediction_chart(prediction)
-                        st.plotly_chart(fig, width="stretch")
+                        st.plotly_chart(fig, use_container_width=True)
                         
                         # Statistics
                         col1, col2, col3, col4 = st.columns(4)
@@ -423,11 +423,11 @@ def render_predictive_analytics_dashboard():
                     height=500
                 )
                 
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(fig, use_container_width=True)
                 
                 # Data table
                 st.subheader("Recent Data Points")
-                st.dataframe(df.tail(20), width="stretch")
+                st.dataframe(df.tail(20), use_container_width=True)
             else:
                 st.info("No historical data available for this metric")
     
@@ -496,7 +496,7 @@ def render_predictive_analytics_dashboard():
                         height=600
                     )
                     
-                    st.plotly_chart(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
                     
                     # Comparison table
                     st.subheader("Forecast Comparison")

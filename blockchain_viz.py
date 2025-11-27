@@ -834,5 +834,5 @@ def render_blockchain_dashboard():
     st.divider()
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        if st.button("🔄 Refresh Data", use_container_width=True):
+        if st.button("🔄 Refresh Data", width="stretch"):
             st.rerun()

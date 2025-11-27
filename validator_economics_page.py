@@ -74,7 +74,7 @@ def render_validator_list(economy: StakingEconomy):
         })
     
     df = pd.DataFrame(validator_data)
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
 
 def render_delegate_interface(economy: StakingEconomy):
@@ -204,7 +204,7 @@ def render_my_delegations(economy: StakingEconomy):
     if stats['delegations']:
         st.markdown("**Delegation Details**")
         df = pd.DataFrame(stats['delegations'])
-        st.dataframe(df, width="stretch", hide_index=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         
         # Undelegate interface
         st.markdown("---")
@@ -289,7 +289,7 @@ def render_validator_performance(economy: StakingEconomy):
         color='Total Stake',
         color_continuous_scale='Blues'
     )
-    st.plotly_chart(fig1, width="stretch")
+    st.plotly_chart(fig1, use_container_width=True)
     
     # Reputation vs Performance
     fig2 = go.Figure()
@@ -313,7 +313,7 @@ def render_validator_performance(economy: StakingEconomy):
         barmode='group',
         yaxis_title='Score'
     )
-    st.plotly_chart(fig2, width="stretch")
+    st.plotly_chart(fig2, use_container_width=True)
 
 
 def render_profitability_calculator(economy: StakingEconomy):
@@ -400,7 +400,7 @@ def render_profitability_calculator(economy: StakingEconomy):
         color='Earnings',
         color_continuous_scale='Greens'
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # AI Delegation Performance Report Generation
     st.divider()
@@ -608,27 +608,27 @@ def render_staking_dashboard(economy: StakingEconomy):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("💰 Stake Now", use_container_width=True, type="primary"):
+        if st.button("💰 Stake Now", width="stretch", type="primary"):
             st.session_state.staking_action = "delegate"
             st.rerun()
     
     with col2:
         if stats['pending_rewards'] > 0:
-            if st.button(f"💎 Claim {stats['pending_rewards']:.2f}", use_container_width=True):
+            if st.button(f"💎 Claim {stats['pending_rewards']:.2f}", width="stretch"):
                 total_claimed, claims = economy.claim_rewards(user)
                 st.session_state.user_tokens += total_claimed
                 st.success(f"✅ Claimed {total_claimed:,.4f} NXT!")
                 st.rerun()
         else:
-            st.button("💎 No Rewards", use_container_width=True, disabled=True)
+            st.button("💎 No Rewards", width="stretch", disabled=True)
     
     with col3:
-        if st.button("🔓 Unstake", use_container_width=True):
+        if st.button("🔓 Unstake", width="stretch"):
             st.session_state.staking_action = "undelegate"
             st.rerun()
     
     with col4:
-        if st.button("🔄 Redelegate", use_container_width=True):
+        if st.button("🔄 Redelegate", width="stretch"):
             st.session_state.staking_action = "redelegate"
             st.rerun()
     
@@ -763,7 +763,7 @@ def render_validator_explorer(economy: StakingEconomy):
             
             with col5:
                 if not v.is_jailed:
-                    if st.button("Delegate", key=f"del_{v.address[:10]}", use_container_width=True):
+                    if st.button("Delegate", key=f"del_{v.address[:10]}", width="stretch"):
                         st.session_state.selected_validator = v.address
                         st.session_state.staking_action = "delegate"
                         st.rerun()
@@ -821,7 +821,7 @@ def render_rewards_center(economy: StakingEconomy):
         with col1:
             st.info(f"💎 You have **{stats['pending_rewards']:.4f} NXT** ready to claim!")
         with col2:
-            if st.button("💎 Claim All Rewards", type="primary", use_container_width=True):
+            if st.button("💎 Claim All Rewards", type="primary", width="stretch"):
                 total_claimed, claims = economy.claim_rewards(user)
                 st.session_state.user_tokens += total_claimed
                 

@@ -107,7 +107,7 @@ def render_token_economics():
         )])
         
         fig.update_layout(height=350, margin=dict(t=30, b=0))
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         st.subheader("Token Allocation")
@@ -122,7 +122,7 @@ def render_token_economics():
             ]
         }
         
-        st.dataframe(data, width="stretch", hide_index=True)
+        st.dataframe(data, use_container_width=True, hide_index=True)
         
         st.info("""
         **Economic Model:**
@@ -250,7 +250,7 @@ def render_pow_mining():
                 "Hash": block.hash[:16] + "...",
             })
         
-        st.dataframe(blocks_data, width="stretch", hide_index=True)
+        st.dataframe(blocks_data, use_container_width=True, hide_index=True)
 
 
 def render_messaging_payments():
@@ -438,7 +438,7 @@ def render_account_management():
                 "TX ID": tx.tx_id
             })
         
-        st.dataframe(tx_data, width="stretch", hide_index=True)
+        st.dataframe(tx_data, use_container_width=True, hide_index=True)
     else:
         st.info("No transactions yet")
 
@@ -503,7 +503,7 @@ def render_analytics():
         )])
         
         fig.update_layout(height=300, margin=dict(t=30, b=0))
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         st.subheader("Economic Loop Health")

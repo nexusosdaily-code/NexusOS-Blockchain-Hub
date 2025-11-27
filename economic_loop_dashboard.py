@@ -175,7 +175,7 @@ def render_loop_overview(economic_loop, loop_status: Dict[str, Any]):
                 yaxis_title="NXT Energy",
                 height=300
             )
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No spectral data yet - send messages to generate energy distribution")
 
@@ -296,7 +296,7 @@ def render_reserve_dex_tab(economic_loop):
             )
         ])
         fig.update_layout(title="Pool Distribution")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def render_supply_chain_tab(economic_loop):

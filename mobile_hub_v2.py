@@ -243,7 +243,7 @@ def render_mobile_nav(current: str) -> str:
             if st.button(
                 item['label'],
                 key=f"nav_{item['id']}",
-                use_container_width=True,
+                width="stretch",
                 type="primary" if is_active else "secondary"
             ):
                 selected = item['id']
@@ -268,24 +268,24 @@ def render_home_view(wallet_data: Dict, bhls_data: Dict):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("&#8593; Send", key="action_send", use_container_width=True):
+        if st.button("&#8593; Send", key="action_send", width="stretch"):
             st.session_state.current_view = 'wallet'
             st.session_state.wallet_action = 'send'
             st.rerun()
     
     with col2:
-        if st.button("&#8595; Receive", key="action_receive", use_container_width=True):
+        if st.button("&#8595; Receive", key="action_receive", width="stretch"):
             st.session_state.current_view = 'wallet'
             st.session_state.wallet_action = 'receive'
             st.rerun()
     
     with col3:
-        if st.button("&#8644; Swap", key="action_swap", use_container_width=True):
+        if st.button("&#8644; Swap", key="action_swap", width="stretch"):
             st.session_state.current_view = 'dex'
             st.rerun()
     
     with col4:
-        if st.button("&#9733; Stake", key="action_stake", use_container_width=True):
+        if st.button("&#9733; Stake", key="action_stake", width="stretch"):
             st.session_state.current_view = 'governance'
             st.rerun()
     
@@ -367,7 +367,7 @@ def render_home_view(wallet_data: Dict, bhls_data: Dict):
                 </div>
             """, unsafe_allow_html=True)
         
-        if st.button("View All Achievements", key="view_achievements", use_container_width=True):
+        if st.button("View All Achievements", key="view_achievements", width="stretch"):
             st.session_state.current_view = 'more'
             st.session_state.more_section = 'achievements'
             st.rerun()
@@ -399,7 +399,7 @@ def render_wallet_view(wallet_data: Dict):
         
         with tab1:
             password = st.text_input("Enter Password", type="password", key="unlock_pwd")
-            if st.button("Unlock Wallet", key="btn_unlock", use_container_width=True):
+            if st.button("Unlock Wallet", key="btn_unlock", width="stretch"):
                 if wallet and wallet.unlock(password):
                     st.success("Wallet unlocked successfully!")
                     st.rerun()
@@ -409,7 +409,7 @@ def render_wallet_view(wallet_data: Dict):
         with tab2:
             new_password = st.text_input("Create Password", type="password", key="create_pwd")
             confirm_password = st.text_input("Confirm Password", type="password", key="confirm_pwd")
-            if st.button("Create Wallet", key="btn_create", use_container_width=True):
+            if st.button("Create Wallet", key="btn_create", width="stretch"):
                 if new_password != confirm_password:
                     st.error("Passwords don't match")
                 elif len(new_password) < 8:
@@ -456,7 +456,7 @@ def render_wallet_view(wallet_data: Dict):
                 if st.button(
                     tab_labels[tab_id],
                     key=f"wallet_tab_{tab_id}",
-                    use_container_width=True,
+                    width="stretch",
                     type="primary" if is_active else "secondary"
                 ):
                     st.session_state.wallet_tab = tab_id
@@ -475,7 +475,7 @@ def render_wallet_view(wallet_data: Dict):
                 energy_cost = (h * c / wavelength) * amount * 1e18
                 st.info(f"Transaction Energy: {energy_cost:.2e} J (E=hf calculation)")
             
-            if st.button("Send NXT", key="btn_send", use_container_width=True):
+            if st.button("Send NXT", key="btn_send", width="stretch"):
                 if recipient and amount > 0:
                     if wallet and hasattr(wallet, 'send_transaction'):
                         if wallet.send_transaction(recipient, amount):
@@ -506,7 +506,7 @@ def render_wallet_view(wallet_data: Dict):
             
             st.code(wallet_data['address'], language=None)
             
-            if st.button("Copy Address", key="btn_copy", use_container_width=True):
+            if st.button("Copy Address", key="btn_copy", width="stretch"):
                 st.success("Address copied!")
         
         elif st.session_state.wallet_tab == 'history':
@@ -586,7 +586,7 @@ def render_dex_view():
     wallet = st.session_state.get('nexus_wallet')
     wallet_address = wallet.get_address() if wallet and wallet.is_unlocked() else None
     
-    if st.button("Swap Tokens", key="btn_swap", use_container_width=True):
+    if st.button("Swap Tokens", key="btn_swap", width="stretch"):
         if from_amount > 0:
             with st.spinner("Processing swap..."):
                 time.sleep(1)
@@ -670,7 +670,7 @@ def render_governance_view():
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("Vote For", key=f"vote_for_{prop['id']}", use_container_width=True):
+                if st.button("Vote For", key=f"vote_for_{prop['id']}", width="stretch"):
                     st.success("Vote recorded!")
                     if wallet_address:
                         achievement_sys = get_achievement_system()
@@ -678,7 +678,7 @@ def render_governance_view():
                         for ach in newly_unlocked:
                             render_achievement_unlock_notification(ach)
             with col2:
-                if st.button("Vote Against", key=f"vote_against_{prop['id']}", use_container_width=True):
+                if st.button("Vote Against", key=f"vote_against_{prop['id']}", width="stretch"):
                     st.success("Vote recorded!")
                     if wallet_address:
                         achievement_sys = get_achievement_system()
@@ -703,7 +703,7 @@ def render_governance_view():
             </div>
         """, unsafe_allow_html=True)
         
-        if st.button("Submit Proposal", key="btn_submit_prop", use_container_width=True):
+        if st.button("Submit Proposal", key="btn_submit_prop", width="stretch"):
             st.success("Proposal submitted for community review!")
             wallet = st.session_state.get('nexus_wallet')
             if wallet and wallet.is_unlocked():
@@ -807,7 +807,7 @@ def render_more_view():
     for feature in features:
         with st.expander(f"{feature['icon']} {feature['title']}", expanded=False):
             st.write(feature['desc'])
-            if st.button(f"Open", key=f"more_{feature['title'].replace(' ', '_').lower()}", use_container_width=True):
+            if st.button(f"Open", key=f"more_{feature['title'].replace(' ', '_').lower()}", width="stretch"):
                 st.info(f"Opening {feature['title']}...")
 
 

@@ -145,7 +145,7 @@ def render_code_examples_tab():
                 'Cost (NXT)': f"{inst['execution_cost_nxt']:.6f}"
             })
         
-        st.dataframe(instructions, width="stretch")
+        st.dataframe(instructions, use_container_width=True)
 
 
 def render_program_analysis_tab():
@@ -198,7 +198,7 @@ def render_program_analysis_tab():
             'Percentage': f"{100 * count / summary['total_instructions']:.1f}%"
         })
     
-    st.dataframe(cols_data, width="stretch")
+    st.dataframe(cols_data, use_container_width=True)
     
     st.divider()
     
@@ -212,7 +212,7 @@ def render_program_analysis_tab():
             'Energy (J)': f"{func_data['total_energy_joules']:.2e}"
         })
     
-    st.dataframe(energy_data, width="stretch")
+    st.dataframe(energy_data, use_container_width=True)
 
 
 def render_instruction_set_tab():
@@ -259,7 +259,7 @@ def render_instruction_set_tab():
                        'I/O'
         })
     
-    st.dataframe(instructions, width="stretch")
+    st.dataframe(instructions, use_container_width=True)
     
     st.divider()
     
@@ -271,7 +271,7 @@ def render_instruction_set_tab():
         categories[cat] = categories.get(cat, 0) + 1
     
     cat_data = [{'Category': k, 'Count': v} for k, v in sorted(categories.items())]
-    st.dataframe(cat_data, width="stretch")
+    st.dataframe(cat_data, use_container_width=True)
 
 
 if __name__ == "__main__":

@@ -53,7 +53,7 @@ def render_sybil_detection_dashboard(
         monitor.scan_interval_seconds = scan_interval
     
     with col3:
-        if st.button("🔍 Force Scan Now", use_container_width=True):
+        if st.button("🔍 Force Scan Now", width="stretch"):
             with st.spinner("Scanning validators..."):
                 if validator_economics and civic_governance:
                     detections = monitor.scan_for_sybil_attacks(

@@ -271,7 +271,7 @@ def render_dashboard():
         num_nodes = st.slider("Network nodes", 10, 1000, 100, step=10)
         world_pop = st.number_input("World population", value=8_000_000_000, step=1_000_000_000)
         
-        if st.button("Run Simulation", use_container_width=True):
+        if st.button("Run Simulation", width="stretch"):
             with st.spinner("Running economic simulation..."):
                 st.session_state.results = engine.simulate_daily_activity(
                     days=sim_days,

@@ -144,7 +144,7 @@ def render_ai_system_status():
     ]
     
     df = pd.DataFrame(ai_systems)
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
     
     # System health metrics (real data)
     col1, col2, col3, col4 = st.columns(4)
@@ -348,7 +348,7 @@ def render_component_ai_integration():
     ]
     
     df = pd.DataFrame(components)
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
     
     # Integration summary
     col1, col2, col3 = st.columns(3)
@@ -451,7 +451,7 @@ def render_learning_analytics():
                 height=300
             )
             
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def render_real_time_ai_activity():
@@ -488,7 +488,7 @@ def render_real_time_ai_activity():
             })
         
         df = pd.DataFrame(obs_data)
-        st.dataframe(df, width="stretch", hide_index=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.caption("No recent observations. AI will log activity as components are used.")
     

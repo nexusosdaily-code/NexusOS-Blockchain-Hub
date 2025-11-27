@@ -739,7 +739,7 @@ def main():
                 if st.button(
                     f"{dashboard['name']}\n\n{dashboard['desc']}", 
                     key=f"btn_{idx}",
-                    use_container_width=True
+                    width="stretch"
                 ):
                     st.session_state.nav_request = dashboard['name']
                     st.rerun()
@@ -773,7 +773,7 @@ def main():
             
             for idx, dash_name in enumerate(more_dashboards):
                 with more_cols[idx % 3]:
-                    if st.button(dash_name, key=f"more_btn_{idx}", use_container_width=True):
+                    if st.button(dash_name, key=f"more_btn_{idx}", width="stretch"):
                         st.session_state.nav_request = dash_name
                         st.rerun()
     

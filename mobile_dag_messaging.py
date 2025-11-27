@@ -589,7 +589,7 @@ def render_dag_visualization(messaging_system: WavelengthMessagingSystem):
             plot_bgcolor='rgba(0,0,0,0.05)'
         )
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         # Statistics
         col1, col2, col3, col4 = st.columns(4)
@@ -658,7 +658,7 @@ def render_analytics(messaging_system: WavelengthMessagingSystem, token_system: 
         height=400
     )
     
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # Cost distribution
     st.subheader("💰 Cost Distribution")
@@ -679,7 +679,7 @@ def render_analytics(messaging_system: WavelengthMessagingSystem, token_system: 
         height=400
     )
     
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # Validator earnings
     st.subheader("👥 Validator Earnings")
@@ -699,7 +699,7 @@ def render_analytics(messaging_system: WavelengthMessagingSystem, token_system: 
         for v_id, earnings in validator_earnings.items()
     ])
     
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
 
 if __name__ == "__main__":

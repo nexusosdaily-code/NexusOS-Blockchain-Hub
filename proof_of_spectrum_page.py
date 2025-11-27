@@ -175,15 +175,15 @@ def render_live_demo_tab():
         
         # Spectrum coverage
         fig_spectrum = visualize_spectrum_coverage(consensus)
-        st.plotly_chart(fig_spectrum, width="stretch")
+        st.plotly_chart(fig_spectrum, use_container_width=True)
         
         # Distribution charts
         fig_distribution = visualize_spectral_distribution(consensus)
-        st.plotly_chart(fig_distribution, width="stretch")
+        st.plotly_chart(fig_distribution, use_container_width=True)
         
         # Validator wavelengths
         fig_wavelengths = visualize_validator_wavelengths(consensus.validators)
-        st.plotly_chart(fig_wavelengths, width="stretch")
+        st.plotly_chart(fig_wavelengths, use_container_width=True)
         
         st.divider()
         
@@ -238,7 +238,7 @@ def render_live_demo_tab():
                             # Visualize interference pattern
                             st.subheader("Wave Interference Pattern")
                             fig_interference = visualize_interference_pattern(interference)
-                            st.plotly_chart(fig_interference, width="stretch")
+                            st.plotly_chart(fig_interference, use_container_width=True)
                             
                             # Show validator details
                             with st.expander("🔍 View Selected Validators"):
@@ -292,12 +292,12 @@ def render_attack_resistance_tab():
         
         # Visualization
         fig_attack = visualize_attack_resistance(results)
-        st.plotly_chart(fig_attack, width="stretch")
+        st.plotly_chart(fig_attack, use_container_width=True)
         
         # Detailed table
         st.subheader("Detailed Results")
         table_df = create_attack_resistance_table(results)
-        st.dataframe(table_df, width="stretch", hide_index=True)
+        st.dataframe(table_df, use_container_width=True, hide_index=True)
         
         # Key findings
         st.info("""

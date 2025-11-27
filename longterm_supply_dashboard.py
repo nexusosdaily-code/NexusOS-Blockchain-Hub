@@ -192,7 +192,7 @@ def render_projection_tab():
                 template="plotly_dark"
             )
             
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
             
             # Show critical milestones
             if milestones:
@@ -256,7 +256,7 @@ def render_balancing_tab():
         })
     
     df = pd.DataFrame(data)
-    st.dataframe(df, width="stretch")
+    st.dataframe(df, use_container_width=True)
     
     # 2. Validator Inflation
     st.subheader("2️⃣ Validator Inflation (Bitcoin-style Halving)")
@@ -273,7 +273,7 @@ def render_balancing_tab():
         })
     
     df_inflation = pd.DataFrame(inflation_data)
-    st.dataframe(df_inflation, width="stretch")
+    st.dataframe(df_inflation, use_container_width=True)
     
     # 3. Burn Cap
     st.subheader("3️⃣ Annual Burn Cap (5% Maximum)")
@@ -293,7 +293,7 @@ def render_balancing_tab():
         })
     
     df_cap = pd.DataFrame(cap_data)
-    st.dataframe(df_cap, width="stretch")
+    st.dataframe(df_cap, use_container_width=True)
 
 
 def render_scenario_comparison_tab():
@@ -336,7 +336,7 @@ def render_scenario_comparison_tab():
             hovermode='x unified'
         )
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def render_current_economics_tab():
@@ -360,7 +360,7 @@ def render_current_economics_tab():
     }
     
     df_burns = pd.DataFrame(burn_data)
-    st.dataframe(df_burns, width="stretch")
+    st.dataframe(df_burns, use_container_width=True)
     
     st.subheader("Supply Allocation")
     
@@ -376,7 +376,7 @@ def render_current_economics_tab():
     }
     
     df_allocation = pd.DataFrame(allocation_data)
-    st.dataframe(df_allocation, width="stretch")
+    st.dataframe(df_allocation, use_container_width=True)
     
     st.subheader("Balancing Features")
     
@@ -396,7 +396,7 @@ def render_current_economics_tab():
     }
     
     df_features = pd.DataFrame(features)
-    st.dataframe(df_features, width="stretch")
+    st.dataframe(df_features, use_container_width=True)
     
     # Nexus AI Research Report for Researchers
     st.divider()

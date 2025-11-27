@@ -198,7 +198,7 @@ def render_network_topology_tab(transport: OfflineMeshTransport):
     
     # Create network graph using Plotly
     fig = create_network_graph(topology)
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # Topology statistics
     col1, col2, col3 = st.columns(3)

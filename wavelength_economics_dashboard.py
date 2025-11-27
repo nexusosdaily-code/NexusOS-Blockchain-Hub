@@ -297,7 +297,7 @@ def render_wave_interference_demo():
         
         fig.update_layout(height=600, showlegend=False)
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         st.info(f"""
         **Cryptographic Fingerprint (Pattern Hash):**  
@@ -350,7 +350,7 @@ def render_economic_pricing():
         })
     
     df = pd.DataFrame(pricing_data)
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
     
     st.divider()
     
@@ -491,7 +491,7 @@ def render_economic_pricing():
         height=400
     )
     
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_live_validation():
@@ -649,7 +649,7 @@ def render_spectral_diversity():
         height=400
     )
     
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     st.divider()
     st.subheader("🛡️ Security Through Diversity")

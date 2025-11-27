@@ -170,7 +170,7 @@ def create_environmental_energy_tab():
                 yaxis_title="Power Density (SIMULATED)",
                 height=400
             )
-            energy_chart.plotly_chart(fig, use_container_width=True)
+            energy_chart.plotly_chart(fig, width="stretch")
             
             # Update metrics
             summary = harvester.get_energy_summary()

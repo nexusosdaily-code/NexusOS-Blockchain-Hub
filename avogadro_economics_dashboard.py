@@ -344,7 +344,7 @@ Molar Energy: E_molar = n × N_A × hf
             showlegend=False
         )
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     
     # Tab 3: Wealth Distribution
     with tab3:
@@ -428,7 +428,7 @@ Molar Energy: E_molar = n × N_A × hf
             height=400
         )
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         st.divider()
         
@@ -541,7 +541,7 @@ Molar Energy: E_molar = n × N_A × hf
             height=400
         )
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         st.divider()
         
@@ -808,7 +808,7 @@ n × R × T = {gas_law['moles']:.2e} × {IDEAL_GAS_CONSTANT:.3f} × {gas_law['cu
             height=400
         )
         
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     
     # Footer with physics constants
     st.divider()

@@ -308,7 +308,7 @@ def render_encoding_map_tab():
         yaxis=dict(showticklabels=False)
     )
     
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # Table view
     with st.expander("📋 Full Encoding Table"):
@@ -467,7 +467,7 @@ def render_dag_network_tab():
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
     )
     
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # Network stats
     col1, col2, col3 = st.columns(3)
@@ -522,7 +522,7 @@ def render_economics_tab():
         height=400
     )
     
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     
     # Stats
     total_cost = sum(m.cost_nxt for m in st.session_state.wnsp_messages)

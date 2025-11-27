@@ -406,7 +406,7 @@ def render_unlock_wallet_tab(wallet):
         key="unlock_password_input"
     )
     
-    if st.button("🔓 Unlock Wallet", type="primary", use_container_width=True):
+    if st.button("🔓 Unlock Wallet", type="primary", width="stretch"):
         if not password:
             st.error("Please enter your password")
         elif not selected_address:

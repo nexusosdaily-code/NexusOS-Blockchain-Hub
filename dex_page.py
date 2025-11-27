@@ -239,7 +239,7 @@ def render_liquidity_interface(dex: DEXEngine):
         
         if user_pools:
             df = pd.DataFrame(user_pools)
-            st.dataframe(df, width="stretch", hide_index=True)
+            st.dataframe(df, use_container_width=True, hide_index=True)
             
             selected_pool = st.selectbox("Select Pool", [p['Pool'] for p in user_pools], key="remove_liq_pool")
             if selected_pool:
@@ -300,7 +300,7 @@ def render_pools_overview(dex: DEXEngine):
     
     if pools_data:
         df = pd.DataFrame(pools_data)
-        st.dataframe(df, width="stretch", hide_index=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("No liquidity pools created yet")
 
@@ -324,7 +324,7 @@ def render_user_portfolio(dex: DEXEngine):
                 for symbol, amount in balances.items()
             ]
             df = pd.DataFrame(balance_data)
-            st.dataframe(df, width="stretch", hide_index=True)
+            st.dataframe(df, use_container_width=True, hide_index=True)
         else:
             st.info("No token balances")
     
@@ -343,7 +343,7 @@ def render_user_portfolio(dex: DEXEngine):
         
         if lp_positions:
             df = pd.DataFrame(lp_positions)
-            st.dataframe(df, width="stretch", hide_index=True)
+            st.dataframe(df, use_container_width=True, hide_index=True)
         else:
             st.info("No LP positions")
 
@@ -446,7 +446,7 @@ def render_pool_ecosystem_tab(dex: DEXEngine):
     
     if service_pool_data:
         df = pd.DataFrame(service_pool_data)
-        st.dataframe(df, width="stretch", hide_index=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         
         # Service pool distribution chart
         st.markdown("### 📊 Service Pool Distribution")
@@ -463,7 +463,7 @@ def render_pool_ecosystem_tab(dex: DEXEngine):
             title="Distribution Across Service Pools",
             height=400
         )
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     
     st.divider()
     
@@ -745,7 +745,7 @@ def render_token_factory(dex: DEXEngine):
         creator = st.session_state.get('user_address', 'dex_user_1')
         st.caption(f"Creator: {creator}")
         
-        submit = st.form_submit_button("🚀 Create Token", type="primary", use_container_width=True)
+        submit = st.form_submit_button("🚀 Create Token", type="primary", width="stretch")
         
         if submit:
             if not symbol or not name:
@@ -905,7 +905,7 @@ def render_farm_list(dex, farming, user: str):
                     label_visibility="collapsed"
                 )
                 st.caption(f"Available: {available_to_stake:.4f} LP")
-                if st.button("🌾 Stake LP", key=f"btn_farm_stake_{pool_id}", use_container_width=True):
+                if st.button("🌾 Stake LP", key=f"btn_farm_stake_{pool_id}", width="stretch"):
                     if stake_amount > 0:
                         success, msg = farming.stake_lp(user, pool_id, stake_amount)
                         if success:
@@ -928,7 +928,7 @@ def render_farm_list(dex, farming, user: str):
                     label_visibility="collapsed"
                 )
                 st.caption(f"Staked: {user_staked:.4f} LP")
-                if st.button("📤 Unstake + Claim", key=f"btn_farm_unstake_{pool_id}", use_container_width=True):
+                if st.button("📤 Unstake + Claim", key=f"btn_farm_unstake_{pool_id}", width="stretch"):
                     if unstake_amount > 0:
                         success, rewards, msg = farming.unstake_lp(user, pool_id, unstake_amount)
                         if success:
@@ -944,7 +944,7 @@ def render_farm_list(dex, farming, user: str):
                 st.markdown(f"**{user_pending:.4f} NXT** pending")
                 st.caption("Rewards auto-compound if not claimed")
                 if st.button("💰 Claim NXT", key=f"btn_farm_claim_{pool_id}", 
-                            use_container_width=True, disabled=(user_pending <= 0)):
+                            width="stretch", disabled=(user_pending <= 0)):
                     success, rewards, msg = farming.claim_rewards(user, pool_id)
                     if success:
                         st.success(f"✅ {msg}")
@@ -981,7 +981,7 @@ def render_my_farming_positions(farming, user: str):
     with col3:
         st.metric("Total Claimed", f"{total_claimed:.4f} NXT")
     with col4:
-        if st.button("💰 Claim All Rewards", type="primary", use_container_width=True):
+        if st.button("💰 Claim All Rewards", type="primary", width="stretch"):
             success, rewards, msg = farming.claim_all_rewards(user)
             if success:
                 st.success(f"✅ {msg}")
@@ -1161,7 +1161,7 @@ def render_farming_analytics(farming):
         st.markdown("### Farm Details")
         st.dataframe(
             df_farms[['pool_id', 'tvl', 'apy', 'tier', 'multiplier', 'staker_count', 'total_rewards_distributed']],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 'pool_id': 'Farm',
@@ -1219,7 +1219,7 @@ def render_analytics(dex: DEXEngine):
             color='TVL',
             color_continuous_scale='Blues'
         )
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
         
         # Volume comparison
         fig2 = px.bar(
@@ -1231,7 +1231,7 @@ def render_analytics(dex: DEXEngine):
             color='Volume',
             color_continuous_scale='Greens'
         )
-        st.plotly_chart(fig2, width="stretch")
+        st.plotly_chart(fig2, use_container_width=True)
 
 
 def render_dex_page():

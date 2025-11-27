@@ -338,7 +338,7 @@ def render_message_sender(network: WNSPv5Network):
     </div>
     """, unsafe_allow_html=True)
     
-    if st.button("Send Frame", type="primary", use_container_width=True):
+    if st.button("Send Frame", type="primary", width="stretch"):
         success, msg = network.send_message(
             from_node, to_node,
             message.encode('utf-8'),

@@ -229,7 +229,7 @@ def render_napp_generator():
     col1, col2, col3 = st.columns([2, 2, 1])
     
     with col1:
-        if st.button("⚡ Generate Napp Contract", type="primary", use_container_width=True):
+        if st.button("⚡ Generate Napp Contract", type="primary", width="stretch"):
             # REAL physics validation
             validation_result = validate_physics_parameters(params)
             
@@ -242,7 +242,7 @@ def render_napp_generator():
                     generate_and_display_contract(napp_name, target_chain, params, validation_result)
     
     with col2:
-        if st.button("🔬 Validate Physics", use_container_width=True):
+        if st.button("🔬 Validate Physics", width="stretch"):
             validation_result = validate_physics_parameters(params)
             
             if validation_result['valid']:
@@ -259,7 +259,7 @@ def render_napp_generator():
                     st.error(f"• {error}")
     
     with col3:
-        if st.button("🔄 Reset", use_container_width=True):
+        if st.button("🔄 Reset", width="stretch"):
             st.rerun()
 
 
@@ -296,7 +296,7 @@ def generate_and_display_contract(napp_name: str, target_chain: str, params: Dic
             data=contract_code,
             file_name=filename,
             mime="text/plain",
-            use_container_width=True
+            width="stretch"
         )
         
         # REAL physics validation summary (from actual calculations)
@@ -613,7 +613,7 @@ def render_napp_templates():
                 </div>
                 """, unsafe_allow_html=True)
                 
-                if st.button(f"📥 Use Template", key=f"template_{idx}", use_container_width=True):
+                if st.button(f"📥 Use Template", key=f"template_{idx}", width="stretch"):
                     st.info(f"✅ {template['name']} template loaded! Go to **Generate Napp** tab to customize.")
 
 

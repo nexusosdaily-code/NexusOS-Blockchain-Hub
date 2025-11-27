@@ -205,7 +205,7 @@ def display_transaction_history(transactions: List[Dict], address: str):
     # Display table
     st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             'Amount (NXT)': st.column_config.TextColumn(width="medium"),
@@ -384,7 +384,7 @@ def display_message_history(messages: List[Dict]):
     
     st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True
     )
 

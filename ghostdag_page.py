@@ -109,7 +109,7 @@ def render_ghostdag_consensus():
     
     dag_structure = ghostdag.get_dag_structure()
     fig_dag = create_dag_network_graph(dag_structure)
-    st.plotly_chart(fig_dag, width="stretch")
+    st.plotly_chart(fig_dag, use_container_width=True)
     
     # Consensus Chain
     st.subheader("🔗 Canonical Consensus Chain")
@@ -127,7 +127,7 @@ def render_ghostdag_consensus():
             })
         
         import pandas as pd
-        st.dataframe(pd.DataFrame(chain_df), width="stretch")
+        st.dataframe(pd.DataFrame(chain_df), use_container_width=True)
         
         if len(ordered_chain) > 20:
             st.caption(f"Showing first 20 of {len(ordered_chain)} blocks")
@@ -211,7 +211,7 @@ def render_dag_optimizer():
         # Timeline
         st.subheader("📅 Parallel Execution Timeline")
         fig_timeline = create_execution_timeline(execution_plan)
-        st.plotly_chart(fig_timeline, width="stretch")
+        st.plotly_chart(fig_timeline, use_container_width=True)
         
         # Execution stages
         with st.expander("View Execution Stages"):
@@ -304,7 +304,7 @@ def render_performance_overview():
         })
         
         fig_perf = create_performance_dashboard(metrics)
-        st.plotly_chart(fig_perf, width="stretch")
+        st.plotly_chart(fig_perf, use_container_width=True)
     else:
         st.info("Run simulation to see GhostDAG performance metrics")
     
@@ -410,12 +410,12 @@ def render_live_simulation():
                 st.subheader("DAG Structure")
                 dag_structure = ghostdag.get_dag_structure()
                 fig_dag = create_dag_network_graph(dag_structure)
-                st.plotly_chart(fig_dag, width="stretch")
+                st.plotly_chart(fig_dag, use_container_width=True)
             
             with col2:
                 st.subheader("Performance Metrics")
                 fig_perf = create_performance_dashboard(metrics)
-                st.plotly_chart(fig_perf, width="stretch")
+                st.plotly_chart(fig_perf, use_container_width=True)
     
     # Show current state
     if ghostdag.total_blocks > 0:
@@ -424,7 +424,7 @@ def render_live_simulation():
         
         dag_structure = ghostdag.get_dag_structure()
         fig_dag = create_dag_network_graph(dag_structure)
-        st.plotly_chart(fig_dag, width="stretch")
+        st.plotly_chart(fig_dag, use_container_width=True)
 
 
 if __name__ == "__main__":
