@@ -182,6 +182,41 @@ class AlertEvent(Base):
     
     rule = relationship("AlertRule", back_populates="alert_events")
 
+class DAGMessage(Base):
+    """DAG-based message for WNSP network communication"""
+    __tablename__ = 'dag_messages'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    message_id = Column(String(64), unique=True, nullable=False, index=True)
+    sender_id = Column(String(64), nullable=False, index=True)
+    receiver_id = Column(String(64), nullable=True, index=True)
+    content_hash = Column(String(64), nullable=False)
+    wavelength = Column(Float, nullable=True)
+    energy_cost = Column(Float, default=0.0)
+    parent_ids = Column(JSON, nullable=True)
+    spectral_signature = Column(JSON, nullable=True)
+    message_type = Column(String(50), default='standard')
+    priority = Column(Integer, default=1)
+    status = Column(String(20), default='pending')
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    confirmed_at = Column(DateTime, nullable=True)
+
+class NetworkNode(Base):
+    """Network node for WNSP mesh topology"""
+    __tablename__ = 'network_nodes'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    node_id = Column(String(64), unique=True, nullable=False, index=True)
+    public_key = Column(Text, nullable=True)
+    node_type = Column(String(50), default='validator')
+    wavelength_band = Column(String(50), nullable=True)
+    authority_score = Column(Float, default=1.0)
+    stake_amount = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    last_seen = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    node_metadata = Column(JSON, nullable=True)
+
 def get_engine():
     database_url = os.getenv('DATABASE_URL')
     if not database_url:
