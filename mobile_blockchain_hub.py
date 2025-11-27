@@ -3628,43 +3628,347 @@ def render_community_tab():
             st.session_state.nav_request = "🗳️ Civic Governance"
             st.rerun()
     
-    # TAB 4: LEARN
+    # TAB 4: LEARN - Interactive Physics Education
     with comm_tabs[3]:
-        st.markdown("### 📚 Learning Center")
-        st.markdown("Master NexusOS technology and become a power user.")
+        st.markdown("### 📚 NexusOS Learning Center")
+        st.markdown("**Interactive physics-based education** - Learn the science behind the civilization operating system.")
+        
+        # Track completed lessons in session state
+        if 'completed_lessons' not in st.session_state:
+            st.session_state.completed_lessons = set()
+        
+        # Physics constants used across lessons
+        PLANCK_CONSTANT = 6.62607015e-34  # J·s
+        SPEED_OF_LIGHT = 299792458  # m/s
+        BHLS_FLOOR = 1150  # NXT/month
+        
+        # Progress bar
+        total_lessons = 7
+        completed = len(st.session_state.completed_lessons)
+        st.progress(completed / total_lessons, text=f"Progress: {completed}/{total_lessons} lessons completed")
         
         st.divider()
         
-        lessons = [
-            {"title": "Understanding E=hf Economics", "level": "Beginner", "duration": "5 min", "icon": "⚛️"},
-            {"title": "WNSP Protocol Overview", "level": "Beginner", "duration": "10 min", "icon": "📡"},
-            {"title": "How BHLS Works", "level": "Beginner", "duration": "5 min", "icon": "💰"},
-            {"title": "7-Band Spectral Architecture", "level": "Intermediate", "duration": "15 min", "icon": "🌈"},
-            {"title": "PoSPECTRUM Consensus", "level": "Intermediate", "duration": "12 min", "icon": "🔐"},
-            {"title": "Running a Validator Node", "level": "Advanced", "duration": "20 min", "icon": "🖥️"},
-            {"title": "WaveLang Programming", "level": "Advanced", "duration": "30 min", "icon": "📝"},
-        ]
+        # Create sub-tabs for lesson categories
+        lesson_tabs = st.tabs(["⚛️ Beginner", "🌈 Intermediate", "🔐 Advanced"])
         
-        for lesson in lessons:
-            level_color = {"Beginner": "#14f195", "Intermediate": "#fbbf24", "Advanced": "#ff6b6b"}[lesson["level"]]
-            st.markdown(f"""
-            <div style="background: #1a1a2e; padding: 14px 18px; border-radius: 10px; 
-                        margin-bottom: 10px; border: 1px solid #334155;
-                        display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 24px;">{lesson['icon']}</span>
-                    <div>
-                        <h4 style="color: #e2e8f0; margin: 0; font-size: 15px;">{lesson['title']}</h4>
-                        <span style="color: #64748b; font-size: 12px;">{lesson['duration']}</span>
-                    </div>
-                </div>
-                <span style="background: {level_color}; color: #0f0f23; padding: 3px 10px; 
-                             border-radius: 12px; font-size: 11px; font-weight: bold;">{lesson['level']}</span>
-            </div>
-            """, unsafe_allow_html=True)
+        # BEGINNER LESSONS
+        with lesson_tabs[0]:
+            # Lesson 1: E=hf Economics
+            with st.expander("⚛️ Lesson 1: Understanding E=hf Economics", expanded=False):
+                st.markdown("""
+                ### The Physics Foundation of NexusOS Economics
+                
+                NexusOS bases ALL economic transactions on the fundamental quantum physics equation:
+                
+                **E = h × f × n_cycles × authority²**
+                
+                Where:
+                - **E** = Energy cost (in NXT tokens)
+                - **h** = Planck's constant (6.62607015 × 10⁻³⁴ J·s)
+                - **f** = Frequency of the spectral tier (Hz)
+                - **n_cycles** = Number of computational cycles
+                - **authority²** = Squared authority weight of the operation
+                
+                This means **every transaction has a physics-derived cost** - not arbitrary fees set by miners.
+                """)
+                
+                st.markdown("#### Try the E=hf Calculator")
+                calc_col1, calc_col2 = st.columns(2)
+                with calc_col1:
+                    freq_input = st.number_input("Frequency (THz)", min_value=100.0, max_value=3000.0, value=789.0, key="ehf_freq")
+                    cycles_input = st.number_input("Computation Cycles", min_value=1, max_value=1000, value=100, key="ehf_cycles")
+                with calc_col2:
+                    authority_input = st.slider("Authority Weight", min_value=1.0, max_value=10.0, value=1.0, key="ehf_auth")
+                
+                # Real physics calculation
+                freq_hz = freq_input * 1e12  # Convert THz to Hz
+                energy_joules = PLANCK_CONSTANT * freq_hz * cycles_input * (authority_input ** 2)
+                energy_nxt = energy_joules * 1e20  # Scale to NXT units
+                
+                st.metric("Calculated Energy Cost", f"{energy_nxt:.6f} NXT")
+                st.caption(f"Raw energy: {energy_joules:.2e} Joules")
+                
+                if st.button("✅ Mark Lesson 1 Complete", key="complete_l1"):
+                    st.session_state.completed_lessons.add("lesson_1")
+                    st.success("Lesson 1 completed! You understand E=hf economics.")
+                    st.rerun()
+            
+            # Lesson 2: WNSP Protocol
+            with st.expander("📡 Lesson 2: WNSP Protocol Overview", expanded=False):
+                st.markdown("""
+                ### Wavelength Network Signaling Protocol (WNSP)
+                
+                WNSP is the world's first **physics-based network protocol** that uses electromagnetic wavelength 
+                states instead of traditional binary computation.
+                
+                #### Core Concepts:
+                
+                | Component | Traditional | WNSP |
+                |-----------|-------------|------|
+                | Data encoding | Binary (0/1) | Wavelength states |
+                | Validation | Cryptographic hash | Spectral interference |
+                | Consensus | Proof of Work | Proof of Spectrum |
+                | Fees | Arbitrary | E=hf derived |
+                
+                #### The 7-Band Architecture
+                WNSP v5.0 implements a multi-scale hierarchy:
+                """)
+                
+                # Display 7-band architecture with real wavelength data
+                bands = [
+                    {"name": "Nano", "wavelength": "100-400 nm", "frequency": "750-3000 THz", "use": "High-security transactions"},
+                    {"name": "Micro", "wavelength": "400-700 nm", "frequency": "430-750 THz", "use": "Standard messaging"},
+                    {"name": "Milli", "wavelength": "700-1000 nm", "frequency": "300-430 THz", "use": "Bulk data transfer"},
+                    {"name": "Centi", "wavelength": "1-10 μm", "frequency": "30-300 THz", "use": "Validator operations"},
+                    {"name": "Deci", "wavelength": "10-100 μm", "frequency": "3-30 THz", "use": "Network routing"},
+                    {"name": "Base", "wavelength": "100-1000 μm", "frequency": "0.3-3 THz", "use": "System sync"},
+                    {"name": "Planck", "wavelength": ">1000 μm", "frequency": "<0.3 THz", "use": "Genesis operations"},
+                ]
+                
+                for band in bands:
+                    st.markdown(f"**{band['name']}**: {band['wavelength']} ({band['frequency']}) - {band['use']}")
+                
+                if st.button("✅ Mark Lesson 2 Complete", key="complete_l2"):
+                    st.session_state.completed_lessons.add("lesson_2")
+                    st.success("Lesson 2 completed! You understand WNSP protocol.")
+                    st.rerun()
+            
+            # Lesson 3: BHLS
+            with st.expander("💰 Lesson 3: How BHLS Works", expanded=False):
+                st.markdown(f"""
+                ### Basic Human Living Standards (BHLS)
+                
+                NexusOS guarantees **every citizen** a minimum monthly income of **{BHLS_FLOOR:,} NXT/month**.
+                
+                This is NOT a handout - it's physics-derived from the civilization's total energy output.
+                
+                #### The BHLS Formula:
+                
+                **BHLS = (Total Network Energy × Citizen Weight) / Active Citizens**
+                
+                Where:
+                - Total Network Energy = Sum of all E=hf transactions
+                - Citizen Weight = Based on participation and staking
+                - Active Citizens = All verified network participants
+                """)
+                
+                st.markdown("#### BHLS Calculator")
+                bhls_col1, bhls_col2 = st.columns(2)
+                with bhls_col1:
+                    network_energy = st.number_input("Network Energy (NXT)", min_value=100000, max_value=10000000, value=1000000, key="bhls_energy")
+                    citizens = st.number_input("Active Citizens", min_value=100, max_value=100000, value=1000, key="bhls_citizens")
+                with bhls_col2:
+                    your_weight = st.slider("Your Citizen Weight", min_value=0.5, max_value=2.0, value=1.0, key="bhls_weight")
+                
+                base_bhls = network_energy / citizens
+                your_bhls = max(BHLS_FLOOR, base_bhls * your_weight)
+                
+                st.metric("Your Monthly BHLS", f"{your_bhls:,.2f} NXT")
+                st.caption(f"Floor guarantee: {BHLS_FLOOR:,} NXT/month (you always receive at least this)")
+                
+                if st.button("✅ Mark Lesson 3 Complete", key="complete_l3"):
+                    st.session_state.completed_lessons.add("lesson_3")
+                    st.success("Lesson 3 completed! You understand BHLS economics.")
+                    st.rerun()
+        
+        # INTERMEDIATE LESSONS
+        with lesson_tabs[1]:
+            # Lesson 4: 7-Band Spectral Architecture
+            with st.expander("🌈 Lesson 4: 7-Band Spectral Architecture", expanded=False):
+                st.markdown("""
+                ### Deep Dive into Spectral Tiers
+                
+                Each spectral band has unique physics properties that determine its use case.
+                """)
+                
+                # Interactive spectral visualization
+                import plotly.graph_objects as go
+                
+                spectral_data = {
+                    "Band": ["UV", "Violet", "Blue", "Green", "Yellow", "Orange", "Red"],
+                    "Wavelength (nm)": [380, 420, 470, 530, 580, 620, 700],
+                    "Frequency (THz)": [789, 714, 638, 566, 517, 484, 428],
+                    "Energy Multiplier": [2.0, 1.8, 1.5, 1.2, 1.0, 0.8, 0.6],
+                    "Color": ["#8B00FF", "#7F00FF", "#0000FF", "#00FF00", "#FFFF00", "#FF7F00", "#FF0000"]
+                }
+                
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=spectral_data["Band"],
+                    y=spectral_data["Energy Multiplier"],
+                    marker_color=spectral_data["Color"],
+                    text=[f"{e}x" for e in spectral_data["Energy Multiplier"]],
+                    textposition='outside'
+                ))
+                fig.update_layout(
+                    title="Energy Multiplier by Spectral Band",
+                    yaxis_title="Energy Multiplier",
+                    template="plotly_dark",
+                    height=300
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                st.markdown("""
+                #### Key Insight:
+                **Higher frequency = More energy = Higher security**
+                
+                UV transactions cost more but are most secure. Red transactions are cheaper but for lower-value operations.
+                """)
+                
+                if st.button("✅ Mark Lesson 4 Complete", key="complete_l4"):
+                    st.session_state.completed_lessons.add("lesson_4")
+                    st.success("Lesson 4 completed! You understand spectral architecture.")
+                    st.rerun()
+            
+            # Lesson 5: PoSPECTRUM Consensus
+            with st.expander("🔐 Lesson 5: PoSPECTRUM Consensus", expanded=False):
+                st.markdown("""
+                ### Proof of Spectrum: Physics-Based Consensus
+                
+                PoSPECTRUM replaces traditional Proof of Work with **spectral validation**.
+                
+                #### Why It's Superior:
+                
+                | Feature | Proof of Work | PoSPECTRUM |
+                |---------|--------------|------------|
+                | Energy waste | Massive | Near zero |
+                | 51% attack | Possible | Physically impossible |
+                | Validation time | ~10 min | ~2 seconds |
+                | Determinism | Probabilistic | Deterministic |
+                
+                #### How It Works:
+                
+                1. **Spectral Commitment**: Validator commits to a wavelength region
+                2. **Interference Pattern**: Transaction creates unique interference signature
+                3. **Maxwell Validation**: Verified against Maxwell's equations
+                4. **Consensus**: Validators in same spectral region agree on state
+                """)
+                
+                st.markdown("#### Spectral Validator Simulator")
+                validator_band = st.selectbox("Select Your Spectral Band", 
+                    ["UV (380-420nm)", "Blue (420-490nm)", "Green (490-570nm)", 
+                     "Yellow (570-590nm)", "Orange (590-620nm)", "Red (620-700nm)"],
+                    key="validator_band")
+                
+                band_rewards = {
+                    "UV (380-420nm)": 2.0,
+                    "Blue (420-490nm)": 1.7,
+                    "Green (490-570nm)": 1.4,
+                    "Yellow (570-590nm)": 1.2,
+                    "Orange (590-620nm)": 1.0,
+                    "Red (620-700nm)": 0.8
+                }
+                
+                base_reward = 100  # NXT per block
+                your_reward = base_reward * band_rewards[validator_band]
+                st.metric("Your Block Reward", f"{your_reward:.1f} NXT", 
+                         delta=f"{band_rewards[validator_band]:.1f}x multiplier")
+                
+                if st.button("✅ Mark Lesson 5 Complete", key="complete_l5"):
+                    st.session_state.completed_lessons.add("lesson_5")
+                    st.success("Lesson 5 completed! You understand PoSPECTRUM consensus.")
+                    st.rerun()
+        
+        # ADVANCED LESSONS
+        with lesson_tabs[2]:
+            # Lesson 6: Running a Validator
+            with st.expander("🖥️ Lesson 6: Running a Validator Node", expanded=False):
+                st.markdown("""
+                ### Becoming a NexusOS Validator
+                
+                Validators secure the network by participating in PoSPECTRUM consensus.
+                
+                #### Requirements:
+                - Minimum stake: **10,000 NXT**
+                - Reliable internet connection
+                - 24/7 uptime capability
+                
+                #### Reward Structure:
+                """)
+                
+                stake_input = st.number_input("Your Stake (NXT)", min_value=10000, max_value=1000000, value=50000, key="val_stake")
+                uptime_input = st.slider("Expected Uptime %", min_value=90.0, max_value=100.0, value=99.0, key="val_uptime")
+                
+                # Calculate rewards based on stake and uptime
+                base_apy = 0.12  # 12% base APY
+                uptime_bonus = (uptime_input - 90) / 10 * 0.05  # Up to 5% bonus for 100% uptime
+                effective_apy = base_apy + uptime_bonus
+                annual_reward = stake_input * effective_apy
+                monthly_reward = annual_reward / 12
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Effective APY", f"{effective_apy*100:.2f}%")
+                with col2:
+                    st.metric("Monthly Reward", f"{monthly_reward:,.2f} NXT")
+                with col3:
+                    st.metric("Annual Reward", f"{annual_reward:,.2f} NXT")
+                
+                if st.button("✅ Mark Lesson 6 Complete", key="complete_l6"):
+                    st.session_state.completed_lessons.add("lesson_6")
+                    st.success("Lesson 6 completed! You're ready to become a validator.")
+                    st.rerun()
+            
+            # Lesson 7: WaveLang Programming
+            with st.expander("📝 Lesson 7: WaveLang Programming", expanded=False):
+                st.markdown("""
+                ### Introduction to WaveLang
+                
+                WaveLang is the native programming language of NexusOS, designed for physics-based computation.
+                
+                #### Basic Syntax:
+                ```wavelang
+                # Define a wavelength transaction
+                EMIT wavelength=450nm energy=100NXT {
+                    target: "0x1234...";
+                    message: "Hello NexusOS";
+                }
+                
+                # Spectral conditional
+                IF spectrum.band == UV {
+                    security_level = HIGH;
+                }
+                
+                # Physics loop
+                OSCILLATE frequency=789THz cycles=1000 {
+                    process_transaction();
+                }
+                ```
+                
+                #### Key Concepts:
+                - **EMIT**: Send wavelength-encoded data
+                - **OSCILLATE**: Loop based on frequency cycles
+                - **SPECTRUM**: Access spectral band properties
+                - **INTERFERE**: Combine multiple wave states
+                """)
+                
+                st.markdown("#### Try WaveLang (Simple Example)")
+                wavelang_code = st.text_area("Enter WaveLang code:", 
+                    value="EMIT wavelength=500nm energy=10NXT {\n    message: 'My first WaveLang!';\n}",
+                    height=100, key="wavelang_input")
+                
+                if st.button("Simulate Execution", key="run_wavelang"):
+                    # Simple parser simulation
+                    if "EMIT" in wavelang_code and "wavelength" in wavelang_code:
+                        st.success("Code validated! Simulated execution successful.")
+                        st.json({
+                            "status": "executed",
+                            "wavelength": "500nm",
+                            "energy_cost": "10 NXT",
+                            "execution_time": "2.3ms"
+                        })
+                    else:
+                        st.error("Syntax error: Missing EMIT or wavelength declaration")
+                
+                if st.button("✅ Mark Lesson 7 Complete", key="complete_l7"):
+                    st.session_state.completed_lessons.add("lesson_7")
+                    st.success("Lesson 7 completed! You're a WaveLang programmer.")
+                    st.rerun()
         
         st.divider()
         
+        # Summary and links
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📝 Open WaveLang AI Teacher", width="stretch"):
