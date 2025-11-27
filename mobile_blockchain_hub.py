@@ -2524,76 +2524,74 @@ def render_p2p_hub_tab():
             except Exception:
                 fm = None
             
-            # Add friend form with expanded fields
-            with st.expander("➕ Add New Friend", expanded=True):
-                st.markdown("**Friend Details for Mesh Media Sharing**")
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    friend_name = st.text_input("👤 Friend's Name", key="friend_name_input", placeholder="John Doe")
-                with col2:
-                    friend_phone = st.text_input("📱 Phone Number", key="add_friend_input", placeholder="+1234567890")
-                
-                col3, col4 = st.columns(2)
-                with col3:
-                    friend_country = st.selectbox(
-                        "🌍 Country",
-                        options=["", "United States", "United Kingdom", "Canada", "Australia", 
-                                "Germany", "France", "Japan", "South Korea", "India", "Brazil",
-                                "Mexico", "South Africa", "Nigeria", "Kenya", "Other"],
-                        key="friend_country_input"
-                    )
-                with col4:
-                    friend_state = st.text_input("📍 State/Region", key="friend_state_input", placeholder="California")
-                
-                col5, col6 = st.columns(2)
-                with col5:
-                    friend_sim = st.text_input(
-                        "📶 SIM ID (Optional)", 
-                        key="friend_sim_input",
-                        placeholder="Last 4 digits only",
-                        help="Optional: Last 4 digits of SIM for mesh routing. Never share full SIM numbers."
-                    )
-                with col6:
-                    can_share_media = st.checkbox("📁 Allow Media Sharing", value=True, key="friend_can_share")
-                
-                st.caption("🔒 **Privacy**: Friend data is stored locally on your device. SIM IDs are optional and only used for mesh network optimization.")
-                
-                if st.button("✅ Add Friend", key="add_friend_btn", type="primary", width="stretch"):
-                    if not friend_name:
-                        st.error("Please enter friend's name")
-                    elif not friend_phone:
-                        st.error("Please enter friend's phone number")
-                    else:
-                        # Add to database if available
-                        if fm:
-                            result = fm.add_friend(
-                                user_id=st.session_state.active_address,
-                                friend_name=friend_name,
-                                friend_contact=friend_phone,
-                                country=friend_country if friend_country else None,
-                                state_region=friend_state if friend_state else None,
-                                sim_number=friend_sim if friend_sim else None,
-                                can_share_media=can_share_media
-                            )
-                            if result['success']:
-                                st.success(f"✅ Added {friend_name} ({friend_phone})")
-                                st.rerun()
-                            else:
-                                st.error(f"Failed: {result.get('error', 'Unknown error')}")
-                        else:
-                            # Fallback to session state
-                            friend_data = {
-                                'name': friend_name,
-                                'contact': friend_phone,
-                                'country': friend_country,
-                                'state_region': friend_state,
-                                'sim_number': friend_sim,
-                                'can_share_media': can_share_media
-                            }
-                            st.session_state.p2p_friends.append(friend_data)
-                            st.success(f"✅ Added {friend_name}")
+            # Add friend form
+            st.markdown("#### ➕ Add New Friend")
+            st.markdown("**Friend Details for Mesh Media Sharing**")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                friend_name = st.text_input("👤 Friend's Name", key="friend_name_input", placeholder="John Doe")
+            with col2:
+                friend_phone = st.text_input("📱 Phone Number", key="add_friend_input", placeholder="+1234567890")
+            
+            col3, col4 = st.columns(2)
+            with col3:
+                friend_country = st.selectbox(
+                    "🌍 Country",
+                    options=["", "United States", "United Kingdom", "Canada", "Australia", 
+                            "Germany", "France", "Japan", "South Korea", "India", "Brazil",
+                            "Mexico", "South Africa", "Nigeria", "Kenya", "Other"],
+                    key="friend_country_input"
+                )
+            with col4:
+                friend_state = st.text_input("📍 State/Region", key="friend_state_input", placeholder="California")
+            
+            col5, col6 = st.columns(2)
+            with col5:
+                friend_sim = st.text_input(
+                    "📶 SIM ID (Optional)", 
+                    key="friend_sim_input",
+                    placeholder="Last 4 digits only",
+                    help="Optional: Last 4 digits of SIM for mesh routing. Never share full SIM numbers."
+                )
+            with col6:
+                can_share_media = st.checkbox("📁 Allow Media Sharing", value=True, key="friend_can_share")
+            
+            st.caption("🔒 **Privacy**: Friend data is stored locally on your device. SIM IDs are optional and only used for mesh network optimization.")
+            
+            if st.button("✅ Add Friend", key="add_friend_btn", type="primary", use_container_width=True):
+                if not friend_name:
+                    st.error("Please enter friend's name")
+                elif not friend_phone:
+                    st.error("Please enter friend's phone number")
+                else:
+                    if fm:
+                        result = fm.add_friend(
+                            user_id=st.session_state.active_address,
+                            friend_name=friend_name,
+                            friend_contact=friend_phone,
+                            country=friend_country if friend_country else None,
+                            state_region=friend_state if friend_state else None,
+                            sim_number=friend_sim if friend_sim else None,
+                            can_share_media=can_share_media
+                        )
+                        if result['success']:
+                            st.success(f"✅ Added {friend_name} ({friend_phone})")
                             st.rerun()
+                        else:
+                            st.error(f"Failed: {result.get('error', 'Unknown error')}")
+                    else:
+                        friend_data = {
+                            'name': friend_name,
+                            'contact': friend_phone,
+                            'country': friend_country,
+                            'state_region': friend_state,
+                            'sim_number': friend_sim,
+                            'can_share_media': can_share_media
+                        }
+                        st.session_state.p2p_friends.append(friend_data)
+                        st.success(f"✅ Added {friend_name}")
+                        st.rerun()
             
             st.divider()
             
@@ -4008,7 +4006,8 @@ def render_community_tab():
             st.divider()
             
             # Lesson 2: WNSP Protocol
-            with st.expander("📡 Lesson 2: WNSP Protocol Overview", expanded=False):
+            st.markdown("#### 📡 Lesson 2: WNSP Protocol Overview")
+            with st.expander("📖 View Theory", expanded=False):
                 st.markdown("""
                 ### Wavelength Network Signaling Protocol (WNSP)
                 
@@ -4027,25 +4026,25 @@ def render_community_tab():
                 #### The 7-Band Architecture
                 WNSP v5.0 implements a multi-scale hierarchy:
                 """)
-                
-                # Display 7-band architecture with real wavelength data
-                bands = [
-                    {"name": "Nano", "wavelength": "100-400 nm", "frequency": "750-3000 THz", "use": "High-security transactions"},
-                    {"name": "Micro", "wavelength": "400-700 nm", "frequency": "430-750 THz", "use": "Standard messaging"},
-                    {"name": "Milli", "wavelength": "700-1000 nm", "frequency": "300-430 THz", "use": "Bulk data transfer"},
-                    {"name": "Centi", "wavelength": "1-10 μm", "frequency": "30-300 THz", "use": "Validator operations"},
-                    {"name": "Deci", "wavelength": "10-100 μm", "frequency": "3-30 THz", "use": "Network routing"},
-                    {"name": "Base", "wavelength": "100-1000 μm", "frequency": "0.3-3 THz", "use": "System sync"},
-                    {"name": "Planck", "wavelength": ">1000 μm", "frequency": "<0.3 THz", "use": "Genesis operations"},
-                ]
-                
-                for band in bands:
-                    st.markdown(f"**{band['name']}**: {band['wavelength']} ({band['frequency']}) - {band['use']}")
-                
-                if st.button("✅ Mark Lesson 2 Complete", key="complete_l2"):
-                    st.session_state.completed_lessons.add("lesson_2")
-                    st.success("Lesson 2 completed! You understand WNSP protocol.")
-                    st.rerun()
+            
+            st.markdown("**7-Band Architecture:**")
+            bands = [
+                {"name": "Nano", "wavelength": "100-400 nm", "frequency": "750-3000 THz", "use": "High-security transactions"},
+                {"name": "Micro", "wavelength": "400-700 nm", "frequency": "430-750 THz", "use": "Standard messaging"},
+                {"name": "Milli", "wavelength": "700-1000 nm", "frequency": "300-430 THz", "use": "Bulk data transfer"},
+                {"name": "Centi", "wavelength": "1-10 μm", "frequency": "30-300 THz", "use": "Validator operations"},
+                {"name": "Deci", "wavelength": "10-100 μm", "frequency": "3-30 THz", "use": "Network routing"},
+                {"name": "Base", "wavelength": "100-1000 μm", "frequency": "0.3-3 THz", "use": "System sync"},
+                {"name": "Planck", "wavelength": ">1000 μm", "frequency": "<0.3 THz", "use": "Genesis operations"},
+            ]
+            
+            for band in bands:
+                st.markdown(f"**{band['name']}**: {band['wavelength']} ({band['frequency']}) - {band['use']}")
+            
+            if st.button("✅ Mark Lesson 2 Complete", key="complete_l2"):
+                st.session_state.completed_lessons.add("lesson_2")
+                st.success("Lesson 2 completed! You understand WNSP protocol.")
+                st.rerun()
             
             # Lesson 3: BHLS
             st.markdown("#### 💰 Lesson 3: How BHLS Works")
@@ -4089,51 +4088,50 @@ def render_community_tab():
         # INTERMEDIATE LESSONS
         with lesson_tabs[1]:
             # Lesson 4: 7-Band Spectral Architecture
-            with st.expander("🌈 Lesson 4: 7-Band Spectral Architecture", expanded=False):
+            st.markdown("#### 🌈 Lesson 4: 7-Band Spectral Architecture")
+            with st.expander("📖 View Theory", expanded=False):
                 st.markdown("""
                 ### Deep Dive into Spectral Tiers
                 
                 Each spectral band has unique physics properties that determine its use case.
-                """)
                 
-                # Interactive spectral visualization
-                import plotly.graph_objects as go
-                
-                spectral_data = {
-                    "Band": ["UV", "Violet", "Blue", "Green", "Yellow", "Orange", "Red"],
-                    "Wavelength (nm)": [380, 420, 470, 530, 580, 620, 700],
-                    "Frequency (THz)": [789, 714, 638, 566, 517, 484, 428],
-                    "Energy Multiplier": [2.0, 1.8, 1.5, 1.2, 1.0, 0.8, 0.6],
-                    "Color": ["#8B00FF", "#7F00FF", "#0000FF", "#00FF00", "#FFFF00", "#FF7F00", "#FF0000"]
-                }
-                
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    x=spectral_data["Band"],
-                    y=spectral_data["Energy Multiplier"],
-                    marker_color=spectral_data["Color"],
-                    text=[f"{e}x" for e in spectral_data["Energy Multiplier"]],
-                    textposition='outside'
-                ))
-                fig.update_layout(
-                    title="Energy Multiplier by Spectral Band",
-                    yaxis_title="Energy Multiplier",
-                    template="plotly_dark",
-                    height=300
-                )
-                st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown("""
                 #### Key Insight:
                 **Higher frequency = More energy = Higher security**
                 
                 UV transactions cost more but are most secure. Red transactions are cheaper but for lower-value operations.
                 """)
-                
-                if st.button("✅ Mark Lesson 4 Complete", key="complete_l4"):
-                    st.session_state.completed_lessons.add("lesson_4")
-                    st.success("Lesson 4 completed! You understand spectral architecture.")
-                    st.rerun()
+            
+            st.markdown("**Spectral Band Energy Chart:**")
+            import plotly.graph_objects as go
+            
+            spectral_data = {
+                "Band": ["UV", "Violet", "Blue", "Green", "Yellow", "Orange", "Red"],
+                "Wavelength (nm)": [380, 420, 470, 530, 580, 620, 700],
+                "Frequency (THz)": [789, 714, 638, 566, 517, 484, 428],
+                "Energy Multiplier": [2.0, 1.8, 1.5, 1.2, 1.0, 0.8, 0.6],
+                "Color": ["#8B00FF", "#7F00FF", "#0000FF", "#00FF00", "#FFFF00", "#FF7F00", "#FF0000"]
+            }
+            
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=spectral_data["Band"],
+                y=spectral_data["Energy Multiplier"],
+                marker_color=spectral_data["Color"],
+                text=[f"{e}x" for e in spectral_data["Energy Multiplier"]],
+                textposition='outside'
+            ))
+            fig.update_layout(
+                title="Energy Multiplier by Spectral Band",
+                yaxis_title="Energy Multiplier",
+                template="plotly_dark",
+                height=300
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            if st.button("✅ Mark Lesson 4 Complete", key="complete_l4"):
+                st.session_state.completed_lessons.add("lesson_4")
+                st.success("Lesson 4 completed! You understand spectral architecture.")
+                st.rerun()
             
             # Lesson 5: PoSPECTRUM Consensus
             st.markdown("#### 🔐 Lesson 5: PoSPECTRUM Consensus")
