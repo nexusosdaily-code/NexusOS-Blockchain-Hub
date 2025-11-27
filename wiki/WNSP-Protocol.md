@@ -521,6 +521,125 @@ class TemporalEntanglement:
 
 ---
 
+## WNSP v5.0 - Wavelength-Native Signalling Protocol (Specification)
+
+**Release**: November 2025
+**Status**: 📋 Specification Complete
+
+### Core Innovation: Multi-Band Physical Attestation
+
+WNSP v5.0 introduces a **seven-band spectral architecture** where security derives from physical impossibility to perfectly spoof multi-scale spectral signatures.
+
+### Seven Spectral Bands
+
+| Band | Symbol | Typical Wavelength | Role |
+|------|--------|-------------------|------|
+| **Nano** | nm | 400–1400 nm (visible/NIR) | UI, device, proximity, apps |
+| **Pico** | pm | ≈ 1–100 pm (atomic resonances) | Identity, account pairing |
+| **Femto** | fm | ≈ 1–100 fm (nuclear windows) | Immutable timestamps, validation |
+| **Atto** | am | ≈ 10⁻¹⁸ m | Policy enforcement, overrides |
+| **Zepto** | zm | ≈ 10⁻²¹ m (gamma-band) | Planetary coordination, deep-space |
+| **Yocto** | ym | ≈ 10⁻²⁴ m | Constitutional/inviolable signals |
+| **Planck** | ℓₚ | 1.616×10⁻³⁵ m | Root clock reference (logical anchor) |
+
+### Architecture Layers
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      WNSP v5.0 Stack                            │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 5: APP       │ Consumer apps, economy, governance       │
+├─────────────────────┼───────────────────────────────────────────┤
+│  Layer 4: CONS      │ PoSPECTRUM consensus, voting, timestamps │
+├─────────────────────┼───────────────────────────────────────────┤
+│  Layer 3: NET       │ Multi-band mesh routing, band-hopping    │
+├─────────────────────┼───────────────────────────────────────────┤
+│  Layer 2: ENC       │ Frame encoding, physical attestation     │
+├─────────────────────┼───────────────────────────────────────────┤
+│  Layer 1: PHY       │ Physical events, multi-modulation        │
+└─────────────────────┴───────────────────────────────────────────┘
+```
+
+### WNSP v5 Frame Structure
+
+```
+WNSP_FRAME ::= [PHY_HDR][BAND_HDR][ATTEST][CONTROL][PAYLOAD][FEC][FRAUD_SIG]
+
+PHY_HDR (48 bits)
+  - FrameVer: 4b
+  - PhysicalEventID: 20b (hash of measured waveform)
+  - Timestamp (root): 40b (Planck-anchored logical time)
+
+BAND_HDR (64 bits)
+  - SourceBandMask: 8b (which bands used)
+  - DestBandMask: 8b
+  - PrimaryBand: 4b (enum)
+  - Priority: 4b (0=low, 1=normal, 2=high, 3=emergency)
+  - EnergyCostUnits: 16b (E units mapped)
+  - TTL: 8b
+  - HopCount: 8b
+  - Flags: 8b
+
+ATTEST (256-2048b)
+  - SensorID, WaveformHash, PhysicalSignature, CryptoSig
+```
+
+### PoSPECTRUM Consensus
+
+Enhanced Proof-of-Spectrum with multi-tier validation:
+
+1. **Spectrum Stake**: Nodes stake time*power units within bands
+2. **Validator Windows**: Femto-band attested validators propose blocks
+3. **Finality**: Two-phase attestation (femto → atto/zepto)
+4. **Constitutional Check**: Yocto signals flag immutable constraints
+
+**Anti-Sybil**: Physical signatures + energy-stake (non-transferable)
+
+### Energy Economics
+
+```
+E = h × f × n_cycles × authority²
+
+Where:
+  h = Planck's constant (6.626×10⁻³⁴ J·s)
+  f = Frequency (Hz) mapped to band
+  n_cycles = Pulse count
+  authority = Band authority level (1-7)
+```
+
+High-authority operations (femto/atto) cost vastly more energy — enforcing scarcity.
+
+### Governance Hooks
+
+| Level | Band | Action |
+|-------|------|--------|
+| Local | Nano/Pico | Discussion, proposals |
+| District | Femto | Validation, timestamps |
+| Planetary | Zepto | Ratification |
+| Constitutional | Yocto | Immutable rules |
+
+**Yocto-anchored rules** cannot be overridden. Changes require Planck-anchored root consensus.
+
+### Backwards Compatibility
+
+WNSP v5.0 encapsulates v4 frames via `V4_ENCAPSULATED` flag — legacy nodes participate through gateway translation.
+
+### Implementation Files
+
+```
+wnsp_v5_wavelength_native.py  # Core v5.0 implementation
+wnsp_v5_dashboard.py          # Visualization dashboard
+```
+
+### Rollout Strategy
+
+1. **v5-alpha**: Encapsulate v4 frames, optional physical attestation
+2. **v5-beta**: Nano/pico required, femto simulated
+3. **v5-mainnet**: Accredited gateways, spectrum-credit economy
+4. **Future**: Yocto/Planck as trusted hardware anchors
+
+---
+
 *Technical documentation maintained by the WNSP development team*
 *Last Updated: November 2025*
-*Quantum Entanglement Phase Documentation: Feasibility Study Complete*
+*WNSP v5.0 Specification: Complete*
