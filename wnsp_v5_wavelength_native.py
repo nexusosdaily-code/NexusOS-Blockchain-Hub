@@ -123,52 +123,141 @@ class FrameFlags(IntEnum):
 @dataclass
 class PhysicalEventDescriptor:
     """
-    Describes a physical wavelength event
-    Links logical frame to actual measured emission pattern
+    PHY_HDR (Physical Event Descriptor) - Per WNSP v5 Specification
+    
+    Structure:
+      - FrameVersion: 4 bits (version 5)
+      - PhysicalEventID: 20 bits (hash of measured waveform)
+      - Timestamp: 40 bits (Planck-anchored logical time)
+      - FrequencyHz: 64 bits (center frequency in Hz)
+      - PulseCount: 16 bits (number of wave cycles)
+      - WaveformHash: 256 bits (SHA3-256 of waveform data)
+    
+    Total: 400 bits (50 bytes) fixed header
     """
-    event_id: bytes
-    timestamp_planck: int
-    waveform_hash: bytes
-    amplitude: float
-    frequency: float
-    phase: float
-    polarization: str
-    pulse_count: int
-    sensor_id: str
+    event_id: bytes              # 20 bits (3 bytes, top 20 bits used)
+    timestamp_planck: int        # 40 bits (Planck-anchored time)
+    frequency_hz: float          # 64 bits (center frequency)
+    pulse_count: int             # 16 bits (0-65535 cycles)
+    waveform_hash: bytes         # 256 bits (SHA3-256)
+    
+    amplitude: float = 1.0       # Derived from waveform analysis
+    phase: float = 0.0           # Phase offset in radians
+    polarization: str = "horizontal"
+    sensor_id: str = "DEFAULT"
+    
+    # Alias for backwards compatibility
+    @property
+    def frequency(self) -> float:
+        return self.frequency_hz
     
     def calculate_energy(self) -> float:
-        """E = h·f·n_cycles"""
-        return PLANCK_CONSTANT * self.frequency * self.pulse_count
+        """E = h·f·n_cycles (base energy without authority)"""
+        return PLANCK_CONSTANT * self.frequency_hz * self.pulse_count
     
     def to_bytes(self) -> bytes:
-        """Serialize to 48-bit PHY_HDR format"""
-        frame_ver = 5
+        """
+        Serialize to PHY_HDR binary format (50 bytes):
+        
+        [FrameVersion:4][EventID:20][Timestamp:40][FrequencyHz:64][PulseCount:16][WaveformHash:256]
+        """
+        frame_version = 5
+        
         event_id_20 = int.from_bytes(self.event_id[:3], 'big') & 0xFFFFF
+        
         timestamp_40 = self.timestamp_planck & 0xFFFFFFFFFF
         
-        header = (frame_ver << 60) | (event_id_20 << 40) | timestamp_40
-        return header.to_bytes(8, 'big')[:6]
+        header_64 = (
+            (frame_version & 0x0F) << 60 |
+            (event_id_20 & 0xFFFFF) << 40 |
+            (timestamp_40 & 0xFFFFFFFFFF)
+        )
+        
+        frequency_bytes = struct.pack('!d', self.frequency_hz)
+        
+        pulse_bytes = struct.pack('!H', min(self.pulse_count, 65535))
+        
+        waveform_hash_bytes = self.waveform_hash[:32].ljust(32, b'\x00')
+        
+        return (
+            header_64.to_bytes(8, 'big') +
+            frequency_bytes +
+            pulse_bytes +
+            waveform_hash_bytes
+        )
+    
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'PhysicalEventDescriptor':
+        """Deserialize from PHY_HDR binary format"""
+        if len(data) < 50:
+            raise ValueError(f"PHY_HDR requires 50 bytes, got {len(data)}")
+        
+        header_64 = int.from_bytes(data[:8], 'big')
+        frame_version = (header_64 >> 60) & 0x0F
+        event_id_20 = (header_64 >> 40) & 0xFFFFF
+        timestamp_40 = header_64 & 0xFFFFFFFFFF
+        
+        frequency_hz = struct.unpack('!d', data[8:16])[0]
+        pulse_count = struct.unpack('!H', data[16:18])[0]
+        waveform_hash = data[18:50]
+        
+        return cls(
+            event_id=event_id_20.to_bytes(3, 'big'),
+            timestamp_planck=timestamp_40,
+            frequency_hz=frequency_hz,
+            pulse_count=pulse_count,
+            waveform_hash=waveform_hash
+        )
     
     @classmethod
     def from_waveform(cls, waveform_data: bytes, sensor_id: str) -> 'PhysicalEventDescriptor':
-        """Create descriptor from measured waveform"""
-        event_id = hashlib.sha3_256(waveform_data + secrets.token_bytes(8)).digest()[:20]
+        """
+        Create descriptor from measured waveform using physics analysis
+        
+        Extracts:
+        - Frequency via zero-crossing analysis
+        - Pulse count from waveform cycles
+        - SHA3-256 hash for integrity
+        """
+        if len(waveform_data) == 0:
+            waveform_data = b'\x00' * 8
+        
+        event_id = hashlib.sha3_256(waveform_data + secrets.token_bytes(8)).digest()[:3]
         waveform_hash = hashlib.sha3_256(waveform_data).digest()
         
-        amplitude = (waveform_data[0] if len(waveform_data) > 0 else 128) / 255.0
-        freq_bytes = waveform_data[:4] if len(waveform_data) >= 4 else b'\x00' * 4
-        frequency = int.from_bytes(freq_bytes, 'big') * 1e9
-        phase = (int.from_bytes(waveform_data[4:6] if len(waveform_data) >= 6 else b'\x00\x00', 'big') / 65535) * 2 * math.pi
+        samples = [float(b) / 255.0 for b in waveform_data[:64]]
+        n_samples = len(samples)
+        
+        zero_crossings = 0
+        for i in range(1, n_samples):
+            if (samples[i-1] - 0.5) * (samples[i] - 0.5) < 0:
+                zero_crossings += 1
+        
+        sample_rate = 1e9
+        if zero_crossings > 0:
+            period_samples = (2.0 * n_samples) / zero_crossings
+            frequency_hz = sample_rate / max(period_samples, 1)
+        else:
+            frequency_hz = 5e14
+        
+        frequency_hz = max(frequency_hz, 1e12)
+        
+        pulse_count = max(1, zero_crossings // 2) if zero_crossings > 0 else len(waveform_data)
+        pulse_count = min(pulse_count, 65535)
+        
+        amplitude = max(samples) - min(samples) if samples else 0.5
+        phase_bytes = waveform_data[4:6] if len(waveform_data) >= 6 else b'\x00\x00'
+        phase = (int.from_bytes(phase_bytes, 'big') / 65535.0) * 2 * math.pi
         
         return cls(
             event_id=event_id,
             timestamp_planck=int(time.time() * 1e9),
+            frequency_hz=frequency_hz,
+            pulse_count=pulse_count,
             waveform_hash=waveform_hash,
             amplitude=amplitude,
-            frequency=max(frequency, 1e12),
             phase=phase,
             polarization="horizontal",
-            pulse_count=len(waveform_data),
             sensor_id=sensor_id
         )
 
@@ -272,33 +361,69 @@ class PhysicalAttestation:
 @dataclass
 class ControlMetadata:
     """
-    CONTROL — Routing and governance metadata
+    CONTROL (Control Metadata) - Per WNSP v5 Specification
+    
+    Structure:
+      - Nonce: 128 bits (16 bytes) - prevents replay attacks
+      - SourceAddress: variable (W-Address format)
+      - DestAddress: variable (W-Address format)
+      - SequenceNumber: 32 bits (monotonic counter)
+    
+    W-Address Format: <UserID>#<DeviceHash>::BAND(<BandMask>)
     """
-    nonce: bytes
-    source_address: str
-    dest_address: str
+    nonce: bytes                 # 128 bits (16 bytes)
+    source_address: str          # Variable-length W-Address
+    dest_address: str            # Variable-length W-Address
+    sequence_number: int = 0     # 32 bits (0-4294967295)
     routing_path: List[str] = field(default_factory=list)
     governance_vote_id: Optional[str] = None
     governance_epoch: Optional[int] = None
     constitutional_ref: Optional[str] = None
     
     def to_bytes(self) -> bytes:
-        """Serialize control metadata"""
-        nonce = self.nonce[:16].ljust(16, b'\x00')
-        source = self.source_address.encode('utf-8')[:64].ljust(64, b'\x00')
-        dest = self.dest_address.encode('utf-8')[:64].ljust(64, b'\x00')
+        """
+        Serialize CONTROL to binary format:
         
-        path_count = len(self.routing_path)
-        path_data = struct.pack('!B', min(path_count, 16))
-        for hop in self.routing_path[:16]:
-            path_data += hop.encode('utf-8')[:32].ljust(32, b'\x00')
+        [Nonce:128][SourceAddrLen:16][SourceAddr:N][DestAddrLen:16][DestAddr:M][SeqNum:32]
+        """
+        nonce_bytes = self.nonce[:16].ljust(16, b'\x00')
         
-        gov_data = b'\x00' * 40
-        if self.governance_vote_id:
-            gov_data = self.governance_vote_id.encode('utf-8')[:32].ljust(32, b'\x00')
-            gov_data += struct.pack('!Q', self.governance_epoch or 0)
+        source_bytes = self.source_address.encode('utf-8')
+        source_len = struct.pack('!H', len(source_bytes))
         
-        return nonce + source + dest + path_data + gov_data
+        dest_bytes = self.dest_address.encode('utf-8')
+        dest_len = struct.pack('!H', len(dest_bytes))
+        
+        seq_bytes = struct.pack('!I', self.sequence_number & 0xFFFFFFFF)
+        
+        return (
+            nonce_bytes +
+            source_len + source_bytes +
+            dest_len + dest_bytes +
+            seq_bytes
+        )
+    
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'ControlMetadata':
+        """Deserialize CONTROL from binary format"""
+        nonce = data[:16]
+        
+        source_len = struct.unpack('!H', data[16:18])[0]
+        source_addr = data[18:18+source_len].decode('utf-8')
+        
+        offset = 18 + source_len
+        dest_len = struct.unpack('!H', data[offset:offset+2])[0]
+        dest_addr = data[offset+2:offset+2+dest_len].decode('utf-8')
+        
+        seq_offset = offset + 2 + dest_len
+        sequence_number = struct.unpack('!I', data[seq_offset:seq_offset+4])[0]
+        
+        return cls(
+            nonce=nonce,
+            source_address=source_addr,
+            dest_address=dest_addr,
+            sequence_number=sequence_number
+        )
     
     @staticmethod
     def create_wavelength_address(user_id: str, device_sig: bytes, bands: List[SpectralBand]) -> str:
@@ -1200,14 +1325,14 @@ class V4CompatibilityLayer:
         waveform_hash = hashlib.sha3_256(v4_frame_data).digest()
         
         phy_event = PhysicalEventDescriptor(
-            event_id=event_id,
+            event_id=event_id[:3],
             timestamp_planck=int(time.time() * 1e9),
+            frequency_hz=physics['frequency_hz'],
+            pulse_count=int(physics['n_cycles']),
             waveform_hash=waveform_hash,
             amplitude=physics['amplitude'],
-            frequency=physics['frequency_hz'],
             phase=physics['phase_rad'],
             polarization="horizontal",
-            pulse_count=int(physics['n_cycles']),
             sensor_id="V4_LEGACY_SENSOR"
         )
         
