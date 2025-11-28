@@ -3371,7 +3371,9 @@ def render_requested_module():
             "lottery system": "lottery",
             "bonus rewards": "bonus_rewards",
             # Governance & AI
+            "physics governance": "physics_governance",
             "civic governance": "governance",
+            "nexusos constitution": "constitution",
             "ai management dashboard": "ai_management",
             "talk to nexus ai": "nexus_ai_chat",
             "ai arbitration dashboard": "arbitration",
@@ -3989,6 +3991,55 @@ contract {contract_type.replace(" ", "")}:
         except Exception as e:
             st.error(f"DEX loading: {str(e)}")
     
+    # PHYSICS GOVERNANCE MODULE
+    elif handler_key == "physics_governance":
+        try:
+            from physics_governance_dashboard import render_physics_governance_page
+            render_physics_governance_page()
+            return
+        except Exception as e:
+            st.error(f"Could not load Physics Governance module: {e}")
+            st.info("Physics Governance uses a 7-band authority system (Nano→Planck) for constitutional governance.")
+    
+    # CONSTITUTION MODULE
+    elif handler_key == "constitution":
+        st.markdown("**📜 NexusOS Constitution v1**")
+        st.info("The NexusOS Constitution defines inviolable rules for civilization governance.")
+        
+        try:
+            from governance.enforcer import GLOBAL_ENFORCER
+            if GLOBAL_ENFORCER:
+                clauses = GLOBAL_ENFORCER.get_all_clauses()
+                constitution_hash = GLOBAL_ENFORCER.get_constitution_hash()[:16]
+                st.caption(f"Constitution Hash: `{constitution_hash}...`")
+                
+                for clause in clauses:
+                    level = clause.get("level", "NANO")
+                    with st.expander(f"⚖️ {clause['id']}: {clause['title']}", expanded=True):
+                        st.markdown(f"**Level:** {level}")
+                        st.markdown(clause['text'])
+                        enforcement = clause.get('enforcement', {})
+                        if enforcement:
+                            st.caption(f"Enforcement: {enforcement.get('type', 'N/A')} | Remedy: {enforcement.get('remedy', 'N/A')}")
+                
+                st.divider()
+                st.markdown("**📋 Enforcement Log:**")
+                log_entries = GLOBAL_ENFORCER.get_enforcement_log(limit=5)
+                if log_entries:
+                    for entry in reversed(log_entries):
+                        status = entry.get('status', 'unknown')
+                        status_icon = {"passed": "✅", "failed": "❌", "pending_attestation": "⏳"}.get(status, "❓")
+                        st.markdown(f"{status_icon} **{status.upper()}** - {entry.get('message', '')}")
+                else:
+                    st.success("No enforcement actions logged yet.")
+            else:
+                st.warning("Constitutional Enforcer not initialized.")
+        except ImportError:
+            st.warning("Governance module not available.")
+        except Exception as e:
+            st.error(f"Constitution error: {e}")
+        return
+    
     # GOVERNANCE MODULE
     elif handler_key == "governance":
         st.markdown("**🗳️ Active Proposals:**")
@@ -4341,7 +4392,9 @@ def render_explore_ecosystem_tab():
             "🏆 Bonus Rewards": "Performance-based rewards distribution"
         },
         "🏛️ Governance & AI": {
+            "⚛️ Physics Governance": "7-band authority system with constitutional clauses",
             "🗳️ Civic Governance": "Community campaigns and voting system",
+            "📜 NexusOS Constitution": "Constitutional clauses and enforcement log",
             "🤖 AI Management Dashboard": "Centralized AI governance control",
             "💬 Talk to Nexus AI": "Conversational AI for governance reports",
             "⚖️ AI Arbitration Dashboard": "Dispute resolution and penalty appeals",

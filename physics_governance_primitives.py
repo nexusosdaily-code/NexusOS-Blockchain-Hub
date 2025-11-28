@@ -340,6 +340,11 @@ class PlanckTimestamp:
     
     Final ordering and audit trail anchored to Planck-scale precision.
     Cannot be altered without Planck-level consensus.
+    
+    Note: Uses nanosecond precision (10^-9) as a practical approximation
+    of Planck time anchoring. True Planck units (10^-44) would overflow
+    64-bit integers. The symbolic association with Planck time remains
+    for governance semantics.
     """
     planck_time: int
     unix_seconds: float
@@ -353,9 +358,11 @@ class PlanckTimestamp:
     def now(cls, sequence: int = 0) -> 'PlanckTimestamp':
         """
         Create Planck-anchored timestamp for current moment
+        
+        Uses nanosecond precision as practical Planck approximation
         """
         unix_time = time.time()
-        planck_units = int(unix_time / PLANCK_TIME)
+        planck_units = int(unix_time * 1e9)
         
         anchor_data = struct.pack('!Qd', planck_units, unix_time) + secrets.token_bytes(16)
         anchor_hash = hashlib.sha3_256(anchor_data).digest()
