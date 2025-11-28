@@ -28,6 +28,19 @@ from physics_governance_primitives import (
     SecurityAnomaly
 )
 
+try:
+    from governance.enforcer import (
+        ConstitutionalEnforcer,
+        EnforcementResult,
+        EnforcementStatus,
+        GLOBAL_ENFORCER,
+        BAND_LEVEL_MAP
+    )
+    ENFORCER_AVAILABLE = True
+except ImportError:
+    ENFORCER_AVAILABLE = False
+    GLOBAL_ENFORCER = None
+
 
 def render_physics_governance_page():
     """Main entry point for Physics Governance dashboard"""
@@ -196,15 +209,107 @@ def render_authority_bands_tab(engine: PhysicsGovernanceEngine):
 def render_constitution_tab(engine: PhysicsGovernanceEngine):
     """Display and manage constitutional clauses"""
     
-    st.subheader("📜 Constitutional Clauses (Yocto-Encoded)")
+    st.subheader("📜 NexusOS Constitution v1")
     
-    st.info("Constitutional clauses are inviolable rules encoded at Yocto level. "
-            "Amendment requires Planck-level consensus (maximum authority).")
+    if ENFORCER_AVAILABLE and GLOBAL_ENFORCER:
+        enforcer = GLOBAL_ENFORCER
+        constitution_hash = enforcer.get_constitution_hash()[:16]
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.info("The NexusOS Constitution defines inviolable rules for civilization governance. "
+                    "Enforcement is automatic at the protocol level.")
+        with col2:
+            st.caption(f"Hash: `{constitution_hash}...`")
+        
+        formal_clauses = enforcer.get_all_clauses()
+        
+        st.markdown("### Formal Constitutional Clauses")
+        
+        for clause in formal_clauses:
+            level = clause.get("level", "NANO")
+            level_color = {
+                "NANO": "#00ff88",
+                "PICO": "#00ddff",
+                "FEMTO": "#00aaff",
+                "ATTO": "#ffaa00",
+                "ZEPTO": "#ff8800",
+                "YOCTO": "#ff00ff",
+                "PLANCK": "#ff0000"
+            }.get(level, "#ffffff")
+            
+            enforcement = clause.get("enforcement", {})
+            enforcement_type = enforcement.get("type", "manual")
+            required_attestations = enforcement.get("required_attestations", [])
+            remedy = enforcement.get("remedy", "N/A")
+            
+            with st.expander(f"⚖️ {clause['id']}: {clause['title']}", expanded=True):
+                st.markdown(f"""
+                <div class="constitution-box">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: {level_color}; font-weight: bold; font-size: 0.9em;">
+                            Level: {level}
+                        </span>
+                        <span style="color: #888; font-size: 0.8em;">
+                            Enforcement: {enforcement_type.upper()}
+                        </span>
+                    </div>
+                    <div style="color: #ffffff; line-height: 1.8; font-size: 1.05em; margin: 15px 0;">
+                        {clause['text']}
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(180, 0, 180, 0.3);">
+                        <div style="color: #888; font-size: 0.85em; margin-bottom: 5px;">
+                            Required Attestations: 
+                            <span style="color: #00d4ff;">{', '.join(required_attestations) if required_attestations else 'None'}</span>
+                        </div>
+                        <div style="color: #888; font-size: 0.85em;">
+                            Remedy: <span style="color: #ffaa00;">{remedy}</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.divider()
+        st.markdown("### Enforcement Log")
+        
+        log_entries = enforcer.get_enforcement_log(limit=10)
+        if log_entries:
+            for entry in reversed(log_entries):
+                status_color = {
+                    "passed": "#00ff00",
+                    "failed": "#ff0000",
+                    "pending_attestation": "#ffaa00",
+                    "quarantined": "#ff00ff"
+                }.get(entry.get("status", ""), "#888888")
+                
+                st.markdown(f"""
+                <div style="background: rgba(0, 50, 80, 0.3); border-left: 3px solid {status_color}; 
+                     padding: 10px 15px; margin: 5px 0; border-radius: 5px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: {status_color}; font-weight: bold;">
+                            {entry.get('status', 'unknown').upper()}
+                        </span>
+                        <span style="color: #666; font-size: 0.8em;">
+                            {entry.get('clause_id', 'N/A')}
+                        </span>
+                    </div>
+                    <div style="color: #ccc; font-size: 0.9em; margin-top: 5px;">
+                        {entry.get('message', '')}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.success("No enforcement actions logged yet.")
+    else:
+        st.warning("Constitutional Enforcer module not loaded.")
+    
+    st.divider()
+    st.markdown("### Engine-Level Clauses (Yocto-Encoded)")
     
     clauses = engine.get_constitutional_clauses()
     
     for clause in clauses:
-        with st.expander(f"📋 {clause.title}", expanded=True):
+        with st.expander(f"📋 {clause.title}", expanded=False):
             st.markdown(f"""
             <div class="constitution-box">
                 <div style="color: #ff88ff; font-size: 0.8em; margin-bottom: 10px;">
