@@ -3384,6 +3384,9 @@ def render_requested_module():
             "wnsp v20 dashboard": "wnsp_v2",
             "wnsp v30 architecture": "wnsp_v3",
             "wnsp v40 quantum": "wnsp_v4",
+            "wnsp v50 wavelength": "wnsp_v5",
+            "wnsp v60 consciousness": "wnsp_v6",
+            "spectrum consciousness": "spectrum_consciousness",
             "unified mesh stack": "unified_mesh",
             # Economics Theory
             "avogadro economics": "avogadro",
@@ -3731,6 +3734,26 @@ contract {contract_type.replace(" ", "")}:
     elif handler_key == "wnsp_v4":
         render_wnsp_v4_quantum()
         return
+    
+    # WNSP V5.0 WAVELENGTH-NATIVE
+    elif handler_key == "wnsp_v5":
+        try:
+            from wnsp_v5_dashboard import render_wnsp_v5_page
+            render_wnsp_v5_page()
+            return
+        except Exception as e:
+            st.error(f"WNSP v5.0 loading: {str(e)}")
+            st.info("WNSP v5.0 features 7-band multi-scale architecture (Nano→Planck)")
+    
+    # WNSP V6.0 SPECTRUM CONSCIOUSNESS
+    elif handler_key == "wnsp_v6" or handler_key == "spectrum_consciousness":
+        try:
+            from wnsp_v6_consciousness_dashboard import render_v6_page
+            render_v6_page()
+            return
+        except Exception as e:
+            st.error(f"WNSP v6.0 Spectrum Consciousness loading: {str(e)}")
+            st.info("WNSP v6.0 introduces network-wide consciousness through coherent spectral resonance")
     
     # UNIFIED MESH STACK
     elif handler_key == "unified_mesh":
@@ -4406,6 +4429,9 @@ def render_explore_ecosystem_tab():
             "🛜 WNSP v2.0 Dashboard": "Optical mesh networking protocol",
             "🔬 WNSP v3.0 Architecture": "Hardware abstraction and adaptive encoding",
             "⚛️ WNSP v4.0 Quantum": "Quantum entanglement consensus layer",
+            "🌈 WNSP v5.0 Wavelength": "7-band multi-scale architecture (Nano→Planck)",
+            "🧠 WNSP v6.0 Consciousness": "Network-wide awareness through spectral resonance",
+            "✨ Spectrum Consciousness": "Collective intelligence and coherence consensus",
             "🌍 Unified Mesh Stack": "4-layer decentralized knowledge infrastructure"
         },
         "🔧 Developer Tools": {
