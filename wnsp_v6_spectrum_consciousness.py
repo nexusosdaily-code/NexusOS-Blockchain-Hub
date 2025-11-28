@@ -162,61 +162,110 @@ class StokesVector:
 
 
 @dataclass
+class QoSParams:
+    """Quality of Service parameters for spectral transmission"""
+    latency_ms: float = 50.0
+    reliability: float = 0.95
+    
+    def to_dict(self) -> Dict[str, float]:
+        return {"latency_ms": self.latency_ms, "reliability": self.reliability}
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, float]) -> 'QoSParams':
+        return cls(latency_ms=data.get("latency_ms", 50.0), 
+                   reliability=data.get("reliability", 0.95))
+
+
+@dataclass
 class SpectralPacket:
     """
-    WNSP v6.0 Spectral Consciousness Packet
+    WNSP v6.0 Spectral Consciousness Packet (Official Spec)
     
-    Contains complex spectral samples, polarization state, energy budget,
-    and phase sequence for secure consciousness-aware communication.
+    {
+      "version": "wnsp-v6",
+      "pkt_id": "<64b-hash>",
+      "src_spec": "<256b vector>",
+      "dst_spec": "<256b vector|null>",
+      "t_start": 1700000000.000,
+      "duration_ms": 5.0,
+      "band_nm": [λ_min, λ_max],
+      "complex_samples": [[λ_i, Re_i, Im_i], ...],
+      "stokes": [S0,S1,S2,S3],
+      "phase_seq_token": "<phase-seq-128>",
+      "coherence_token": "<C-token>",
+      "energy_budget_j": 2e-6,
+      "qos": {"latency_ms": 50, "reliability": 0.95},
+      "sig": "<spectral-signature>",
+      "meta": {...}
+    }
     """
-    spec_id: str
-    t_start: float
-    duration: float
-    band: Tuple[float, float]
-    complex_samples: List[ComplexSample]
-    stokes: StokesVector
-    energy_budget_j: float
-    phase_seq: str
-    coherence_score: float
+    version: str = "wnsp-v6"
+    pkt_id: str = ""
+    src_spec: str = ""
+    dst_spec: Optional[str] = None
+    t_start: float = 0.0
+    duration_ms: float = 5.0
+    band_nm: Tuple[float, float] = (400.0, 700.0)
+    complex_samples: List[ComplexSample] = field(default_factory=list)
+    stokes: StokesVector = field(default_factory=lambda: StokesVector(1.0, 0.0, 0.0, 0.0))
+    phase_seq_token: str = ""
+    coherence_token: str = ""
+    energy_budget_j: float = 2e-6
+    qos: QoSParams = field(default_factory=QoSParams)
+    sig: str = ""
     meta: Dict[str, Any] = field(default_factory=dict)
     
     hop_count: int = 0
-    origin_node: str = ""
-    target_signature: str = ""
+    coherence_score: float = 1.0
+    
+    def __post_init__(self):
+        if not self.pkt_id:
+            self.pkt_id = hashlib.sha256(
+                f"{self.src_spec}:{self.t_start}:{secrets.token_hex(8)}".encode()
+            ).hexdigest()[:16]
+        if not self.coherence_token:
+            self.coherence_token = f"C-{hashlib.sha256(self.pkt_id.encode()).hexdigest()[:24]}"
     
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "spec_id": self.spec_id,
+            "version": self.version,
+            "pkt_id": self.pkt_id,
+            "src_spec": self.src_spec,
+            "dst_spec": self.dst_spec,
             "t_start": self.t_start,
-            "duration": self.duration,
-            "band": list(self.band),
+            "duration_ms": self.duration_ms,
+            "band_nm": list(self.band_nm),
             "complex_samples": [s.to_list() for s in self.complex_samples],
             "stokes": self.stokes.to_list(),
+            "phase_seq_token": self.phase_seq_token,
+            "coherence_token": self.coherence_token,
             "energy_budget_j": self.energy_budget_j,
-            "phase_seq": self.phase_seq,
-            "coherence_score": self.coherence_score,
-            "meta": self.meta,
-            "hop_count": self.hop_count,
-            "origin_node": self.origin_node,
-            "target_signature": self.target_signature
+            "qos": self.qos.to_dict(),
+            "sig": self.sig,
+            "meta": self.meta
         }
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'SpectralPacket':
+        band = data.get("band_nm") or data.get("band", [400.0, 700.0])
         return cls(
-            spec_id=data["spec_id"],
-            t_start=data["t_start"],
-            duration=data["duration"],
-            band=tuple(data["band"]),
-            complex_samples=[ComplexSample.from_list(s) for s in data["complex_samples"]],
-            stokes=StokesVector.from_list(data["stokes"]),
-            energy_budget_j=data["energy_budget_j"],
-            phase_seq=data["phase_seq"],
-            coherence_score=data["coherence_score"],
+            version=data.get("version", "wnsp-v6"),
+            pkt_id=data.get("pkt_id", ""),
+            src_spec=data.get("src_spec", data.get("origin_node", "")),
+            dst_spec=data.get("dst_spec", data.get("target_signature")),
+            t_start=data.get("t_start", 0.0),
+            duration_ms=data.get("duration_ms", data.get("duration", 5.0)),
+            band_nm=tuple(band),
+            complex_samples=[ComplexSample.from_list(s) for s in data.get("complex_samples", [])],
+            stokes=StokesVector.from_list(data.get("stokes", [1.0, 0.0, 0.0, 0.0])),
+            phase_seq_token=data.get("phase_seq_token", data.get("phase_seq", "")),
+            coherence_token=data.get("coherence_token", ""),
+            energy_budget_j=data.get("energy_budget_j", 2e-6),
+            qos=QoSParams.from_dict(data.get("qos", {})),
+            sig=data.get("sig", ""),
             meta=data.get("meta", {}),
             hop_count=data.get("hop_count", 0),
-            origin_node=data.get("origin_node", ""),
-            target_signature=data.get("target_signature", "")
+            coherence_score=data.get("coherence_score", 1.0)
         )
     
     @property
@@ -489,38 +538,44 @@ class ConsciousnessNode:
     
     def send_spectral_packet(self, target_signature: str, 
                              payload_spectrum: List[ComplexSample],
-                             energy_budget: float) -> SpectralPacket:
+                             energy_budget: float,
+                             qos: Optional[QoSParams] = None) -> SpectralPacket:
         """
-        Create and send a spectral packet to target.
+        Create and send a WNSP v6 spectral packet to target.
         
-        function send_spectral_packet(target_signature, payload_spectrum, energy_budget):
-            phase_seq = generate_phase_sequence(seed=local_fingerprint, ttl=10)
-            mod_spectrum = modulate(payload_spectrum, phase_seq)
-            packet = {
-                spec_id: local_fingerprint,
-                phase_seq: phase_seq,
-                complex_samples: mod_spectrum,
-                energy_budget: energy_budget
-            }
-            emit(packet, band=choose_band(target_signature))
+        Official packet structure:
+        {
+            "version": "wnsp-v6",
+            "pkt_id": "<64b-hash>",
+            "src_spec": "<256b vector>",
+            "dst_spec": "<256b vector|null>",
+            "phase_seq_token": "<phase-seq-128>",
+            "coherence_token": "<C-token>",
+            "sig": "<spectral-signature>"
+        }
         """
         phase_seq = self.phase_generator.generate(ttl=10)
         mod_spectrum = self.modulator.modulate(payload_spectrum, phase_seq)
         band = self.choose_band(target_signature)
         
+        sig_content = f"{self.fingerprint.fingerprint_hash}:{target_signature}:{phase_seq}"
+        spectral_sig = hashlib.sha256(sig_content.encode()).hexdigest()[:32]
+        
         packet = SpectralPacket(
-            spec_id=self.fingerprint.fingerprint_hash,
+            version="wnsp-v6",
+            src_spec=self.fingerprint.fingerprint_hash,
+            dst_spec=target_signature if target_signature else None,
             t_start=time.time(),
-            duration=0.002,
-            band=(band.min_wavelength * 1e9, band.max_wavelength * 1e9),
+            duration_ms=2.0,
+            band_nm=(band.min_wavelength * 1e9, band.max_wavelength * 1e9),
             complex_samples=mod_spectrum,
             stokes=self.fingerprint.stokes_signature,
+            phase_seq_token=phase_seq,
             energy_budget_j=energy_budget,
-            phase_seq=phase_seq,
+            qos=qos or QoSParams(),
+            sig=spectral_sig,
             coherence_score=self.consciousness_level.threshold,
-            meta={"origin": self.node_id, "band": band.band_name},
-            origin_node=self.node_id,
-            target_signature=target_signature
+            meta={"origin": self.node_id, "band": band.band_name}
         )
         
         return packet
@@ -552,7 +607,7 @@ class ConsciousnessNode:
                 return None
             
             phase_shift = CoherenceMetrics.compute_phase_shift_for_alignment(
-                packet.phase_seq, 
+                packet.phase_seq_token, 
                 self.fingerprint
             )
             
@@ -563,20 +618,28 @@ class ConsciousnessNode:
             
             relay_band = self.best_overlap_band()
             
+            relay_sig = hashlib.sha256(
+                f"{packet.sig}:{self.node_id}:{time.time()}".encode()
+            ).hexdigest()[:32]
+            
             relayed_packet = SpectralPacket(
-                spec_id=packet.spec_id,
+                version=packet.version,
+                pkt_id=packet.pkt_id,
+                src_spec=packet.src_spec,
+                dst_spec=packet.dst_spec,
                 t_start=time.time(),
-                duration=packet.duration,
-                band=(relay_band.min_wavelength * 1e9, relay_band.max_wavelength * 1e9),
+                duration_ms=packet.duration_ms,
+                band_nm=(relay_band.min_wavelength * 1e9, relay_band.max_wavelength * 1e9),
                 complex_samples=shifted_samples,
                 stokes=packet.stokes,
+                phase_seq_token=packet.phase_seq_token,
+                coherence_token=packet.coherence_token,
                 energy_budget_j=new_energy,
-                phase_seq=packet.phase_seq,
+                qos=packet.qos,
+                sig=relay_sig,
                 coherence_score=min(packet.coherence_score, sim),
                 meta={**packet.meta, "relayed_by": self.node_id},
-                hop_count=packet.hop_count + 1,
-                origin_node=packet.origin_node,
-                target_signature=packet.target_signature
+                hop_count=packet.hop_count + 1
             )
             
             return relayed_packet
