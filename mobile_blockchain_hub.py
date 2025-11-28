@@ -1050,6 +1050,7 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
         "💱 Trading",
         "🏛️ Staking",
         "📱 P2P Hub",
+        "⚛️ Governance",
         "👥 Community",
         "🧭 Explore",
         "📊 Info"
@@ -1075,16 +1076,20 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
     with tab[4]:
         render_p2p_hub_tab()
     
-    # TAB 6: COMMUNITY
+    # TAB 6: PHYSICS GOVERNANCE
     with tab[5]:
+        render_physics_governance_tab()
+    
+    # TAB 7: COMMUNITY
+    with tab[6]:
         render_community_tab()
     
-    # TAB 7: EXPLORE ECOSYSTEM
-    with tab[6]:
+    # TAB 8: EXPLORE ECOSYSTEM
+    with tab[7]:
         render_explore_ecosystem_tab()
     
-    # TAB 8: INFO
-    with tab[7]:
+    # TAB 9: INFO
+    with tab[8]:
         render_info_tab()
 
 
@@ -4493,6 +4498,35 @@ def render_explore_ecosystem_tab():
     # Module count summary
     total_modules = sum(len(m) for m in ECOSYSTEM_MODULES.values())
     st.caption(f"🌟 **{total_modules} modules** across **{len(ECOSYSTEM_MODULES)} categories** available to explore")
+
+
+def render_physics_governance_tab():
+    """Physics Governance - 7-band authority system with constitutional clauses"""
+    
+    try:
+        from physics_governance_dashboard import render_physics_governance_page
+        render_physics_governance_page()
+    except Exception as e:
+        st.error(f"Could not load Physics Governance module: {e}")
+        
+        st.subheader("⚛️ Physics Governance Primitives")
+        st.markdown("""
+        **"Constructing the rules of nature into the governance of civilization"**
+        
+        This module maps physical wavelength primitives to governance semantics:
+        
+        | Physics Primitive | Governance Semantic |
+        |-------------------|---------------------|
+        | Waveform hash | Event identity (single-source truth) |
+        | Band used (nano..planck) | Authority tier (weight & cost) |
+        | Energy used (E=h·f·cycles) | Economic cost / stake |
+        | Multi-sensor endorsement | Multi-sig attestation |
+        | Root timestamp | Immutable time anchor |
+        | Yocto-encoded declarations | Constitutional clause |
+        | Anomaly patterns | Security alerts / quarantine |
+        
+        **Formula:** `E = h·f·n_cycles·authority²`
+        """)
 
 
 def render_community_tab():
