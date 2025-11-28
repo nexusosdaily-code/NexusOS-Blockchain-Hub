@@ -13,6 +13,7 @@ import json
 from datetime import datetime
 
 from nexus_native_wallet import NexusNativeWallet
+from input_validators import validate_nxs_address, validate_amount
 
 
 def init_wallet_session():
@@ -458,9 +459,17 @@ def render_send_nxt_tab(wallet):
     with st.form("send_nxt_form"):
         to_address = st.text_input(
             "Recipient Address",
-            placeholder="NXS...",
+            placeholder="NXS... (40+ characters)",
             help="NexusOS address starting with 'NXS'"
         )
+        
+        # Validate recipient address in real-time
+        if to_address:
+            is_valid, error_msg = validate_nxs_address(to_address)
+            if not is_valid:
+                st.error(f"⚠️ {error_msg}")
+            else:
+                st.success("✅ Valid NexusOS address")
         
         # Set default value based on balance (avoid max_value error)
         default_amount = min(1.0, float(balance['balance_nxt'])) if balance['balance_nxt'] > 0 else 0.01
@@ -533,8 +542,17 @@ def render_send_nxt_tab(wallet):
         submit = st.form_submit_button("📤 Send Transaction", type="primary", width="stretch")
         
         if submit:
+            # Validate all inputs
+            addr_valid = False
             if not to_address:
                 st.error("Please enter recipient address")
+            else:
+                addr_valid, addr_error = validate_nxs_address(to_address)
+                if not addr_valid:
+                    st.error(f"❌ Invalid address: {addr_error}")
+            
+            if not addr_valid:
+                pass  # Address error already shown
             elif not password:
                 st.error("Please enter your password")
             elif amount <= 0:
@@ -612,9 +630,17 @@ def render_send_message_tab(wallet):
     with st.form("send_message_form"):
         to_address = st.text_input(
             "Recipient (optional)",
-            placeholder="Leave empty for broadcast",
+            placeholder="NXS... or leave empty for broadcast",
             help="NexusOS address or empty for broadcast to network"
         )
+        
+        # Validate recipient address if provided
+        if to_address:
+            is_valid, error_msg = validate_nxs_address(to_address)
+            if not is_valid:
+                st.error(f"⚠️ {error_msg}")
+            else:
+                st.success("✅ Valid NexusOS address")
         
         content = st.text_area(
             "Message Content",
@@ -650,7 +676,16 @@ def render_send_message_tab(wallet):
         submit = st.form_submit_button("📡 Send Message", type="primary", width="stretch")
         
         if submit:
-            if not content:
+            # Validate recipient if provided
+            addr_valid = True
+            if to_address:
+                addr_valid, addr_error = validate_nxs_address(to_address)
+                if not addr_valid:
+                    st.error(f"❌ Invalid recipient: {addr_error}")
+            
+            if not addr_valid:
+                pass  # Error already shown
+            elif not content:
                 st.error("Please enter a message")
             elif not password:
                 st.error("Please enter your password")

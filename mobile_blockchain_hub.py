@@ -27,6 +27,12 @@ import json
 import os
 import math
 
+# Import input validators for address and phone validation
+from input_validators import (
+    validate_nxs_address, validate_phone_e164, 
+    normalize_phone_e164, validate_amount
+)
+
 # Import wallet for central hub functionality
 from nexus_native_wallet import NexusNativeWallet
 from web3_wallet_dashboard import (
@@ -681,7 +687,7 @@ def render_mobile_blockchain_hub():
         total_supply_nxt = token_system.TOTAL_SUPPLY / token_system.UNITS_PER_NXT
         circulating = token_system.get_circulating_supply() / token_system.UNITS_PER_NXT
         
-        from database import get_session, DAGMessage, ValidatorStake
+        from database import get_session, DAGMessage, NetworkNode
         session = get_session()
         
         if session:
@@ -693,14 +699,16 @@ def render_mobile_blockchain_hub():
                 five_min_ago = datetime.utcnow() - timedelta(minutes=5)
                 try:
                     recent_messages = session.query(DAGMessage).filter(
-                        DAGMessage.timestamp >= five_min_ago
+                        DAGMessage.created_at >= five_min_ago
                     ).count() or 0
                 except:
                     recent_messages = min(message_count, 50)
                 
-                # Calculate total staked amount using SQL aggregation
+                # Calculate total staked amount using NetworkNode.stake_amount
                 try:
-                    stake_sum_result = session.query(func.sum(ValidatorStake.stake_amount)).scalar()
+                    stake_sum_result = session.query(func.sum(NetworkNode.stake_amount)).filter(
+                        NetworkNode.is_active == True
+                    ).scalar()
                     total_stake_amount = float(stake_sum_result) if stake_sum_result else 0.0
                 except Exception:
                     total_stake_amount = 0.0
@@ -997,7 +1005,7 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🔓 Unlock Now", type="primary", use_container_width=True, key="quick_unlock_btn"):
+                if st.button("🔓 Unlock Now", type="primary", width="stretch", key="quick_unlock_btn"):
                     if quick_password and selected_address:
                         try:
                             if wallet.unlock_wallet(selected_address, quick_password):
@@ -1027,7 +1035,7 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
                     else:
                         st.error("Please enter your password")
             with col2:
-                if st.button("➕ Create New Wallet", use_container_width=True, key="quick_create_btn"):
+                if st.button("➕ Create New Wallet", width="stretch", key="quick_create_btn"):
                     st.info("👆 Go to the Wallet tab → Create section")
         else:
             st.markdown("#### ➕ Get Started")
@@ -1177,7 +1185,18 @@ def render_blockchain_tab():
             
             # Message composition with real physics pricing
             with st.form("dag_message_form"):
-                recipient = st.text_input("📬 Recipient Address", placeholder="NXS... or username")
+                recipient = st.text_input("📬 Recipient Address", placeholder="NXS... (40+ characters)")
+                
+                # Validate recipient address in real-time
+                recipient_valid = True
+                if recipient:
+                    is_valid, error_msg = validate_nxs_address(recipient)
+                    if not is_valid:
+                        st.error(f"⚠️ {error_msg}")
+                        recipient_valid = False
+                    else:
+                        st.success("✅ Valid NexusOS address")
+                
                 message_content = st.text_area("💬 Message", placeholder="Your quantum-encrypted message...")
                 
                 # Real physics calculation for message cost
@@ -1200,19 +1219,24 @@ def render_blockchain_tab():
                 submit = st.form_submit_button("📤 Send DAG Message", type="primary", width="stretch")
                 
                 if submit and message_content and recipient:
-                    sender = st.session_state.get('active_address', 'demo_user')
-                    if sender and sender != 'demo_user':
-                        try:
-                            result = messaging.send_message(sender, recipient, message_content)
-                            if result.get('success'):
-                                st.success(f"✅ Message sent! TX: {result.get('tx_id', 'pending')[:16]}...")
-                                st.balloons()
-                            else:
-                                st.error(f"Failed: {result.get('error', 'Unknown error')}")
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
+                    # Validate address before sending
+                    addr_valid, addr_error = validate_nxs_address(recipient)
+                    if not addr_valid:
+                        st.error(f"❌ Invalid recipient: {addr_error}")
                     else:
-                        st.warning("🔐 Unlock wallet to send real messages")
+                        sender = st.session_state.get('active_address', 'demo_user')
+                        if sender and sender != 'demo_user':
+                            try:
+                                result = messaging.send_message(sender, recipient, message_content)
+                                if result.get('success'):
+                                    st.success(f"✅ Message sent! TX: {result.get('tx_id', 'pending')[:16]}...")
+                                    st.balloons()
+                                else:
+                                    st.error(f"Failed: {result.get('error', 'Unknown error')}")
+                            except Exception as e:
+                                st.error(f"Error: {str(e)}")
+                        else:
+                            st.warning("🔐 Unlock wallet to send real messages")
             
             # Recent messages
             st.divider()
@@ -1304,7 +1328,7 @@ def render_blockchain_tab():
                         })
                     
                     df = pd.DataFrame(tx_data)
-                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    st.dataframe(df, width="stretch", hide_index=True)
                     
                     # Transaction detail viewer
                     st.markdown("#### Transaction Details")
@@ -1434,7 +1458,7 @@ def render_blockchain_tab():
                                 'Status': msg.status or 'confirmed'
                             })
                         df = pd.DataFrame(msg_data)
-                        st.dataframe(df, use_container_width=True, hide_index=True)
+                        st.dataframe(df, width="stretch", hide_index=True)
                         
                         # Message detail viewer
                         st.markdown("#### Message Details")
@@ -1506,7 +1530,7 @@ def render_blockchain_tab():
                                 height=350,
                                 template="plotly_dark"
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width="stretch")
                     except Exception as e:
                         st.caption(f"Timeline loading: {str(e)}")
                 
@@ -1539,7 +1563,7 @@ def render_blockchain_tab():
                                     height=350,
                                     template="plotly_dark"
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width="stretch")
                         else:
                             st.info("Send messages to see spectral distribution")
                     except Exception as e:
@@ -1675,7 +1699,7 @@ def render_blockchain_tab():
         import pandas as pd
         df = pd.DataFrame(spectral_regions)
         df.columns = ['Region', 'Icon', 'Wavelength Range', 'Energy Level', 'Reward Multiplier']
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
         
         st.divider()
         
@@ -1778,7 +1802,7 @@ def render_blockchain_tab():
                 yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
                 margin=dict(l=0, r=0, t=0, b=0)
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
             
         except Exception as e:
             st.warning(f"GhostDAG visualization loading: {str(e)}")
@@ -1894,7 +1918,7 @@ def render_trading_tab():
                 })
             
             df = pd.DataFrame(markets_data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
         else:
             st.info("No markets yet. Create a pool to start trading!")
         
@@ -2074,7 +2098,7 @@ def render_staking_tab():
                     'Status': d['status'].title()
                 })
             df = pd.DataFrame(del_data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
         else:
             st.info("🚀 Start staking to earn rewards!")
     
@@ -2188,7 +2212,7 @@ def render_staking_tab():
                 yaxis_title='Value (NXT)',
                 template='plotly_dark'
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.info("Stake tokens to see projections")
     
@@ -2445,27 +2469,40 @@ def render_p2p_hub_tab():
                 
                 if not st.session_state.phone_verification_pending:
                     # Step 1: Enter phone and request code
-                    phone = st.text_input("📱 Your Phone Number", placeholder="+1234567890", key="p2p_phone_link")
-                    if st.button("📤 Send Verification Code", key="send_code", type="primary"):
-                        if phone and len(phone) >= 10:
-                            if sms_available:
-                                result = send_verification(phone, 'user_self', st.session_state.active_address)
-                                if result.get('success'):
-                                    st.session_state.phone_verification_pending = True
-                                    st.session_state.phone_to_verify = phone
-                                    if 'demo_code' in result:
-                                        st.info(f"📱 Demo: Your code is **{result['demo_code']}**")
-                                    else:
-                                        st.success(result.get('message', 'Code sent!'))
-                                    st.rerun()
-                                else:
-                                    st.error(result.get('error', 'Failed to send code'))
-                            else:
-                                st.session_state.p2p_phone = phone
-                                st.success("✅ Phone linked (verification unavailable)")
-                                st.rerun()
+                    phone = st.text_input("📱 Your Phone Number", placeholder="+1234567890 (E.164 format)", key="p2p_phone_link")
+                    
+                    # Validate phone in real-time
+                    if phone:
+                        normalized = normalize_phone_e164(phone)
+                        if normalized:
+                            st.success(f"✅ Valid: {normalized}")
                         else:
-                            st.error("Please enter a valid phone number")
+                            phone_valid, phone_err = validate_phone_e164(phone)
+                            if not phone_valid:
+                                st.error(f"⚠️ {phone_err}")
+                    
+                    if st.button("📤 Send Verification Code", key="send_code", type="primary"):
+                        # Normalize and validate phone before sending
+                        normalized_phone = normalize_phone_e164(phone) if phone else None
+                        if not normalized_phone:
+                            phone_valid, phone_err = validate_phone_e164(phone if phone else "")
+                            st.error(f"❌ Invalid phone: {phone_err}")
+                        elif sms_available:
+                            result = send_verification(normalized_phone, 'user_self', st.session_state.active_address)
+                            if result.get('success'):
+                                st.session_state.phone_verification_pending = True
+                                st.session_state.phone_to_verify = normalized_phone
+                                if 'demo_code' in result:
+                                    st.info(f"📱 Demo: Your code is **{result['demo_code']}**")
+                                else:
+                                    st.success(result.get('message', 'Code sent!'))
+                                st.rerun()
+                            else:
+                                st.error(result.get('error', 'Failed to send code'))
+                        else:
+                            st.session_state.p2p_phone = normalized_phone
+                            st.success("✅ Phone linked (verification unavailable)")
+                            st.rerun()
                 else:
                     # Step 2: Enter verification code
                     st.info(f"📱 Code sent to {st.session_state.phone_to_verify}")
@@ -2559,9 +2596,19 @@ def render_p2p_hub_tab():
                 )
                 phone_optional = st.text_input(
                     "📱 Phone Number (optional)", 
-                    placeholder="+1234567890",
+                    placeholder="+1234567890 (E.164 format)",
                     help="Optional: Add for friend discovery"
                 )
+                
+                # Validate optional phone in real-time
+                if phone_optional:
+                    normalized = normalize_phone_e164(phone_optional)
+                    if normalized:
+                        st.success(f"✅ Valid: {normalized}")
+                    else:
+                        phone_valid, phone_err = validate_phone_e164(phone_optional)
+                        if not phone_valid:
+                            st.warning(f"⚠️ {phone_err}")
                 
                 submit = st.form_submit_button("✨ Create Wallet & Connect", type="primary", width="stretch")
                 
@@ -2588,9 +2635,10 @@ def render_p2p_hub_tab():
                                 # Also check for Early Adopter badge
                                 trigger_achievement(result['address'], 'joined_before', value=True)
                                 
-                                # Link phone if provided
-                                if phone_optional and len(phone_optional) >= 10:
-                                    st.session_state.p2p_phone = phone_optional
+                                # Link phone if provided - normalize to E.164
+                                normalized_phone = normalize_phone_e164(phone_optional) if phone_optional else None
+                                if normalized_phone:
+                                    st.session_state.p2p_phone = normalized_phone
                                     trigger_achievement(result['address'], 'phone_verified', increment=1)
                                 
                                 # Show badge notification
@@ -2644,7 +2692,17 @@ def render_p2p_hub_tab():
             with col1:
                 friend_name = st.text_input("👤 Friend's Name", key="friend_name_input", placeholder="John Doe")
             with col2:
-                friend_phone = st.text_input("📱 Phone Number", key="add_friend_input", placeholder="+1234567890")
+                friend_phone = st.text_input("📱 Phone Number", key="add_friend_input", placeholder="+1234567890 (E.164)")
+            
+            # Validate friend phone in real-time
+            if friend_phone:
+                normalized_friend_phone = normalize_phone_e164(friend_phone)
+                if normalized_friend_phone:
+                    st.success(f"✅ Valid: {normalized_friend_phone}")
+                else:
+                    phone_valid, phone_err = validate_phone_e164(friend_phone)
+                    if not phone_valid:
+                        st.error(f"⚠️ {phone_err}")
             
             col3, col4 = st.columns(2)
             with col3:
@@ -2671,31 +2729,36 @@ def render_p2p_hub_tab():
             
             st.caption("🔒 **Privacy**: Friend data is stored locally on your device. SIM IDs are optional and only used for mesh network optimization.")
             
-            if st.button("✅ Add Friend", key="add_friend_btn", type="primary", use_container_width=True):
+            if st.button("✅ Add Friend", key="add_friend_btn", type="primary", width="stretch"):
                 if not friend_name:
                     st.error("Please enter friend's name")
                 elif not friend_phone:
                     st.error("Please enter friend's phone number")
                 else:
-                    if fm:
+                    # Validate and normalize phone before saving
+                    normalized_friend_phone = normalize_phone_e164(friend_phone)
+                    if not normalized_friend_phone:
+                        phone_valid, phone_err = validate_phone_e164(friend_phone)
+                        st.error(f"❌ Invalid phone: {phone_err}")
+                    elif fm:
                         result = fm.add_friend(
                             user_id=st.session_state.active_address,
                             friend_name=friend_name,
-                            friend_contact=friend_phone,
+                            friend_contact=normalized_friend_phone,
                             country=friend_country if friend_country else None,
                             state_region=friend_state if friend_state else None,
                             sim_number=friend_sim if friend_sim else None,
                             can_share_media=can_share_media
                         )
                         if result['success']:
-                            st.success(f"✅ Added {friend_name} ({friend_phone})")
+                            st.success(f"✅ Added {friend_name} ({normalized_friend_phone})")
                             st.rerun()
                         else:
                             st.error(f"Failed: {result.get('error', 'Unknown error')}")
                     else:
                         friend_data = {
                             'name': friend_name,
-                            'contact': friend_phone,
+                            'contact': normalized_friend_phone,
                             'country': friend_country,
                             'state_region': friend_state,
                             'sim_number': friend_sim,
@@ -3549,7 +3612,7 @@ contract {contract_type.replace(" ", "")}:
         
         import pandas as pd
         df = pd.DataFrame(rewards)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
         
         available = sum(r['amount'] for r in rewards if r['status'] == 'Available')
         st.metric("Available to Claim", f"{available} NXT")
@@ -3676,7 +3739,7 @@ contract {contract_type.replace(" ", "")}:
         
         import pandas as pd
         df = pd.DataFrame(layers)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
     
     # ============ ECONOMICS THEORY ============
     
@@ -3844,7 +3907,16 @@ contract {contract_type.replace(" ", "")}:
             st.divider()
             
             with st.form("inline_msg_form"):
-                recipient = st.text_input("📬 Recipient", placeholder="NXS... address")
+                recipient = st.text_input("📬 Recipient", placeholder="NXS... (40+ characters)")
+                
+                # Validate recipient address
+                if recipient:
+                    is_valid, error_msg = validate_nxs_address(recipient)
+                    if not is_valid:
+                        st.error(f"⚠️ {error_msg}")
+                    else:
+                        st.success("✅ Valid NexusOS address")
+                
                 content = st.text_area("💬 Message", placeholder="Enter message...")
                 
                 if content:
@@ -3856,10 +3928,16 @@ contract {contract_type.replace(" ", "")}:
                 
                 if st.form_submit_button("📤 Send", type="primary", width="stretch"):
                     sender = st.session_state.get('active_address', '')
-                    if sender and content and recipient:
-                        st.success(f"✅ Message queued for DAG processing")
+                    if not sender:
+                        st.warning("🔐 Unlock wallet first")
+                    elif not content or not recipient:
+                        st.warning("Please fill all fields")
                     else:
-                        st.warning("🔐 Unlock wallet and fill all fields")
+                        addr_valid, addr_err = validate_nxs_address(recipient)
+                        if not addr_valid:
+                            st.error(f"❌ Invalid recipient: {addr_err}")
+                        else:
+                            st.success(f"✅ Message queued for DAG processing")
         except Exception as e:
             st.error(f"Module loading: {str(e)}")
     
@@ -3999,7 +4077,7 @@ contract EnergyTransfer:
         import pandas as pd
         df = pd.DataFrame(pools)
         df['Progress'] = df.apply(lambda x: f"{x['funded']/x['goal']*100:.1f}%", axis=1)
-        st.dataframe(df[['name', 'funded', 'goal', 'Progress', 'apy']], use_container_width=True, hide_index=True)
+        st.dataframe(df[['name', 'funded', 'goal', 'Progress', 'apy']], width="stretch", hide_index=True)
         
         st.divider()
         selected_pool = st.selectbox("Select Pool to Fund:", [p['name'] for p in pools], key="pool_select")
@@ -4814,7 +4892,7 @@ def render_community_tab():
                 template="plotly_dark",
                 height=300
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
             
             if st.button("✅ Mark Lesson 4 Complete", key="complete_l4"):
                 st.session_state.completed_lessons.add("lesson_4")
