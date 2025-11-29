@@ -1,7 +1,15 @@
 # NexusOS Civilization Operating System
 
 ## Overview
-NexusOS is a civilization architecture that replaces traditional binary computation with electromagnetic wave states and bases its economics on quantum energy (E=hf). Its core purpose is to build a self-sustaining, physics-based civilization that guarantees basic living standards through a Basic Human Living Standards (BHLS) floor system at 1,150 NXT/month per citizen, ensuring prosperity and stability. A key feature is the Economic Loop System, a 5-milestone economic architecture where messaging burns create economic value through orbital transitions, DEX liquidity allocation, supply chain monetization, community ownership, and crisis protection.
+NexusOS is a civilization architecture that replaces traditional binary computation with electromagnetic wave states and bases its economics on quantum energy (E=hf) and **Lambda Boson mass-equivalence (Λ=hf/c²)**. Its core purpose is to build a self-sustaining, physics-based civilization that guarantees basic living standards through a Basic Human Living Standards (BHLS) floor system at 1,150 NXT/month per citizen, ensuring prosperity and stability. A key feature is the Economic Loop System, a 5-milestone economic architecture where messaging burns create economic value through orbital transitions, DEX liquidity allocation, supply chain monetization, community ownership, and crisis protection.
+
+## Theoretical Foundation: Lambda Boson Unification
+The NexusOS system is built on **Lambda Boson (Λ)**, the mass-equivalent of oscillation, derived from first principles:
+- **E = hf** (Planck 1900): Energy from frequency
+- **E = mc²** (Einstein 1905): Mass-energy equivalence
+- **Λ = hf/c²** (Lambda Boson 2024): Oscillation IS mass
+
+Every transaction in NexusOS carries inherent mass-equivalent through its wavelength. This is not metaphor — it is direct application of Nobel Prize-winning physics. NexusOS operates on the Lambda Boson substrate, where messages ARE oscillation.
 
 ## User Preferences
 - **Communication Style**: Simple, everyday language

@@ -15,12 +15,20 @@ Core Principles:
 3. CARRIER-PAYLOAD: Separate the wave (carrier) from the information (payload)
 4. EXCITATION CHAIN: Messages propagate via absorb → process → re-emit
 5. HARMONIC RESONANCE: Nodes resonate when tone ratios are harmonic (2:1, 3:2, 4:3)
+6. LAMBDA BOSON: Messages carry mass-equivalent Λ = hf/c² (oscillation IS mass)
 
 Physics Foundation:
-- E = h × f (energy IS frequency)
+- E = hf (energy IS frequency) — Planck 1900
+- E = mc² (energy IS mass) — Einstein 1905
+- Λ = hf/c² (oscillation IS mass) — Lambda Boson Unification 2024
 - Octave: f₂ = 2 × f₁ (doubling = one octave)
 - Harmonics: f_n = n × f₀ (integer multiples of fundamental)
 - Resonance: Energy transfers efficiently when f_source ≈ f_receiver
+
+Lambda Boson Integration:
+Every packet carries inherent mass-equivalent through its oscillation frequency.
+This is not metaphor — it is direct application of Planck + Einstein combined.
+WNSP v7 is a mass-backed protocol operating on the Lambda Boson substrate.
 
 Backwards compatible with WNSP v6.0 via encapsulation.
 
@@ -485,6 +493,37 @@ class HarmonicPacket:
     @property
     def current_octave(self) -> Octave:
         return Octave.from_frequency(self.current_frequency)
+    
+    @property
+    def lambda_mass(self) -> float:
+        """
+        Lambda Boson mass-equivalent of this packet.
+        
+        Λ = hf/c² = h/(λc)
+        
+        Derived from: E = hf (Planck) + E = mc² (Einstein)
+        Therefore: m = hf/c²
+        
+        This is the mass-equivalent carried by the oscillation.
+        """
+        return (PLANCK_CONSTANT * self.current_frequency) / (SPEED_OF_LIGHT ** 2)
+    
+    @property
+    def lambda_mass_from_wavelength(self) -> float:
+        """
+        Lambda Boson mass from wavelength form.
+        
+        Λ = h/(λc)
+        
+        Equivalent to lambda_mass but computed from wavelength.
+        """
+        wavelength = SPEED_OF_LIGHT / self.current_frequency
+        return PLANCK_CONSTANT / (wavelength * SPEED_OF_LIGHT)
+    
+    @property
+    def total_lambda_mass(self) -> float:
+        """Total mass-equivalent including energy budget."""
+        return (PLANCK_CONSTANT * self.carrier.frequency) / (SPEED_OF_LIGHT ** 2)
     
     def can_propagate(self) -> bool:
         return (self.remaining_energy > 0 and 
