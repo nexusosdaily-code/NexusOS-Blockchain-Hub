@@ -47,7 +47,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run wnsp_v7/dashboard.py --server.port 5000 --server.headless true"
+args = "cd /home/runner/workspace && PYTHONPATH=/home/runner/workspace:$PYTHONPATH streamlit run wnsp_v7/dashboard.py --server.port 5000 --server.headless true"
 waitForPort = 5000
 
 [[ports]]
