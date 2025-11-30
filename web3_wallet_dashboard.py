@@ -315,20 +315,21 @@ def render_unlock_wallet_tab(wallet):
     
     st.caption(f"📋 **{len(wallets)} wallet(s) found** - Select one to unlock")
     
-    # Scrollable wallet container with CSS
+    # Scrollable wallet container with CSS - LIGHT THEME
     st.markdown("""
         <style>
         .wallet-scroll-container {
             max-height: 300px;
             overflow-y: auto;
             padding: 10px;
-            border: 1px solid rgba(102, 126, 234, 0.3);
+            border: 2px solid rgba(102, 126, 234, 0.4);
             border-radius: 12px;
-            background: rgba(26, 26, 46, 0.5);
+            background: rgba(255, 255, 255, 0.95);
             margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
         }
         .wallet-card {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
             border: 2px solid rgba(102, 126, 234, 0.3);
             border-radius: 10px;
             padding: 15px;
@@ -339,27 +340,32 @@ def render_unlock_wallet_tab(wallet):
         .wallet-card:hover {
             border-color: #667eea;
             transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
         }
         .wallet-card.selected {
             border-color: #10b981 !important;
-            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
         }
         .wallet-address {
             font-family: monospace;
-            font-size: 12px;
-            color: #94a3b8;
+            font-size: 13px;
+            color: #1B1B2F;
             word-break: break-all;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
         }
         .wallet-balance {
             font-size: 18px;
             font-weight: bold;
-            color: #10b981;
+            color: #047857;
         }
         .wallet-label {
             font-size: 14px;
-            color: #e2e8f0;
+            color: #1e3a5f;
+            font-weight: 600;
             margin-bottom: 5px;
         }
         </style>
