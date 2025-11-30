@@ -814,6 +814,85 @@ def get_responsive_css() -> str:
         color: inherit !important;
     }
     
+    /* ============================================
+       DROPDOWN BLACKOUT FIX - Enhanced Visibility
+       Prevents black background on dropdown menus
+       ============================================ */
+    
+    /* Force white background on all popover layers */
+    [data-baseweb="popover"] > div,
+    [data-baseweb="popover"] > div > div,
+    [data-baseweb="popover"] [data-baseweb="menu"],
+    .stApp div[data-baseweb="popover"],
+    .stApp div[data-baseweb="popover"] > div {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+    }
+    
+    /* Ensure listbox has proper background */
+    ul[role="listbox"],
+    div[role="listbox"],
+    [data-baseweb="menu"] > ul,
+    [data-baseweb="menu"] > div {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Force all option text to be dark and visible */
+    [role="option"],
+    [role="option"] *,
+    li[role="option"],
+    li[role="option"] *,
+    [data-baseweb="menu"] li,
+    [data-baseweb="menu"] li * {
+        color: #1B1B2F !important;
+        background-color: transparent !important;
+    }
+    
+    /* Option container backgrounds */
+    li[role="option"],
+    [data-baseweb="menu"] li {
+        background: #ffffff !important;
+    }
+    
+    /* Hover state - light purple highlight */
+    li[role="option"]:hover,
+    [data-baseweb="menu"] li:hover,
+    [role="option"][data-highlighted="true"],
+    li[data-highlighted="true"] {
+        background: rgba(102, 126, 234, 0.15) !important;
+        background-color: rgba(102, 126, 234, 0.15) !important;
+    }
+    
+    /* Selected state - purple gradient */
+    [role="option"][aria-selected="true"],
+    li[role="option"][aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    }
+    
+    [role="option"][aria-selected="true"] *,
+    li[role="option"][aria-selected="true"] * {
+        color: #ffffff !important;
+    }
+    
+    /* Input field in select box */
+    [data-baseweb="select"] input,
+    .stSelectbox input {
+        color: #1B1B2F !important;
+        background: transparent !important;
+    }
+    
+    /* Dropdown arrow icon */
+    [data-baseweb="select"] svg,
+    .stSelectbox svg {
+        fill: #667eea !important;
+    }
+    
+    /* Z-index fix to ensure dropdown appears above other elements */
+    [data-baseweb="popover"] {
+        z-index: 999999 !important;
+    }
+    
     /* Progress bar */
     .stApp .stProgress > div > div {
         background: linear-gradient(90deg, var(--primary-start), var(--primary-end)) !important;
