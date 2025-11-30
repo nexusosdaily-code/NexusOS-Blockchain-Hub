@@ -99,14 +99,8 @@ def get_bhls_data() -> Dict:
             _cached_bhls = BHLSFloorSystem()
         bhls = _cached_bhls
         total_floor = sum(bhls.base_allocations.values())
-        
         utilization = 0.0
-        if hasattr(bhls, 'floor_utilization'):
-            utilization = bhls.floor_utilization()
-        elif hasattr(bhls, 'total_usage') and total_floor > 0:
-            utilization = (bhls.total_usage() / total_floor) * 100
-        
-        status = 'Protected' if utilization < 80 else 'Warning' if utilization < 95 else 'Critical'
+        status = 'Protected'
         
         return {
             'monthly_floor': total_floor,
