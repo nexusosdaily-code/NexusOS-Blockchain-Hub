@@ -603,7 +603,8 @@ def main():
                 "🤖 WaveLang AI Teacher",
                 "💻 WaveLang Binary Compiler",
                 "⚛️ Quantum Analyzer",
-                "🚀 Resonance Propulsion"
+                "🚀 Resonance Propulsion",
+                "🎥 Video & Livestream"
             ],
             key="module_selector"
         )
@@ -766,6 +767,11 @@ def main():
                 "icon": "🚀",
                 "desc": "Electromagnetic resonance propulsion research based on Lambda Boson substrate (Λ = hf/c²)",
                 "features": ["⚛️ Lambda Boson Calculations", "📐 Cavity Geometry Design", "🔬 Thrust Simulation", "📊 WNSP Spectral Analysis", "📈 Propulsion Comparison", "🧪 Research Platform"]
+            },
+            "🎥 Video & Livestream": {
+                "icon": "🎥",
+                "desc": "Upload videos and broadcast live across the NexusOS network with wavelength energy tracking",
+                "features": ["📤 Video Upload", "📡 Live Streaming", "📚 Video Library", "👥 Friend Sharing", "⚡ Energy Cost Tracking", "🌐 WNSP Network Distribution"]
             }
         }
         
@@ -800,7 +806,8 @@ def main():
             {"name": "🌈 Proof of Spectrum", "desc": "Wavelength-based consensus", "color": "#88aadd"},
             {"name": "⚙️ Nexus Consensus", "desc": "Unified consensus engine", "color": "#ddaa88"},
             {"name": "🌍 Civilization Dashboard", "desc": "Complete civilization architecture", "color": "#88ddaa"},
-            {"name": "💫 Economic Loop Dashboard", "desc": "Full economic cycle visualization", "color": "#dd88ff"}
+            {"name": "💫 Economic Loop Dashboard", "desc": "Full economic cycle visualization", "color": "#dd88ff"},
+            {"name": "🎥 Video & Livestream", "desc": "Upload & broadcast video content", "color": "#ff6688"}
         ]
         
         # Display in 3-column grid
@@ -992,6 +999,10 @@ def main():
     elif module == "🔒 Security Command Center":
         # Comprehensive security monitoring and protection
         security_dashboard()
+    
+    elif module == "🎥 Video & Livestream":
+        # Video upload and livestreaming dashboard
+        render_video_livestream_dashboard()
     
     elif module == "🚀 Resonance Propulsion":
         # Electromagnetic resonance propulsion research
