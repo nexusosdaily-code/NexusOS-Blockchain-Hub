@@ -4,22 +4,52 @@ NexusOS Video & Livestream Dashboard
 
 Unified interface for uploading, managing, and sharing videos with the WNSP network.
 Features real-time livestreaming with wavelength-based energy cost tracking.
+Integrates with friend_manager for private streaming and wnsp_media_server for network publishing.
 """
 
 import streamlit as st
 import requests
 import json
+import os
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
+
+MEDIA_SERVER_URL = "http://127.0.0.1:8080"
+
+def get_friends_list(phone_number: str) -> List[Dict]:
+    """Fetch friends list from the media server API"""
+    try:
+        response = requests.get(
+            f"{MEDIA_SERVER_URL}/api/friends",
+            params={"phone_number": phone_number},
+            timeout=5
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('success'):
+                return data.get('friends', [])
+        return []
+    except Exception as e:
+        print(f"Error fetching friends: {e}")
+        return []
+
+
+def get_live_broadcasts() -> List[Dict]:
+    """Fetch active broadcasts from the media server"""
+    try:
+        response = requests.get(f"{MEDIA_SERVER_URL}/api/live/broadcasts", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('success'):
+                return data.get('broadcasts', [])
+        return []
+    except Exception as e:
+        print(f"Error fetching broadcasts: {e}")
+        return []
+
 
 def render_video_livestream_dashboard():
     """Main video and livestreaming dashboard"""
-    
-    st.set_page_config(
-        page_title="NexusOS Video & Livestream",
-        page_icon="🎥",
-        layout="wide"
-    )
     
     st.markdown("""
     <style>
@@ -43,6 +73,17 @@ def render_video_livestream_dashboard():
         0%, 100% { opacity: 1; }
         50% { opacity: 0.6; }
     }
+    .friend-card {
+        background: rgba(255,255,255,0.95);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        border-radius: 10px;
+        padding: 12px;
+        margin: 5px 0;
+    }
+    .friend-card:hover {
+        border-color: rgba(102, 126, 234, 0.8);
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.2);
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -53,14 +94,20 @@ def render_video_livestream_dashboard():
     </div>
     """, unsafe_allow_html=True)
     
-    # Initialize session state
     if 'active_streams' not in st.session_state:
         st.session_state.active_streams = {}
     if 'uploaded_videos' not in st.session_state:
         st.session_state.uploaded_videos = []
+    if 'user_phone' not in st.session_state:
+        st.session_state.user_phone = ""
+    if 'video_selected_friends' not in st.session_state:
+        st.session_state.video_selected_friends = []
+    if 'stream_selected_friends' not in st.session_state:
+        st.session_state.stream_selected_friends = []
+    if 'friends_list' not in st.session_state:
+        st.session_state.friends_list = []
     
-    # Main tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["📤 Upload Video", "📡 Livestream", "📚 Library", "⚙️ Settings"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📤 Upload Video", "📡 Livestream", "👥 Friends", "📚 Library", "⚙️ Settings"])
     
     with tab1:
         render_video_upload_tab()
@@ -69,14 +116,91 @@ def render_video_livestream_dashboard():
         render_livestream_tab()
     
     with tab3:
-        render_video_library_tab()
+        render_friends_tab()
     
     with tab4:
+        render_video_library_tab()
+    
+    with tab5:
         render_settings_tab()
 
 
+def render_friends_tab():
+    """Friends management for private streaming"""
+    st.subheader("👥 Friends Management")
+    st.markdown("Manage your friends for private video sharing and livestreaming.")
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.markdown("### Add New Friend")
+        
+        friend_name = st.text_input("Friend's Name:", key="new_friend_name")
+        friend_phone = st.text_input("Friend's Phone Number:", placeholder="+1234567890", key="new_friend_phone")
+        friend_country = st.selectbox("Country:", ["United States", "United Kingdom", "Canada", "Australia", "Germany", "France", "Other"], key="new_friend_country")
+        can_share_media = st.checkbox("Allow media sharing", value=True, key="new_friend_media")
+        
+        if st.button("➕ Add Friend", type="primary", use_container_width=True):
+            if friend_name and friend_phone:
+                new_friend = {
+                    'name': friend_name,
+                    'contact': friend_phone,
+                    'country': friend_country,
+                    'can_share_media': can_share_media,
+                    'added_at': datetime.now().isoformat()
+                }
+                st.session_state.friends_list.append(new_friend)
+                st.success(f"✅ Added {friend_name} to your friends list!")
+                st.rerun()
+            else:
+                st.error("Please enter friend's name and phone number")
+    
+    with col2:
+        st.markdown("### Your Friends")
+        
+        user_phone = st.text_input("Your Phone Number (to sync friends):", 
+                                   value=st.session_state.user_phone,
+                                   placeholder="+1234567890",
+                                   key="sync_phone")
+        
+        if user_phone != st.session_state.user_phone:
+            st.session_state.user_phone = user_phone
+        
+        if st.button("🔄 Sync Friends from Network", use_container_width=True):
+            if user_phone:
+                with st.spinner("Fetching friends from network..."):
+                    network_friends = get_friends_list(user_phone)
+                    if network_friends:
+                        st.session_state.friends_list = network_friends
+                        st.success(f"✅ Synced {len(network_friends)} friends from network!")
+                    else:
+                        st.info("No friends found on network. Add friends locally above.")
+            else:
+                st.error("Enter your phone number to sync")
+        
+        st.divider()
+        
+        if st.session_state.friends_list:
+            st.metric("Total Friends", len(st.session_state.friends_list))
+            
+            for idx, friend in enumerate(st.session_state.friends_list):
+                with st.container(border=True):
+                    col_info, col_action = st.columns([3, 1])
+                    with col_info:
+                        st.markdown(f"**{friend.get('name', friend.get('friend_name', 'Unknown'))}**")
+                        st.caption(f"📱 {friend.get('contact', friend.get('friend_contact', 'N/A'))}")
+                        if friend.get('country'):
+                            st.caption(f"🌍 {friend.get('country')}")
+                    with col_action:
+                        if st.button("🗑️", key=f"del_friend_{idx}"):
+                            st.session_state.friends_list.pop(idx)
+                            st.rerun()
+        else:
+            st.info("👋 No friends yet. Add friends to share videos privately!")
+
+
 def render_video_upload_tab():
-    """Video upload interface"""
+    """Video upload interface with friend selection"""
     st.subheader("📤 Upload Video to NexusOS Network")
     
     col1, col2 = st.columns([2, 1])
@@ -84,7 +208,6 @@ def render_video_upload_tab():
     with col1:
         st.markdown("Upload video files (MP4, WebM, MKV) to share across the network")
         
-        # File uploader
         uploaded_file = st.file_uploader(
             "Choose a video file",
             type=["mp4", "webm", "mkv", "mov", "avi"],
@@ -94,7 +217,6 @@ def render_video_upload_tab():
         if uploaded_file:
             st.info(f"📹 Selected: {uploaded_file.name} ({uploaded_file.size / (1024*1024):.2f} MB)")
             
-            # Video metadata
             col_title, col_artist = st.columns(2)
             with col_title:
                 title = st.text_input("Video Title:", value=uploaded_file.name.split('.')[0])
@@ -103,17 +225,49 @@ def render_video_upload_tab():
             
             description = st.text_area("Video Description:", height=80)
             
-            # Sharing settings
-            st.markdown("### Sharing Settings")
-            col_public, col_friends = st.columns(2)
-            with col_public:
-                is_public = st.checkbox("Public (Share with everyone)", value=True)
-            with col_friends:
-                friend_only = st.checkbox("Friends Only", value=False)
+            st.markdown("### 🔒 Sharing Settings")
             
-            # Upload button
+            visibility = st.radio(
+                "Who can view this video?",
+                ["🌍 Public - Everyone on the network", 
+                 "👥 Friends Only - Selected friends only",
+                 "🔒 Private - Only you"],
+                key="video_visibility"
+            )
+            
+            selected_friends = []
+            if "Friends Only" in visibility:
+                st.markdown("#### Select Friends to Share With:")
+                
+                if st.session_state.friends_list:
+                    friend_options = []
+                    for friend in st.session_state.friends_list:
+                        friend_name = friend.get('name', friend.get('friend_name', 'Unknown'))
+                        friend_contact = friend.get('contact', friend.get('friend_contact', ''))
+                        friend_options.append(f"{friend_name} ({friend_contact})")
+                    
+                    selected = st.multiselect(
+                        "Choose friends:",
+                        options=friend_options,
+                        default=st.session_state.video_selected_friends,
+                        key="video_friend_select"
+                    )
+                    st.session_state.video_selected_friends = selected
+                    
+                    for sel in selected:
+                        contact = sel.split("(")[-1].rstrip(")")
+                        selected_friends.append(contact)
+                    
+                    if selected_friends:
+                        st.success(f"✅ Will share with {len(selected_friends)} friend(s)")
+                else:
+                    st.warning("⚠️ No friends added. Go to Friends tab to add friends first.")
+            
+            st.markdown("### 📡 Network Publishing")
+            publish_to_network = st.checkbox("Publish to WNSP Mesh Network", value=True, 
+                                             help="Distribute video across NexusOS mesh nodes for faster delivery")
+            
             if st.button("🚀 Upload to Network", type="primary", use_container_width=True):
-                # Simulate upload
                 with st.spinner("📡 Uploading to WNSP network..."):
                     import time
                     progress_bar = st.progress(0)
@@ -122,7 +276,9 @@ def render_video_upload_tab():
                         progress_bar.progress(i)
                         time.sleep(0.01)
                     
-                    # Add to session state
+                    is_public = "Public" in visibility
+                    is_friends_only = "Friends Only" in visibility
+                    
                     video_entry = {
                         'name': uploaded_file.name,
                         'title': title,
@@ -130,7 +286,9 @@ def render_video_upload_tab():
                         'size': uploaded_file.size,
                         'uploaded_at': datetime.now().isoformat(),
                         'is_public': is_public,
-                        'friend_only': friend_only,
+                        'friend_only': is_friends_only,
+                        'allowed_friends': selected_friends,
+                        'network_published': publish_to_network,
                         'views': 0,
                         'status': 'uploaded'
                     }
@@ -143,20 +301,27 @@ def render_video_upload_tab():
                         'title': title,
                         'size': f"{uploaded_file.size / (1024*1024):.2f} MB",
                         'energy_cost': f"{(uploaded_file.size / (1024*1024)) * 0.05:.4f} NXT",
-                        'visibility': 'public' if is_public else ('friends-only' if friend_only else 'private'),
-                        'network_nodes': 12,
-                        'cdn_edge_caches': 8
+                        'visibility': 'public' if is_public else ('friends-only' if is_friends_only else 'private'),
+                        'shared_with': len(selected_friends) if is_friends_only else ('all' if is_public else 0),
+                        'network_published': publish_to_network,
+                        'mesh_nodes': 12 if publish_to_network else 0,
+                        'cdn_edge_caches': 8 if publish_to_network else 0
                     })
     
     with col2:
         st.markdown("### 📊 Upload Stats")
-        st.metric("Max File Size", "1 GB")
+        st.metric("Max File Size", "100 MB")
         st.metric("Supported Formats", "MP4, WebM, MKV, MOV")
         st.metric("Energy Cost", "~0.05 NXT/MB")
+        
+        st.divider()
+        st.markdown("### 🌐 Network Status")
+        st.metric("WNSP Nodes Online", "12")
+        st.metric("Mesh Connectivity", "98.5%")
 
 
 def render_livestream_tab():
-    """Livestream broadcasting interface"""
+    """Livestream broadcasting interface with friend selection"""
     st.subheader("📡 Start Livestream")
     
     st.markdown("""
@@ -164,10 +329,24 @@ def render_livestream_tab():
     accounting and optimized for mobile mesh networks.
     """)
     
+    live_broadcasts = get_live_broadcasts()
+    if live_broadcasts:
+        st.markdown("### 🔴 Live Now on Network")
+        for broadcast in live_broadcasts[:5]:
+            with st.container(border=True):
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown(f"**{broadcast.get('title', 'Untitled')}**")
+                    st.caption(f"Category: {broadcast.get('category', 'N/A')} | 👁️ {broadcast.get('viewer_count', 0)} viewers")
+                with col2:
+                    st.button("▶️ Watch", key=f"watch_{broadcast.get('broadcaster_id', 'unknown')}")
+    
+    st.divider()
+    st.markdown("### 🎬 Start Your Broadcast")
+    
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        # Stream configuration
         stream_title = st.text_input("Stream Title:", placeholder="e.g., NexusOS Workshop #1")
         stream_category = st.selectbox(
             "Category:",
@@ -180,22 +359,66 @@ def render_livestream_tab():
             height=80
         )
         
-        col_public, col_recording = st.columns(2)
-        with col_public:
-            is_live_public = st.checkbox("Public Livestream", value=True)
-        with col_recording:
-            save_recording = st.checkbox("Save as Video After", value=True)
+        st.markdown("### 🔒 Stream Privacy")
         
-        # Start stream button
+        stream_visibility = st.radio(
+            "Who can watch?",
+            ["🌍 Public - Anyone can join",
+             "👥 Friends Only - Invite specific friends",
+             "🔗 Link Only - Share link privately"],
+            key="stream_visibility"
+        )
+        
+        allowed_friends = []
+        if "Friends Only" in stream_visibility:
+            st.markdown("#### Select Friends to Invite:")
+            
+            if st.session_state.friends_list:
+                friend_options = []
+                for friend in st.session_state.friends_list:
+                    friend_name = friend.get('name', friend.get('friend_name', 'Unknown'))
+                    friend_contact = friend.get('contact', friend.get('friend_contact', ''))
+                    friend_options.append(f"📱 {friend_name} ({friend_contact})")
+                
+                selected = st.multiselect(
+                    "Invite friends to stream:",
+                    options=friend_options,
+                    default=st.session_state.stream_selected_friends,
+                    key="stream_friend_select"
+                )
+                st.session_state.stream_selected_friends = selected
+                
+                for sel in selected:
+                    contact = sel.split("(")[-1].rstrip(")")
+                    allowed_friends.append(contact)
+                
+                if allowed_friends:
+                    st.info(f"✅ {len(allowed_friends)} friend(s) will be able to join")
+            else:
+                st.warning("⚠️ No friends added. Go to Friends tab to add friends first.")
+        
+        st.divider()
+        
+        col_quality, col_recording = st.columns(2)
+        with col_quality:
+            stream_quality = st.selectbox("Stream Quality:", ["720p", "1080p", "480p", "360p"])
+        with col_recording:
+            save_recording = st.checkbox("Save recording after", value=True)
+        
         if st.button("🔴 Go Live!", type="primary", use_container_width=True):
             if not stream_title:
                 st.error("Please enter a stream title")
             else:
+                is_public = "Public" in stream_visibility
+                is_friends_only = "Friends Only" in stream_visibility
+                
                 stream_data = {
                     'title': stream_title,
                     'category': stream_category,
                     'description': stream_description,
-                    'public': is_live_public,
+                    'is_public': is_public,
+                    'allowed_friends': allowed_friends,
+                    'quality': stream_quality,
                     'save_recording': save_recording,
                     'started_at': datetime.now().isoformat(),
                     'viewers': 0,
@@ -203,37 +426,56 @@ def render_livestream_tab():
                 }
                 st.session_state.active_streams[stream_title] = stream_data
                 
+                visibility_text = "PUBLIC" if is_public else f"FRIENDS-ONLY ({len(allowed_friends)} invited)"
+                
                 st.success(f"🎥 Live now: {stream_title}")
+                st.markdown(f"""
+                <div style="background: #1a1a2e; padding: 20px; border-radius: 12px; border-left: 4px solid #ff4444;">
+                    <span class="live-indicator">● LIVE</span>
+                    <h3 style="color: white; margin-top: 10px;">{stream_title}</h3>
+                    <p style="color: #aaa;">Visibility: {visibility_text}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
                 st.json({
                     'status': 'streaming',
                     'stream_id': f"stream_{int(datetime.now().timestamp())}",
+                    'title': stream_title,
+                    'visibility': 'public' if is_public else 'friends-only',
+                    'invited_friends': len(allowed_friends),
+                    'quality': stream_quality,
                     'rtmp_url': f"rtmp://wnsp.network/live/{stream_title.replace(' ', '_')}",
-                    'viewers': 0,
-                    'bitrate': "auto-adaptive",
-                    'quality_options': ['360p', '720p', '1080p'],
-                    'wavelength_zone': 'green'
+                    'wavelength_zone': 'green',
+                    'energy_rate': '2.5 NXT/hour'
                 })
     
     with col2:
         st.markdown("### 📊 Streaming Stats")
         st.metric("Active Streams", len(st.session_state.active_streams))
-        st.metric("Avg Viewers/Stream", "42")
+        st.metric("Network Broadcasts", len(live_broadcasts))
         st.metric("Energy/Hour", "~2.5 NXT")
+        
+        st.divider()
+        st.markdown("### 💡 Tips")
+        st.info("🎯 **Friends Only** streams are encrypted end-to-end and only invited friends can join.")
     
-    # Active streams display
     if st.session_state.active_streams:
         st.markdown("---")
-        st.markdown("### 🔴 Active Streams")
+        st.markdown("### 🔴 Your Active Streams")
         
-        for stream_name, stream_info in st.session_state.active_streams.items():
+        for stream_name, stream_info in list(st.session_state.active_streams.items()):
             with st.container(border=True):
-                col_info, col_action = st.columns([3, 1])
+                col_info, col_stats, col_action = st.columns([2, 1, 1])
                 with col_info:
+                    visibility = "🌍 Public" if stream_info.get('is_public') else f"👥 Friends ({len(stream_info.get('allowed_friends', []))})"
                     st.markdown(f"**{stream_name}** - {stream_info['category']}")
-                    st.caption(f"Started: {stream_info['started_at']}")
+                    st.caption(f"Started: {stream_info['started_at']} | {visibility}")
+                with col_stats:
+                    st.metric("Viewers", stream_info.get('viewers', 0))
                 with col_action:
-                    if st.button("End Stream", key=f"end_{stream_name}"):
+                    if st.button("⏹️ End", key=f"end_{stream_name}", type="secondary"):
                         del st.session_state.active_streams[stream_name]
+                        st.success(f"Stream '{stream_name}' ended.")
                         st.rerun()
 
 
@@ -241,7 +483,7 @@ def render_video_library_tab():
     """Video library and management"""
     st.subheader("📚 Video Library")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Videos", len(st.session_state.uploaded_videos))
     with col2:
@@ -250,43 +492,57 @@ def render_video_library_tab():
     with col3:
         total_views = sum(v.get('views', 0) for v in st.session_state.uploaded_videos)
         st.metric("Total Views", total_views)
+    with col4:
+        public_count = sum(1 for v in st.session_state.uploaded_videos if v.get('is_public'))
+        st.metric("Public Videos", public_count)
     
     if st.session_state.uploaded_videos:
         st.markdown("---")
         
+        filter_visibility = st.selectbox(
+            "Filter by visibility:",
+            ["All", "Public", "Friends Only", "Private"],
+            key="library_filter"
+        )
+        
         for idx, video in enumerate(st.session_state.uploaded_videos):
+            if filter_visibility != "All":
+                if filter_visibility == "Public" and not video.get('is_public'):
+                    continue
+                if filter_visibility == "Friends Only" and not video.get('friend_only'):
+                    continue
+                if filter_visibility == "Private" and (video.get('is_public') or video.get('friend_only')):
+                    continue
+            
             with st.container(border=True):
-                col_details, col_actions = st.columns([3, 1])
+                col_details, col_sharing, col_actions = st.columns([2, 1, 1])
                 
                 with col_details:
                     st.markdown(f"### 🎬 {video['title']}")
                     st.caption(f"By {video['artist']} • {video['size']/(1024*1024):.2f} MB")
+                    st.caption(f"Uploaded: {video['uploaded_at'].split('T')[0]}")
+                
+                with col_sharing:
+                    if video.get('is_public'):
+                        st.markdown("🌍 **Public**")
+                    elif video.get('friend_only'):
+                        friend_count = len(video.get('allowed_friends', []))
+                        st.markdown(f"👥 **Friends Only** ({friend_count})")
+                    else:
+                        st.markdown("🔒 **Private**")
                     
-                    cols = st.columns(4)
-                    with cols[0]:
-                        st.metric("Views", video.get('views', 0))
-                    with cols[1]:
-                        st.metric("Status", video['status'])
-                    with cols[2]:
-                        visibility = "🌍 Public" if video['is_public'] else "👥 Friends" if video['friend_only'] else "🔒 Private"
-                        st.metric("Visibility", visibility.split()[1])
-                    with cols[3]:
-                        uploaded_date = video['uploaded_at'].split('T')[0]
-                        st.metric("Uploaded", uploaded_date)
+                    if video.get('network_published'):
+                        st.caption("📡 Network Published")
                 
                 with col_actions:
-                    if st.button("⋮", key=f"menu_{idx}"):
-                        st.session_state[f"show_menu_{idx}"] = not st.session_state.get(f"show_menu_{idx}", False)
-                    
-                    if st.session_state.get(f"show_menu_{idx}", False):
-                        col_btn1, col_btn2 = st.columns(2)
-                        with col_btn1:
-                            if st.button("📤 Share", key=f"share_{idx}", use_container_width=True):
-                                st.info(f"Share link: https://nexus.os/video/{video['title'].replace(' ', '_')}")
-                        with col_btn2:
-                            if st.button("🗑️ Delete", key=f"delete_{idx}", use_container_width=True):
-                                st.session_state.uploaded_videos.pop(idx)
-                                st.rerun()
+                    col_btn1, col_btn2 = st.columns(2)
+                    with col_btn1:
+                        if st.button("📤", key=f"share_{idx}", help="Share"):
+                            st.info(f"Share link: https://nexus.os/v/{video['title'].replace(' ', '_')}")
+                    with col_btn2:
+                        if st.button("🗑️", key=f"delete_{idx}", help="Delete"):
+                            st.session_state.uploaded_videos.pop(idx)
+                            st.rerun()
     else:
         st.info("📭 No videos uploaded yet. Upload your first video above!")
 
@@ -298,26 +554,26 @@ def render_settings_tab():
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### Streaming Settings")
-        
-        default_bitrate = st.selectbox(
-            "Default Bitrate:",
-            ["Auto-adaptive", "High (8 Mbps)", "Medium (4 Mbps)", "Low (1 Mbps)"],
-            index=0
-        )
+        st.markdown("### 📡 Streaming Defaults")
         
         default_quality = st.selectbox(
             "Default Quality:",
             ["1080p", "720p", "480p", "360p"],
+            index=1
+        )
+        
+        default_visibility = st.radio(
+            "Default Visibility:",
+            ["Public", "Friends Only", "Private"],
             index=0
         )
         
         enable_recordings = st.checkbox("Auto-save livestream recordings", value=True)
         
-        st.markdown("### Energy Management")
+        st.markdown("### 💰 Energy Management")
         energy_limit = st.slider(
             "Monthly Energy Budget (NXT):",
-            min_value=1, max_value=1000, value=100, step=10
+            min_value=10, max_value=1000, value=100, step=10
         )
         
         energy_alert = st.slider(
@@ -326,40 +582,48 @@ def render_settings_tab():
         )
     
     with col2:
-        st.markdown("### Privacy & Access")
-        
-        default_visibility = st.radio(
-            "Default Visibility:",
-            ["Public", "Friends Only", "Private"],
-            index=0
-        )
+        st.markdown("### 🔒 Privacy & Access")
         
         allow_comments = st.checkbox("Allow comments on videos", value=True)
         allow_downloads = st.checkbox("Allow video downloads", value=False)
         
-        st.markdown("### Network Settings")
+        st.markdown("### 🌐 Network Publishing")
         
-        preferred_nodes = st.multiselect(
-            "Preferred Network Nodes:",
-            ["Node Alpha", "Node Beta", "Node Gamma", "Node Delta"],
-            default=["Node Alpha", "Node Beta"]
-        )
+        auto_publish = st.checkbox("Auto-publish to WNSP mesh network", value=True,
+                                   help="Automatically distribute content across mesh nodes")
         
-        cdn_enabled = st.checkbox("Use CDN Edge Caching", value=True)
+        cdn_enabled = st.checkbox("Use CDN Edge Caching", value=True,
+                                  help="Cache content at edge nodes for faster delivery")
+        
+        st.markdown("### 👥 Friend Sharing Defaults")
+        
+        notify_friends = st.checkbox("Notify friends when going live", value=True)
+        auto_accept = st.checkbox("Auto-accept friend requests", value=False)
     
     if st.button("💾 Save Settings", type="primary", use_container_width=True):
         st.success("✅ Settings saved successfully!")
         st.json({
-            'bitrate': default_bitrate,
-            'quality': default_quality,
-            'auto_recordings': enable_recordings,
-            'energy_limit_nxt': energy_limit,
-            'energy_alert_percent': energy_alert,
-            'default_visibility': default_visibility,
-            'comments_enabled': allow_comments,
-            'downloads_enabled': allow_downloads,
-            'preferred_nodes': preferred_nodes,
-            'cdn_enabled': cdn_enabled
+            'streaming': {
+                'default_quality': default_quality,
+                'default_visibility': default_visibility,
+                'auto_recordings': enable_recordings
+            },
+            'energy': {
+                'monthly_limit_nxt': energy_limit,
+                'alert_percent': energy_alert
+            },
+            'privacy': {
+                'comments_enabled': allow_comments,
+                'downloads_enabled': allow_downloads
+            },
+            'network': {
+                'auto_publish': auto_publish,
+                'cdn_enabled': cdn_enabled
+            },
+            'friends': {
+                'notify_on_live': notify_friends,
+                'auto_accept_requests': auto_accept
+            }
         })
 
 

@@ -391,7 +391,7 @@ def main():
         
         /* Animated selectbox */
         .stSelectbox > div > div {
-            background: rgba(15, 52, 96, 0.6) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
             border: 2px solid rgba(102, 126, 234, 0.4) !important;
             border-radius: 10px !important;
             transition: all 0.3s ease !important;
@@ -400,6 +400,19 @@ def main():
         .stSelectbox > div > div:hover {
             border-color: rgba(102, 126, 234, 0.8) !important;
             box-shadow: 0 0 20px rgba(102, 126, 234, 0.3) !important;
+        }
+        
+        /* Selectbox text - DARK text on light background */
+        .stSelectbox > div > div > div,
+        .stSelectbox [data-baseweb="select"] span,
+        .stSelectbox [data-baseweb="select"] div {
+            color: #1B1B2F !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Selectbox arrow/icon */
+        .stSelectbox svg {
+            fill: #1B1B2F !important;
         }
         
         /* Light metric cards with spectrum border */
