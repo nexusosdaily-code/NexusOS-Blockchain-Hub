@@ -56,15 +56,31 @@ def get_wallet_data() -> Dict:
     """Get current wallet data with safe fallbacks"""
     wallet = st.session_state.get('nexus_wallet')
     
-    if wallet and wallet.is_unlocked():
-        balance = wallet.get_balance()
-        address = wallet.get_address()
-        return {
-            'balance': balance,
-            'address': address,
-            'is_unlocked': True,
-            'status': 'Active'
-        }
+    try:
+        if wallet:
+            address = None
+            balance = 0.0
+            
+            if hasattr(wallet, 'get_address'):
+                address = wallet.get_address()
+            elif hasattr(wallet, 'address'):
+                address = wallet.address
+            
+            if hasattr(wallet, 'get_balance'):
+                balance = wallet.get_balance()
+            elif hasattr(wallet, 'balance'):
+                balance = wallet.balance
+            
+            if address:
+                return {
+                    'balance': balance,
+                    'address': address,
+                    'is_unlocked': True,
+                    'status': 'Active'
+                }
+    except Exception:
+        pass
+    
     return {
         'balance': 0.0,
         'address': None,
