@@ -82,7 +82,7 @@ The WNSP SDK provides developers and enterprises with tools to build application
 | SLA guarantee | ✓ 99.9% uptime |
 | Training & consulting | ✓ |
 
-**Contact**: enterprise@nexusos.network
+**Contact**: nexusOSdaily@gmail.com
 
 ---
 
@@ -685,7 +685,7 @@ async def handle_aws_message(topic, payload):
 - Documentation Wiki: https://github.com/nexusosdaily-code/NexusOS/wiki
 
 ### Professional Tier
-- Email: support@nexusos.network
+- Email: nexusOSdaily@gmail.com
 - Response time: 48 hours
 - Private Slack channel
 
@@ -695,7 +695,7 @@ async def handle_aws_message(topic, payload):
 - On-site training available
 - Custom integration consulting
 
-**Contact**: enterprise@nexusos.network
+**Contact**: nexusOSdaily@gmail.com
 
 ---
 
@@ -713,7 +713,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 
 ### Commercial License
-Contact sales@nexusos.network for commercial licensing options.
+Contact nexusOSdaily@gmail.com for commercial licensing options.
 
 ---
 
