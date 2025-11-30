@@ -1,6 +1,15 @@
 """
-Regenerative Circular Economy - NexusOS Civilization OS
+Regenerative Circular Economy - NexusOS Civilization OS - Physics Substrate Integrated
+=======================================================================================
+
 Buy → Consume → Dispose → Return → Recycle → Liquidity → BHLS Floor
+
+Full physics substrate compliance for circular economy:
+- E=hf energy economics for recycling credit valuation
+- Λ=hf/c² Lambda Boson mass tracking on all material recovery
+- Orbital burns → TransitionReserveLedger for recycling payouts
+- SDK fee routing (0.5%) on all recycling credit transactions
+- BHLS RECYCLING allocation integration (25 NXT/month per citizen)
 
 This module implements the waste-to-liquidity cycle where recycling
 generates economic value that feeds back into the BHLS floor system.
@@ -11,6 +20,12 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from datetime import datetime
 from enum import Enum
+
+from physics_economics_adapter import (
+    get_physics_adapter,
+    EconomicModule,
+    SubstrateTransaction
+)
 
 class MaterialType(Enum):
     """Types of recyclable materials"""
@@ -65,12 +80,14 @@ class Product:
 
 class RegenerativeEconomy:
     """
-    Manages the circular economy loop
-    Tracks consumption, waste, recycling, and liquidity generation
+    Manages the circular economy loop with physics substrate integration.
+    Tracks consumption, waste, recycling, and liquidity generation.
+    All recycling credits route through E=hf → TransitionReserveLedger → BHLS.
     """
     
+    RECYCLING_WAVELENGTH_NM = 520.0
+    
     def __init__(self):
-        # Base recycling rates (NXT per kg)
         self.recycling_rates = {
             MaterialType.PLASTIC: 2.5,
             MaterialType.METAL: 5.0,
@@ -82,22 +99,24 @@ class RegenerativeEconomy:
             MaterialType.BATTERIES: 20.0
         }
         
-        # Economy tracking
         self.products_sold: List[Product] = []
         self.recycling_submissions: List[RecyclableItem] = []
         self.citizen_recycling_credits: Dict[str, float] = {}
         
-        # Liquidity pools
-        self.recycling_liquidity_pool: float = 100_000.0  # Initial fund
+        self.recycling_liquidity_pool: float = 100_000.0
         self.bhls_floor_transfer: float = 0.0
         self.supply_chain_fund: float = 0.0
         
-        # Statistics
         self.total_products_purchased: int = 0
         self.total_waste_generated_kg: float = 0.0
         self.total_recycled_kg: float = 0.0
         self.recycling_rate_percent: float = 0.0
-        self.entropy_reduction: float = 0.0  # Waste prevented from landfill
+        self.entropy_reduction: float = 0.0
+        
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
     
     def purchase_product(self, product: Product, citizen_id: str):
         """Citizen purchases a product - enters the economy"""
@@ -124,37 +143,52 @@ class RegenerativeEconomy:
     def recycle_materials(self, citizen_id: str, materials: List[RecyclableItem]) -> float:
         """
         Citizen submits materials for recycling
-        Returns NXT tokens credited to citizen
+        Returns NXT tokens credited to citizen (0 if substrate fails)
         """
-        total_credits = 0.0
-        total_weight = 0.0
+        pending_credits = 0.0
+        pending_weight = 0.0
+        pending_submissions = []
         
         for item in materials:
-            # Calculate value
             value = item.calculate_value(self.recycling_rates)
-            total_credits += value
-            total_weight += item.weight_kg
+            pending_credits += value
+            pending_weight += item.weight_kg
+            pending_submissions.append(item)
+        
+        recycle_id = f"RECYCLE-{citizen_id[:8]}-{int(datetime.now().timestamp())}"
+        
+        substrate_tx = self._physics_adapter.process_orbital_transfer(
+            source_address="RECYCLING_POOL",
+            recipient_address=citizen_id,
+            amount_nxt=pending_credits,
+            wavelength_nm=self.RECYCLING_WAVELENGTH_NM,
+            module=EconomicModule.SERVICE_POOLS,
+            transfer_id=recycle_id,
+            bhls_category="RECYCLING"
+        )
+        
+        if substrate_tx.success and substrate_tx.settlement_success:
+            self.substrate_transactions.append(substrate_tx)
+            self.total_energy_joules += substrate_tx.energy_joules
+            self.total_lambda_mass_kg += substrate_tx.lambda_boson_kg
             
-            # Record submission
-            self.recycling_submissions.append(item)
+            for item in pending_submissions:
+                self.recycling_submissions.append(item)
+            
+            if citizen_id not in self.citizen_recycling_credits:
+                self.citizen_recycling_credits[citizen_id] = 0.0
+            self.citizen_recycling_credits[citizen_id] += pending_credits
+            
+            self.total_recycled_kg += pending_weight
+            self.entropy_reduction += pending_weight
+            self.recycling_liquidity_pool -= pending_credits
+            
+            if self.total_waste_generated_kg > 0:
+                self.recycling_rate_percent = (self.total_recycled_kg / self.total_waste_generated_kg) * 100
+            
+            return pending_credits
         
-        # Update citizen's recycling credits
-        if citizen_id not in self.citizen_recycling_credits:
-            self.citizen_recycling_credits[citizen_id] = 0.0
-        self.citizen_recycling_credits[citizen_id] += total_credits
-        
-        # Update statistics
-        self.total_recycled_kg += total_weight
-        self.entropy_reduction += total_weight  # Waste diverted from landfill
-        
-        # Update recycling rate
-        if self.total_waste_generated_kg > 0:
-            self.recycling_rate_percent = (self.total_recycled_kg / self.total_waste_generated_kg) * 100
-        
-        # Deduct from recycling pool (paid to citizen)
-        self.recycling_liquidity_pool -= total_credits
-        
-        return total_credits
+        return 0.0
     
     def distribute_to_floor(self, percentage: float = 0.30):
         """

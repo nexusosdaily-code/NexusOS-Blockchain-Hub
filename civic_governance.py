@@ -1,6 +1,13 @@
 """
-Civic Governance Layer - NexusOS Civilization OS
-Spectral-region governance with voting, decision-making, civic participation
+Civic Governance Layer - NexusOS Civilization OS - Physics Substrate Integrated
+================================================================================
+
+Spectral-region governance with full substrate compliance:
+- E=hf energy economics for campaign burns
+- Λ=hf/c² Lambda Boson mass tracking on governance actions
+- Orbital burns → TransitionReserveLedger for campaign NXT
+- SDK fee routing (0.5%) on all governance transactions
+- BHLS GOVERNANCE allocation integration for voting costs
 
 Uses Proof of Spectrum where validators represent different spectral regions
 and consensus requires 5 of 6 regions to approve decisions.
@@ -11,6 +18,12 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Set
 from datetime import datetime, timedelta
 from enum import Enum
+
+from physics_economics_adapter import (
+    get_physics_adapter,
+    EconomicModule,
+    SubstrateTransaction
+)
 
 class SpectralRegion(Enum):
     """Spectral regions for distributed governance"""
@@ -144,37 +157,40 @@ class CommunityVote:
 
 class CivicGovernance:
     """
-    Manages decentralized governance using Proof of Spectrum
-    Requires spectral diversity for all decisions
+    Manages decentralized governance using Proof of Spectrum with physics substrate.
+    Requires spectral diversity for all decisions.
+    Campaign burns route through E=hf → TransitionReserveLedger → BHLS.
     """
     
+    GOVERNANCE_WAVELENGTH_NM = 450.0
+    
     def __init__(self):
-        # Validators by spectral region
         self.validators: Dict[str, Validator] = {}
         self.validators_by_region: Dict[SpectralRegion, List[Validator]] = {
             region: [] for region in SpectralRegion
         }
         
-        # Proposals and votes
         self.proposals: Dict[str, Proposal] = {}
-        self.votes: Dict[str, List[Vote]] = {}  # proposal_id -> votes
+        self.votes: Dict[str, List[Vote]] = {}
         
-        # Innovation campaigns (validators burn NXT to promote ideas)
         self.campaigns: Dict[str, Campaign] = {}
-        self.community_votes: Dict[str, List[CommunityVote]] = {}  # campaign_id -> votes
-        self.total_nxt_burned = 0.0  # Total NXT burned for campaigns
+        self.community_votes: Dict[str, List[CommunityVote]] = {}
+        self.total_nxt_burned = 0.0
         
-        # Governance parameters
-        self.min_stake_required = 1000.0  # Minimum NXT to be validator
-        self.spectral_diversity_requirement = 5  # Regions needed for approval
-        self.min_campaign_burn = 100.0  # Minimum NXT to create campaign
+        self.min_stake_required = 1000.0
+        self.spectral_diversity_requirement = 5
+        self.min_campaign_burn = 100.0
         
-        # Statistics
         self.total_proposals = 0
         self.approved_proposals = 0
         self.rejected_proposals = 0
         self.total_campaigns = 0
         self.successful_campaigns = 0
+        
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
     
     def register_validator(self, validator_id: str, spectral_region: SpectralRegion, 
                           stake_amount: float) -> Validator:

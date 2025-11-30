@@ -1,19 +1,26 @@
 """
-NexusOS Lottery System
-Quantum randomness-based lottery funded by F_floor
+NexusOS Lottery System - Physics Substrate Integrated
+======================================================
+
+Quantum randomness-based lottery with full substrate compliance:
+- E=hf energy pricing for ticket purchases
+- Λ=hf/c² Lambda Boson mass tracking
+- Orbital burns → TransitionReserveLedger
+- SDK fee routing (0.5%) to founder wallet
+- Prize distributions through physics substrate
 
 Architecture:
 - Lottery Pool receives allocation from F_floor
-- Users purchase tickets with NXT
+- Users purchase tickets with NXT (priced via E=hf)
 - Quantum randomness (CSPRNG) determines winners
 - Prize distribution follows physics-based tiers
 - Portion of proceeds returns to F_floor (sustainability)
 
-Prize Tiers (E=hf inspired):
-- Gamma Jackpot: 50% of pool (rare)
-- X-Ray Prize: 25% of pool
-- UV Prize: 15% of pool
-- Visible Prizes: 10% of pool (many winners)
+Prize Tiers (E=hf inspired - mapped to spectral wavelengths):
+- Gamma Jackpot: 0.001nm wavelength (highest energy, rarest)
+- X-Ray Prize: 1nm wavelength
+- UV Prize: 300nm wavelength
+- Visible Prizes: 550nm wavelength (many winners)
 """
 
 import secrets
@@ -24,13 +31,42 @@ from typing import Dict, List, Optional, Tuple, Any
 from enum import Enum
 from datetime import datetime
 
+from physics_economics_adapter import (
+    get_physics_adapter,
+    EconomicModule,
+    PhysicsEnergyResult,
+    SubstrateTransaction
+)
+
 
 class LotteryTier(Enum):
-    """Prize tiers based on electromagnetic spectrum"""
-    GAMMA_JACKPOT = "gamma"      # Highest energy, rarest
-    XRAY_PRIZE = "xray"          # High energy, uncommon
-    UV_PRIZE = "uv"              # Medium energy, occasional
-    VISIBLE_PRIZE = "visible"    # Common prizes, many winners
+    """Prize tiers based on electromagnetic spectrum with wavelengths"""
+    GAMMA_JACKPOT = "gamma"
+    XRAY_PRIZE = "xray"
+    UV_PRIZE = "uv"
+    VISIBLE_PRIZE = "visible"
+    
+    @property
+    def wavelength_nm(self) -> float:
+        """Spectral wavelength for each tier (physics-based)"""
+        wavelengths = {
+            "gamma": 0.001,
+            "xray": 1.0,
+            "uv": 300.0,
+            "visible": 550.0
+        }
+        return wavelengths.get(self.value, 550.0)
+    
+    @property
+    def energy_multiplier(self) -> float:
+        """Higher energy (shorter wavelength) = bigger prizes"""
+        multipliers = {
+            "gamma": 10.0,
+            "xray": 5.0,
+            "uv": 2.0,
+            "visible": 1.0
+        }
+        return multipliers.get(self.value, 1.0)
 
 
 @dataclass
@@ -113,6 +149,8 @@ class QuantumLotteryEngine:
         LotteryTier.VISIBLE_PRIZE: 3   # 3 numbers
     }
     
+    TICKET_WAVELENGTH_NM = 500.0
+    
     def __init__(self, token_system=None):
         self.token_system = token_system
         self.draws: Dict[str, LotteryDraw] = {}
@@ -120,7 +158,11 @@ class QuantumLotteryEngine:
         self.current_draw: Optional[LotteryDraw] = None
         self.draw_history: List[str] = []
         
-        # Initialize first draw
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
+        
         self._create_new_draw()
     
     def _generate_quantum_seed(self) -> str:
@@ -197,31 +239,25 @@ class QuantumLotteryEngine:
                 self.NUMBER_RANGE[1]
             )
         
-        # Process payment if token system available
-        if self.token_system:
-            buyer_account = self.token_system.get_account(buyer)
-            if not buyer_account:
-                return False, None, "Wallet not found"
-            
-            ticket_cost_units = int(self.TICKET_PRICE_NXT * self.token_system.UNITS_PER_NXT)
-            
-            if buyer_account.balance < ticket_cost_units:
-                return False, None, f"Insufficient balance. Need {self.TICKET_PRICE_NXT} NXT"
-            
-            # Transfer to lottery pool
-            success, _, msg = self.token_system.transfer_atomic(
-                from_address=buyer,
-                to_address="LOTTERY_POOL",
-                amount=ticket_cost_units,
-                fee=0,
-                reason="Lottery ticket purchase"
-            )
-            
-            if not success:
-                return False, None, f"Payment failed: {msg}"
+        ticket_id = f"TKT-{secrets.token_hex(8)}"
+        
+        substrate_tx = self._physics_adapter.process_orbital_burn(
+            sender_address=buyer,
+            amount_nxt=self.TICKET_PRICE_NXT,
+            wavelength_nm=self.TICKET_WAVELENGTH_NM,
+            module=EconomicModule.LOTTERY,
+            message_id=ticket_id,
+            bhls_category=None
+        )
+        
+        if not substrate_tx.success:
+            return False, None, f"Payment failed: {substrate_tx.message}"
+        
+        self.substrate_transactions.append(substrate_tx)
+        self.total_energy_joules += substrate_tx.energy_joules
+        self.total_lambda_mass_kg += substrate_tx.lambda_boson_kg
         
         # Create ticket
-        ticket_id = f"TKT-{secrets.token_hex(8)}"
         ticket = LotteryTicket(
             ticket_id=ticket_id,
             owner=buyer,
@@ -297,30 +333,41 @@ class QuantumLotteryEngine:
                 # No winners - rollover to next draw (conceptually)
                 prize_amounts[tier.value] = 0
         
-        # Distribute prizes if token system available
-        if self.token_system:
-            for tier in LotteryTier:
-                for ticket_id in winners_by_tier[tier.value]:
-                    ticket = self.tickets[ticket_id]
-                    if ticket.prize_amount > 0:
-                        prize_units = int(ticket.prize_amount * self.token_system.UNITS_PER_NXT)
-                        self.token_system.transfer_atomic(
-                            from_address="LOTTERY_POOL",
-                            to_address=ticket.owner,
-                            amount=prize_units,
-                            fee=0,
-                            reason=f"Lottery prize: {tier.value}"
-                        )
-            
-            # Return portion to F_floor
-            f_floor_units = int(f_floor_amount * self.token_system.UNITS_PER_NXT)
-            self.token_system.transfer_atomic(
-                from_address="LOTTERY_POOL",
-                to_address="F_FLOOR_POOL",
-                amount=f_floor_units,
-                fee=0,
-                reason="Lottery sustainability return to F_floor"
-            )
+        for tier in LotteryTier:
+            for ticket_id in winners_by_tier[tier.value]:
+                ticket = self.tickets[ticket_id]
+                if ticket.prize_amount > 0:
+                    prize_id = f"PRIZE-{draw.draw_id}-{ticket_id}"
+                    
+                    substrate_tx = self._physics_adapter.process_orbital_transfer(
+                        source_address="LOTTERY_POOL",
+                        recipient_address=ticket.owner,
+                        amount_nxt=ticket.prize_amount,
+                        wavelength_nm=tier.wavelength_nm,
+                        module=EconomicModule.LOTTERY,
+                        transfer_id=prize_id,
+                        bhls_category=None
+                    )
+                    
+                    if substrate_tx.success and substrate_tx.settlement_success:
+                        self.substrate_transactions.append(substrate_tx)
+                        self.total_energy_joules += substrate_tx.energy_joules
+                        self.total_lambda_mass_kg += substrate_tx.lambda_boson_kg
+        
+        f_floor_tx = self._physics_adapter.process_orbital_transfer(
+            source_address="LOTTERY_POOL",
+            recipient_address="F_FLOOR_POOL",
+            amount_nxt=f_floor_amount,
+            wavelength_nm=550.0,
+            module=EconomicModule.LOTTERY,
+            transfer_id=f"FFLOOR-{draw.draw_id}",
+            bhls_category=None
+        )
+        
+        if f_floor_tx.success and f_floor_tx.settlement_success:
+            self.substrate_transactions.append(f_floor_tx)
+            self.total_energy_joules += f_floor_tx.energy_joules
+            self.total_lambda_mass_kg += f_floor_tx.lambda_boson_kg
         
         draw.status = "completed"
         

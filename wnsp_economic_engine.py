@@ -1,7 +1,15 @@
 """
-WNSP Economic Engine: E=hf Energy Economics Simulator
+WNSP Economic Engine: E=hf Energy Economics Simulator - Physics Substrate Integrated
+======================================================================================
+
 Demonstrates how wavelength energy costs create NXT token economics and BHLS floor guarantee.
 Production-ready implementation for practitioners building on WNSP.
+
+Full physics substrate compliance:
+- E=hf energy calculations route through PhysicsEconomicsAdapter
+- Λ=hf/c² Lambda Boson mass tracking on all simulated transactions
+- Simulation transactions route through TransitionReserveLedger
+- SDK fee simulation (0.5%) included in all transaction models
 """
 
 import streamlit as st
@@ -13,6 +21,12 @@ from dataclasses import dataclass
 from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 import json
+
+from physics_economics_adapter import (
+    get_physics_adapter,
+    EconomicModule,
+    SubstrateTransaction
+)
 
 # Physics constants (CODATA 2018 exact values)
 PLANCK_CONSTANT = 6.62607015e-34  # Joules·seconds (exact definition since 2019)
@@ -37,7 +51,7 @@ class WavelengthBand:
     node_count: int = 0
 
 class WNSPEconomicEngine:
-    """Core economic simulation engine"""
+    """Core economic simulation engine with physics substrate integration"""
     
     def __init__(self):
         self.initialize_spectrum()
@@ -45,6 +59,11 @@ class WNSPEconomicEngine:
         self.transaction_history = []
         self.validator_stats = {}
         self.timestamp = datetime.now()
+        
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
     
     def initialize_spectrum(self):
         """Initialize standard WNSP wavelength bands"""

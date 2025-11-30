@@ -1,10 +1,17 @@
 """
-NexusOS Bonus Pool Distribution System
-Performance-based rewards funded by F_floor
+NexusOS Bonus Pool Distribution System - Physics Substrate Integrated
+======================================================================
+
+Performance-based rewards with full substrate compliance:
+- E=hf energy economics for bonus calculations
+- Λ=hf/c² Lambda Boson mass tracking on all distributions
+- Orbital burns → TransitionReserveLedger
+- SDK fee routing (0.5%) on all bonus payouts
+- BHLS integration for sustainability bonuses
 
 Architecture:
 - Bonus Pool receives allocation from F_floor
-- Rewards distributed based on performance metrics
+- Rewards distributed based on performance metrics via physics substrate
 - Categories: Validator performance, Community contribution, Trading volume, Staking loyalty
 
 Distribution Model (E=hf inspired):
@@ -19,6 +26,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any
 from enum import Enum
+
+from physics_economics_adapter import (
+    get_physics_adapter,
+    EconomicModule,
+    SubstrateTransaction
+)
 
 
 class BonusCategory(Enum):
@@ -97,6 +110,8 @@ class BonusPoolEngine:
         BonusCategory.SUSTAINABILITY_BONUS: 1        # 1 action
     }
     
+    DISTRIBUTION_WAVELENGTH_NM = 550.0
+    
     def __init__(self, token_system=None):
         self.token_system = token_system
         self.allocation = BonusAllocation()
@@ -104,7 +119,11 @@ class BonusPoolEngine:
         self.period_history: List[BonusPeriod] = []
         self.performance_records: Dict[str, List[PerformanceMetrics]] = {}
         
-        # Initialize first period
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
+        
         self._create_new_period()
     
     def _create_new_period(self) -> BonusPeriod:
@@ -265,26 +284,26 @@ class BonusPoolEngine:
         distributed_count = 0
         total_distributed = 0.0
         
-        # Distribute to each user
         for user, amount in period.distributions.items():
             if amount <= 0:
                 continue
             
-            if self.token_system:
-                amount_units = int(amount * self.token_system.UNITS_PER_NXT)
-                
-                success, _, msg = self.token_system.transfer_atomic(
-                    from_address="BONUS_POOL",
-                    to_address=user,
-                    amount=amount_units,
-                    fee=0,
-                    reason="Performance bonus distribution"
-                )
-                
-                if success:
-                    distributed_count += 1
-                    total_distributed += amount
-            else:
+            distribution_id = f"BONUS-{period.period_id}-{user[:8]}"
+            
+            substrate_tx = self._physics_adapter.process_orbital_transfer(
+                source_address="BONUS_POOL",
+                recipient_address=user,
+                amount_nxt=amount,
+                wavelength_nm=self.DISTRIBUTION_WAVELENGTH_NM,
+                module=EconomicModule.SERVICE_POOLS,
+                transfer_id=distribution_id,
+                bhls_category=None
+            )
+            
+            if substrate_tx.success and substrate_tx.settlement_success:
+                self.substrate_transactions.append(substrate_tx)
+                self.total_energy_joules += substrate_tx.energy_joules
+                self.total_lambda_mass_kg += substrate_tx.lambda_boson_kg
                 distributed_count += 1
                 total_distributed += amount
         

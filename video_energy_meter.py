@@ -127,9 +127,9 @@ class VideoEnergyMeter:
     Lambda Boson mass-equivalent: Λ = hf/c²
     
     INTEGRATION POINTS:
+    - PhysicsEconomicsAdapter: Unified substrate layer for all transactions
     - BHLSFloorSystem: Uses CONNECTIVITY allocation for video
     - MessagingFlowController: Records burns to TransitionReserveLedger
-    - WalletPaymentAdapter: Handles settlement and rollback
     - NativeTokenSystem: Routes SDK fees to founder wallet
     """
     
@@ -145,6 +145,12 @@ class VideoEnergyMeter:
         self._flow_controller = None
         self._token_system = None
         self._payment_adapter = None
+        
+        try:
+            from physics_economics_adapter import get_physics_adapter
+            self._physics_adapter = get_physics_adapter()
+        except ImportError:
+            self._physics_adapter = None
     
     def _get_bhls_system(self):
         """Lazy-load BHLS Floor System"""

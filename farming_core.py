@@ -1,13 +1,19 @@
 """
-NexusOS Farming Core Module
-Liquidity farming system with physics-based yield calculation
-Uses E=hf energy economics for reward distribution
+NexusOS Farming Core Module - Physics Substrate Integrated
+============================================================
+
+Liquidity farming with full substrate compliance:
+- E=hf energy economics for reward distribution
+- Λ=hf/c² Lambda Boson mass tracking on all rewards
+- Orbital burns → TransitionReserveLedger
+- SDK fee routing (0.5%) on reward claims
+- Physics-based APY: Higher frequency pools = higher energy rewards
 
 Farming Flow:
 1. User provides liquidity to DEX pool → receives LP tokens
 2. User stakes LP tokens in farming pool → earns NXT rewards
 3. Rewards calculated based on stake share and pool multiplier
-4. Physics-based APY: Higher frequency pools = higher energy rewards
+4. Reward claims route through physics substrate
 """
 
 import time
@@ -15,6 +21,12 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import math
+
+from physics_economics_adapter import (
+    get_physics_adapter,
+    EconomicModule,
+    SubstrateTransaction
+)
 
 
 class FarmTier(Enum):
@@ -147,7 +159,17 @@ class FarmPool:
         # Cap at reasonable values
         return max(10, min(500, final_apy))
     
-    def stake(self, user_address: str, lp_amount: float, lp_value_nxt: float) -> Tuple[bool, str]:
+    def get_pending_rewards_for_stake(self, user_address: str) -> Tuple[float, float]:
+        """
+        Get pending rewards before staking (for substrate settlement).
+        Returns:
+            (pending_rewards, snapshot_time)
+        """
+        if user_address not in self.stakers:
+            return 0.0, time.time()
+        return self.calculate_pending_rewards(user_address), time.time()
+    
+    def stake(self, user_address: str, lp_amount: float, lp_value_nxt: float, rewards_already_settled: float = 0.0, snapshot_time: float = 0.0) -> Tuple[bool, str]:
         """
         Stake LP tokens in the farm
         
@@ -155,6 +177,8 @@ class FarmPool:
             user_address: User's wallet address
             lp_amount: Amount of LP tokens to stake
             lp_value_nxt: Value of LP tokens in NXT (for TVL calculation)
+            rewards_already_settled: Rewards already processed through substrate (for existing stakers)
+            snapshot_time: Snapshot time for reward claim (for existing stakers)
         
         Returns:
             (success, message)
@@ -165,58 +189,77 @@ class FarmPool:
         if lp_amount <= 0:
             return False, "Invalid stake amount"
         
-        # Update or create position
         if user_address in self.stakers:
-            # Claim pending rewards first
-            self._claim_pending_rewards(user_address)
-            # Add to existing stake
+            if snapshot_time > 0:
+                self.stakers[user_address].last_reward_claim = snapshot_time
+                self.stakers[user_address].total_rewards_claimed += rewards_already_settled
+                self.total_rewards_distributed += rewards_already_settled
             self.stakers[user_address].staked_lp += lp_amount
         else:
-            # Create new position
             self.stakers[user_address] = FarmPosition(
                 user_address=user_address,
                 pool_id=self.pool_id,
                 staked_lp=lp_amount
             )
         
-        # Update pool totals
         self.total_staked_lp += lp_amount
         self.total_value_locked += lp_value_nxt
         
         return True, f"Staked {lp_amount:.4f} LP tokens in {self.pool_id} farm"
     
-    def unstake(self, user_address: str, lp_amount: float) -> Tuple[bool, float, str]:
+    def preview_unstake(self, user_address: str, lp_amount: float) -> Tuple[bool, float, float, float, str]:
         """
-        Unstake LP tokens from farm
-        
+        Preview unstake without modifying state.
         Returns:
-            (success, pending_rewards, message)
+            (can_unstake, pending_rewards, value_to_remove, snapshot_time, message)
         """
         if user_address not in self.stakers:
-            return False, 0.0, "No stake found"
+            return False, 0.0, 0.0, 0.0, "No stake found"
         
         position = self.stakers[user_address]
         if position.staked_lp < lp_amount:
-            return False, 0.0, f"Insufficient stake: have {position.staked_lp:.4f}, requested {lp_amount:.4f}"
+            return False, 0.0, 0.0, 0.0, f"Insufficient stake: have {position.staked_lp:.4f}, requested {lp_amount:.4f}"
         
-        # Calculate and store pending rewards
         pending_rewards = self.calculate_pending_rewards(user_address)
+        value_to_remove = (lp_amount / self.total_staked_lp) * self.total_value_locked if self.total_staked_lp > 0 else 0
+        snapshot_time = time.time()
         
-        # Update position
+        return True, pending_rewards, value_to_remove, snapshot_time, f"Ready to unstake {lp_amount:.4f} LP + {pending_rewards:.4f} NXT"
+    
+    def commit_unstake(self, user_address: str, lp_amount: float, value_to_remove: float, pending_rewards: float, snapshot_time: float) -> Tuple[bool, str]:
+        """
+        Commit unstake using pre-calculated snapshot values.
+        Only call this after process_orbital_transfer succeeds.
+        """
+        if user_address not in self.stakers:
+            return False, "No stake found"
+        
+        position = self.stakers[user_address]
+        if position.staked_lp < lp_amount:
+            return False, f"Insufficient stake"
+        
         position.staked_lp -= lp_amount
+        position.last_reward_claim = snapshot_time
+        position.total_rewards_claimed += pending_rewards
         
-        # Calculate value being removed (proportional)
-        value_removed = (lp_amount / self.total_staked_lp) * self.total_value_locked if self.total_staked_lp > 0 else 0
-        
-        # Update pool totals
         self.total_staked_lp -= lp_amount
-        self.total_value_locked = max(0, self.total_value_locked - value_removed)
+        self.total_value_locked = max(0, self.total_value_locked - value_to_remove)
+        self.total_rewards_distributed += pending_rewards
         
-        # Remove position if fully unstaked
         if position.staked_lp <= 0:
             del self.stakers[user_address]
         
-        return True, pending_rewards, f"Unstaked {lp_amount:.4f} LP tokens + {pending_rewards:.4f} NXT rewards"
+        return True, f"Unstaked {lp_amount:.4f} LP tokens"
+    
+    def unstake(self, user_address: str, lp_amount: float) -> Tuple[bool, float, str]:
+        """
+        DEPRECATED: Use preview_unstake + commit_unstake for transactional semantics.
+        Left for backwards compatibility.
+        """
+        success, rewards, value_to_remove, snapshot_time, msg = self.preview_unstake(user_address, lp_amount)
+        if success:
+            self.commit_unstake(user_address, lp_amount, value_to_remove, rewards, snapshot_time)
+        return success, rewards, msg
     
     def calculate_pending_rewards(self, user_address: str) -> float:
         """Calculate pending rewards for a user"""
@@ -245,8 +288,38 @@ class FarmPool:
         
         return rewards
     
+    def preview_claim_rewards(self, user_address: str) -> Tuple[bool, float, float, str]:
+        """
+        Preview reward claim without modifying state.
+        Returns:
+            (can_claim, pending_rewards, claim_timestamp, message)
+        """
+        if user_address not in self.stakers:
+            return False, 0.0, 0.0, "No stake found"
+        
+        rewards = self.calculate_pending_rewards(user_address)
+        if rewards <= 0:
+            return False, 0.0, 0.0, "No rewards to claim"
+        
+        snapshot_time = time.time()
+        return True, rewards, snapshot_time, f"Ready to claim {rewards:.4f} NXT"
+    
+    def commit_claim_rewards(self, user_address: str, rewards: float, snapshot_time: float) -> Tuple[bool, str]:
+        """
+        Commit reward claim using pre-calculated snapshot values.
+        Only call this after process_orbital_transfer succeeds.
+        """
+        if user_address not in self.stakers:
+            return False, "No stake found"
+        
+        self.stakers[user_address].last_reward_claim = snapshot_time
+        self.stakers[user_address].total_rewards_claimed += rewards
+        self.total_rewards_distributed += rewards
+        
+        return True, f"Claimed {rewards:.4f} NXT"
+    
     def _claim_pending_rewards(self, user_address: str) -> float:
-        """Internal: Claim and reset pending rewards"""
+        """DEPRECATED: Internal claim method"""
         rewards = self.calculate_pending_rewards(user_address)
         if user_address in self.stakers:
             self.stakers[user_address].last_reward_claim = time.time()
@@ -255,16 +328,11 @@ class FarmPool:
         return rewards
     
     def claim_rewards(self, user_address: str) -> Tuple[bool, float, str]:
-        """Claim pending rewards"""
-        if user_address not in self.stakers:
-            return False, 0.0, "No stake found"
-        
-        rewards = self._claim_pending_rewards(user_address)
-        
-        if rewards <= 0:
-            return False, 0.0, "No rewards to claim"
-        
-        return True, rewards, f"Claimed {rewards:.4f} NXT farming rewards"
+        """
+        DEPRECATED: DISABLED - Must use preview_claim_rewards + commit_claim_rewards
+        for physics substrate compliance.
+        """
+        return False, 0.0, "Legacy claim_rewards disabled - use transactional preview/commit flow via FarmingEngine"
     
     def get_user_info(self, user_address: str) -> Optional[dict]:
         """Get user's farming info for this pool"""
@@ -305,13 +373,17 @@ class FarmPool:
 
 class FarmingEngine:
     """
-    Main farming engine managing all farm pools
+    Main farming engine managing all farm pools with physics substrate integration.
     
     Physics Foundation:
     - Energy distribution follows E=hf (Planck's equation)
     - Higher TVL pools operate at higher "frequency" → more energy rewards
+    - All reward claims route through TransitionReserveLedger
+    - SDK fees (0.5%) on all reward distributions
     - Creates natural incentive for liquidity concentration
     """
+    
+    REWARD_WAVELENGTH_NM = 600.0
     
     def __init__(self, dex_engine=None, nxt_adapter=None):
         """
@@ -324,15 +396,15 @@ class FarmingEngine:
         self.dex_engine = dex_engine
         self.nxt_adapter = nxt_adapter
         
-        # Farm pools indexed by pool_id
         self.farms: Dict[str, FarmPool] = {}
-        
-        # Reward source account
         self.reward_source = "FARMING_REWARDS"
-        
-        # Global stats
         self.total_rewards_distributed = 0.0
         self.created_at = time.time()
+        
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
     
     def set_dex_engine(self, dex_engine):
         """Set DEX engine reference"""
@@ -433,11 +505,16 @@ class FarmingEngine:
             # Calculate LP value for TVL before locking
             lp_value = self._calculate_lp_value(pool, lp_amount)
         
-        # FIRST: Try to stake in farm (record position) - do this BEFORE moving tokens
-        success, message = farm.stake(user_address, lp_amount, lp_value)
+        pending_rewards, snapshot_time = farm.get_pending_rewards_for_stake(user_address)
+        
+        if pending_rewards > 0:
+            if not self._distribute_rewards(user_address, pending_rewards):
+                return False, "Pending reward distribution failed - stake blocked"
+            self.total_rewards_distributed += pending_rewards
+        
+        success, message = farm.stake(user_address, lp_amount, lp_value, pending_rewards, snapshot_time)
         
         if not success:
-            # Staking failed - don't touch LP balances
             return False, message
         
         # THEN: LOCK LP TOKENS only after stake succeeds
@@ -462,27 +539,32 @@ class FarmingEngine:
             return False, 0.0, f"Farm not found for {pool_id}"
         
         farm = self.farms[pool_id]
-        success, rewards, message = farm.unstake(user_address, lp_amount)
         
-        if success:
-            # Farm escrow account for this pool
-            farm_escrow = f"FARM_ESCROW_{pool_id}"
-            
-            # UNLOCK LP TOKENS: Transfer from farm escrow back to user
-            if self.dex_engine and pool_id in self.dex_engine.pools:
-                pool = self.dex_engine.pools[pool_id]
-                escrow_balance = pool.lp_balances.get(farm_escrow, 0)
-                
-                if escrow_balance >= lp_amount:
-                    pool.lp_balances[farm_escrow] = escrow_balance - lp_amount
-                    pool.lp_balances[user_address] = pool.lp_balances.get(user_address, 0) + lp_amount
-            
-            # Transfer rewards to user
-            if rewards > 0:
-                self._distribute_rewards(user_address, rewards)
-                self.total_rewards_distributed += rewards
+        can_unstake, pending_rewards, value_to_remove, snapshot_time, preview_msg = farm.preview_unstake(user_address, lp_amount)
+        if not can_unstake:
+            return False, 0.0, preview_msg
         
-        return success, rewards, message
+        if pending_rewards > 0:
+            if not self._distribute_rewards(user_address, pending_rewards):
+                return False, 0.0, "Reward distribution failed through physics substrate - unstake blocked"
+        
+        success, commit_msg = farm.commit_unstake(user_address, lp_amount, value_to_remove, pending_rewards, snapshot_time)
+        if not success:
+            return False, 0.0, commit_msg
+        
+        self.total_rewards_distributed += pending_rewards
+        
+        farm_escrow = f"FARM_ESCROW_{pool_id}"
+        
+        if self.dex_engine and pool_id in self.dex_engine.pools:
+            pool = self.dex_engine.pools[pool_id]
+            escrow_balance = pool.lp_balances.get(farm_escrow, 0)
+            
+            if escrow_balance >= lp_amount:
+                pool.lp_balances[farm_escrow] = escrow_balance - lp_amount
+                pool.lp_balances[user_address] = pool.lp_balances.get(user_address, 0) + lp_amount
+        
+        return True, pending_rewards, f"Unstaked {lp_amount:.4f} LP + {pending_rewards:.4f} NXT rewards"
     
     def claim_rewards(self, user_address: str, pool_id: str) -> Tuple[bool, float, str]:
         """Claim farming rewards from a specific pool"""
@@ -490,38 +572,75 @@ class FarmingEngine:
             return False, 0.0, f"Farm not found for {pool_id}"
         
         farm = self.farms[pool_id]
-        success, rewards, message = farm.claim_rewards(user_address)
+        can_claim, pending_rewards, snapshot_time, preview_msg = farm.preview_claim_rewards(user_address)
         
-        if success and rewards > 0:
-            self._distribute_rewards(user_address, rewards)
-            self.total_rewards_distributed += rewards
+        if not can_claim:
+            return False, 0.0, preview_msg
         
-        return success, rewards, message
+        if not self._distribute_rewards(user_address, pending_rewards):
+            return False, 0.0, "Reward distribution failed through physics substrate"
+        
+        commit_success, commit_msg = farm.commit_claim_rewards(user_address, pending_rewards, snapshot_time)
+        if not commit_success:
+            return False, 0.0, f"Commit failed: {commit_msg}"
+        
+        self.total_rewards_distributed += pending_rewards
+        
+        return True, pending_rewards, f"Claimed {pending_rewards:.4f} NXT farming rewards"
     
     def claim_all_rewards(self, user_address: str) -> Tuple[bool, float, str]:
-        """Claim rewards from all farms"""
-        total_rewards = 0.0
-        claims = []
+        """
+        Claim rewards from all farms using atomic transactional semantics.
+        Validates ALL farms can commit before starting ANY substrate transfers.
+        """
+        pending_claims = []
         
         for pool_id, farm in self.farms.items():
-            if user_address in farm.stakers:
-                success, rewards, _ = farm.claim_rewards(user_address)
-                if success and rewards > 0:
-                    total_rewards += rewards
-                    claims.append(f"{pool_id}: {rewards:.4f}")
+            if user_address not in farm.stakers:
+                continue
+            can_claim, rewards, snapshot_time, _ = farm.preview_claim_rewards(user_address)
+            if can_claim and rewards > 0:
+                pending_claims.append((pool_id, farm, rewards, snapshot_time))
         
-        if total_rewards > 0:
-            self._distribute_rewards(user_address, total_rewards)
-            self.total_rewards_distributed += total_rewards
-            return True, total_rewards, f"Claimed {total_rewards:.4f} NXT from {len(claims)} farms"
+        if not pending_claims:
+            return False, 0.0, "No rewards to claim"
         
-        return False, 0.0, "No rewards to claim"
+        for pool_id, farm, rewards, snapshot_time in pending_claims:
+            if user_address not in farm.stakers:
+                return False, 0.0, f"Pre-validation failed: user no longer in {pool_id}"
+        
+        total_pending = sum(rewards for _, _, rewards, _ in pending_claims)
+        
+        if not self._distribute_rewards(user_address, total_pending):
+            return False, 0.0, "Reward distribution failed through physics substrate"
+        
+        for pool_id, farm, rewards, snapshot_time in pending_claims:
+            farm.commit_claim_rewards(user_address, rewards, snapshot_time)
+        
+        self.total_rewards_distributed += total_pending
+        return True, total_pending, f"Claimed {total_pending:.4f} NXT from {len(pending_claims)} farms"
     
     def _distribute_rewards(self, user_address: str, amount: float) -> bool:
-        """Distribute NXT rewards to user"""
-        if self.nxt_adapter:
-            return self.nxt_adapter.transfer(self.reward_source, user_address, amount)
-        return True  # Mock success if no adapter
+        """Distribute NXT rewards to user through physics substrate"""
+        reward_id = f"FARM-REWARD-{user_address[:8]}-{int(time.time())}"
+        
+        substrate_tx = self._physics_adapter.process_orbital_transfer(
+            source_address=self.reward_source,
+            recipient_address=user_address,
+            amount_nxt=amount,
+            wavelength_nm=self.REWARD_WAVELENGTH_NM,
+            module=EconomicModule.FARMING,
+            transfer_id=reward_id,
+            bhls_category=None
+        )
+        
+        if substrate_tx.success and substrate_tx.settlement_success:
+            self.substrate_transactions.append(substrate_tx)
+            self.total_energy_joules += substrate_tx.energy_joules
+            self.total_lambda_mass_kg += substrate_tx.lambda_boson_kg
+            return True
+        
+        return False
     
     def _calculate_lp_value(self, pool, lp_amount: float) -> float:
         """Calculate the NXT value of LP tokens"""

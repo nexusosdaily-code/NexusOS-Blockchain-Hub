@@ -64,6 +64,9 @@ class SubstrateTransaction:
     bhls_deducted: float
     success: bool
     message: str
+    recipient: Optional[str] = None
+    net_payout_nxt: float = 0.0
+    settlement_success: bool = False
 
 
 class PhysicsEconomicsAdapter:
@@ -340,6 +343,81 @@ class PhysicsEconomicsAdapter:
         
         self.transactions.append(tx)
         return tx
+    
+    def process_orbital_transfer(
+        self,
+        source_address: str,
+        recipient_address: str,
+        amount_nxt: float,
+        wavelength_nm: float,
+        module: EconomicModule,
+        transfer_id: Optional[str] = None,
+        bhls_category: Optional[str] = None
+    ) -> SubstrateTransaction:
+        """
+        Process complete payout through physics substrate with settlement.
+        
+        Two-phase transfer:
+        1. Burn phase: Track through substrate (E=hf, SDK fee, reserve)
+        2. Settlement phase: Credit recipient only if burn succeeds
+        
+        Args:
+            source_address: Pool/wallet sending funds
+            recipient_address: Wallet receiving funds
+            amount_nxt: Amount to transfer
+            wavelength_nm: Wavelength for energy calculation
+            module: Which economic module
+            transfer_id: Optional transaction ID
+            bhls_category: Optional BHLS category
+            
+        Returns:
+            SubstrateTransaction with burn + settlement details
+        """
+        substrate_tx = self.process_orbital_burn(
+            sender_address=source_address,
+            amount_nxt=amount_nxt,
+            wavelength_nm=wavelength_nm,
+            module=module,
+            message_id=transfer_id,
+            bhls_category=bhls_category
+        )
+        
+        substrate_tx.recipient = recipient_address
+        
+        if substrate_tx.success:
+            net_payout = amount_nxt - substrate_tx.sdk_fee_routed
+            substrate_tx.net_payout_nxt = net_payout
+            
+            if self._token_system:
+                try:
+                    payout_units = int(net_payout * self._token_system.UNITS_PER_NXT)
+                    
+                    if self._token_system.get_account(source_address) is None:
+                        self._token_system.create_account(source_address, initial_balance=0)
+                    if self._token_system.get_account(recipient_address) is None:
+                        self._token_system.create_account(recipient_address, initial_balance=0)
+                    
+                    success, _, msg = self._token_system.transfer_atomic(
+                        from_address=source_address,
+                        to_address=recipient_address,
+                        amount=payout_units,
+                        fee=0,
+                        reason=f"Substrate payout: {substrate_tx.tx_id}"
+                    )
+                    
+                    substrate_tx.settlement_success = success
+                    if success:
+                        substrate_tx.message = f"{substrate_tx.message}; Settlement: {net_payout:.4f} NXT to {recipient_address[:12]}..."
+                    else:
+                        substrate_tx.message = f"{substrate_tx.message}; Settlement failed: {msg}"
+                except Exception as e:
+                    substrate_tx.settlement_success = False
+                    substrate_tx.message = f"{substrate_tx.message}; Settlement error: {e}"
+            else:
+                substrate_tx.settlement_success = True
+                substrate_tx.message = f"{substrate_tx.message}; Settlement recorded (no token system)"
+        
+        return substrate_tx
     
     def _route_sdk_fee(self, fee_nxt: float, tx_id: str) -> bool:
         """Route SDK fee to founder wallet"""
