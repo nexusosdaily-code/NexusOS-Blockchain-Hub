@@ -331,6 +331,60 @@ Constitutional governance with spectral voting.
 
 ---
 
+## How to Pay for SDK Access
+
+All SDK subscription payments support research, development, and sustaining life for the NexusOS project.
+
+### Payment Methods
+
+#### Option 1: NXT Native Transfer (Preferred)
+Send NXT tokens directly to the official SDK wallet:
+
+```
+SDK Wallet Address: NXS5372697543A0FEF822E453DBC26FA044D14599E9
+```
+
+**Professional Tier**: Send 99 NXT equivalent monthly  
+**Enterprise Tier**: Contact for custom pricing
+
+#### Option 2: Cryptocurrency
+Contact us for payment via:
+- Bitcoin (BTC)
+- Ethereum (ETH)
+- USDC/USDT stablecoins
+
+#### Option 3: Traditional Payment
+For invoicing, bank transfer, or other payment arrangements:
+- **Email**: nexusOSdaily@gmail.com
+- **Subject**: "SDK Payment - [Your Company Name]"
+
+### Payment Process
+
+1. **Choose Your Tier**: Free, Professional ($99/month), or Enterprise
+2. **Select Payment Method**: NXT, crypto, or traditional
+3. **Send Payment**: Use SDK wallet address or contact for alternatives
+4. **Confirmation**: Email nexusOSdaily@gmail.com with:
+   - Transaction ID or payment reference
+   - Your email address
+   - Company/project name
+   - Requested tier
+5. **Access Granted**: Receive API keys and commercial license within 24-48 hours
+
+### Enterprise Inquiries
+
+For custom integrations, dedicated support, or volume licensing:
+
+**Email**: nexusOSdaily@gmail.com  
+**Subject**: "Enterprise SDK Inquiry"
+
+Include:
+- Company name and industry
+- Integration requirements
+- Expected usage volume
+- Timeline
+
+---
+
 ## Related Documentation
 
 | Document | Description |
