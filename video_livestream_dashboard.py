@@ -137,6 +137,9 @@ def render_video_calling_tab():
     wallet_address = st.session_state.get('wallet_address', '')
     wallet_valid = wallet_address and wallet_address.startswith('NXS') and not wallet_address.startswith('NXS_GUEST')
     
+    user_identity = st.session_state.get('user_phone', st.session_state.get('username', 'unknown'))
+    pending_escrows = video_energy_meter.get_pending_escrows(user_identity)
+    
     if not wallet_valid:
         st.error("""
         ⚠️ **Wallet Not Linked** - Video calls require a linked wallet for physics-based energy billing.
@@ -145,13 +148,23 @@ def render_video_calling_tab():
         Without a linked wallet, video charges go to **escrow** and are collected when you link your wallet.
         """)
         
+        if pending_escrows:
+            st.warning(f"💰 **{len(pending_escrows)} pending escrow charge(s)** - Link wallet to settle")
+            with st.expander("View Pending Escrows"):
+                total_pending = sum(e['energy_nxt'] for e in pending_escrows)
+                total_fees = sum(e['sdk_fee_nxt'] for e in pending_escrows)
+                st.markdown(f"**Total Pending: {total_pending:.6f} NXT** (SDK fees: {total_fees:.8f} NXT)")
+                for escrow in pending_escrows:
+                    st.markdown(f"- Session `{escrow['session_id'][:16]}...`: {escrow['energy_nxt']:.6f} NXT ({escrow['created_at'][:10]})")
+        
         with st.expander("📊 Physics Economics for Video"):
-            st.markdown("""
+            formulas = video_energy_meter.get_physics_formula()
+            st.markdown(f"""
             **How Video Calling is Priced:**
             
             Video streams are photon oscillations at specific frequencies:
-            - **E = hf × t** (Energy = Planck constant × frequency × time)
-            - **Λ = hf/c²** (Lambda Boson mass-equivalent)
+            - **{formulas['energy_formula']}**
+            - **{formulas['lambda_boson']}**
             
             | Quality | Frequency (Hz) | Cost/Minute (NXT) |
             |---------|---------------|-------------------|
@@ -160,21 +173,32 @@ def render_video_calling_tab():
             | 720p    | ~27.6M        | ~0.018 NXT        |
             | 1080p   | ~62.2M        | ~0.041 NXT        |
             
-            Your **BHLS** (Basic Human Living Standards) includes **115 NXT/month** for video (10% of 1,150 NXT).
+            **SDK Fee:** {formulas['sdk_fee']} → `{formulas['sdk_wallet'][:24]}...`
+            
+            Your **BHLS** (Basic Human Living Standards) includes **75 NXT/month** for connectivity (video/messaging).
             """)
     else:
+        if pending_escrows:
+            st.info(f"🔄 Resolving {len(pending_escrows)} pending escrow(s)...")
+            result = video_energy_meter.link_wallet_to_escrow(user_identity, wallet_address)
+            if result['resolved_escrow_count'] > 0:
+                st.success(f"✅ Settled {result['resolved_escrow_count']} escrow(s): {result['total_resolved_nxt']:.6f} NXT charged")
+        
         bhls_status = video_energy_meter.get_bhls_video_status(wallet_address)
-        col_wallet, col_budget = st.columns(2)
+        col_wallet, col_budget, col_sdk = st.columns(3)
         with col_wallet:
             st.success(f"✅ Wallet Linked: `{wallet_address[:20]}...`")
         with col_budget:
             remaining = bhls_status['remaining_nxt']
             if remaining > 50:
-                st.info(f"📊 BHLS Video Budget: {remaining:.2f} NXT remaining")
+                st.info(f"📊 BHLS Budget: {remaining:.2f} NXT")
             elif remaining > 0:
-                st.warning(f"⚠️ Low Budget: {remaining:.2f} NXT remaining")
+                st.warning(f"⚠️ Low: {remaining:.2f} NXT")
             else:
-                st.error("❌ BHLS Video Budget Exhausted")
+                st.error("❌ Budget Exhausted")
+        with col_sdk:
+            sdk_summary = video_energy_meter.get_sdk_revenue_summary()
+            st.metric("SDK Fees", f"{sdk_summary['total_fees_collected_nxt']:.6f} NXT")
     
     st.markdown("""
     Connect with friends through live video calls. Each monitor shows a friend's video feed in real-time.
