@@ -33,6 +33,33 @@ class EconomicModule(Enum):
     FARMING = "farming"
     LOTTERY = "lottery"
     SERVICE_POOLS = "service_pools"
+    SUPPLY_CHAIN = "supply_chain"
+    EMERGENCY = "emergency"
+    RESERVE = "reserve"
+    INTERVENTION = "intervention"
+
+
+class CrisisLevel(Enum):
+    """Crisis severity levels for emergency liquidity coordination"""
+    NORMAL = "normal"          # No crisis - standard operations
+    ELEVATED = "elevated"      # Early warning - monitor closely
+    WARNING = "warning"        # Active concern - prepare reserves
+    CRITICAL = "critical"      # Immediate action required
+    EMERGENCY = "emergency"    # System-wide emergency response
+
+
+@dataclass
+class LiquidityLock:
+    """Lock on reserve funds during crisis coordination"""
+    lock_id: str
+    reserve_pool: str
+    amount_locked_nxt: float
+    crisis_level: CrisisLevel
+    locked_at: float
+    expires_at: float
+    purpose: str
+    released: bool = False
+    release_recipient: Optional[str] = None
 
 
 @dataclass
@@ -90,6 +117,11 @@ class PhysicsEconomicsAdapter:
         self.total_energy_processed_joules = 0.0
         self.total_lambda_mass_kg = 0.0
         self.total_sdk_fees_nxt = 0.0
+        
+        self.liquidity_locks: Dict[str, LiquidityLock] = {}
+        self.current_crisis_level = CrisisLevel.NORMAL
+        self.emergency_interventions: list = []
+        self.total_emergency_liquidity_deployed_nxt = 0.0
         
     def _lazy_init(self):
         """Lazy initialization of dependent systems"""
@@ -448,6 +480,327 @@ class PhysicsEconomicsAdapter:
             print(f"SDK fee routing error: {e}")
             return False
     
+    def set_crisis_level(self, level: CrisisLevel, reason: str) -> bool:
+        """
+        Update system-wide crisis level.
+        
+        Args:
+            level: New crisis level
+            reason: Justification for level change
+            
+        Returns:
+            True if level changed
+        """
+        if level != self.current_crisis_level:
+            previous_level = self.current_crisis_level
+            self.current_crisis_level = level
+            self.emergency_interventions.append({
+                "type": "crisis_level_change",
+                "from": previous_level.value,
+                "to": level.value,
+                "reason": reason,
+                "timestamp": time.time()
+            })
+            return True
+        return False
+    
+    def initiate_liquidity_lock(
+        self,
+        reserve_pool: str,
+        amount_nxt: float,
+        crisis_level: CrisisLevel,
+        purpose: str,
+        lock_duration_seconds: int = 3600
+    ) -> Tuple[bool, Optional[LiquidityLock], str]:
+        """
+        Lock reserve funds for emergency coordination.
+        
+        Locks funds from reserve pool to prevent competing draws during crisis.
+        Only releases to authorized recipient after settlement.
+        
+        Args:
+            reserve_pool: Pool to lock from (VALIDATOR_POOL, TRANSITION_RESERVE, ECOSYSTEM_FUND)
+            amount_nxt: Amount to lock
+            crisis_level: Crisis severity
+            purpose: Reason for lock
+            lock_duration_seconds: How long to hold lock
+            
+        Returns:
+            (success, lock_object, message)
+        """
+        self._lazy_init()
+        
+        lock_id = f"LOCK_{reserve_pool}_{int(time.time() * 1000)}"
+        
+        if self._token_system:
+            pool_account = self._token_system.get_account(reserve_pool)
+            if pool_account is None:
+                return False, None, f"Reserve pool {reserve_pool} not found"
+            
+            pool_balance = pool_account.balance / self._token_system.UNITS_PER_NXT
+            if pool_balance < amount_nxt:
+                return False, None, f"Insufficient reserves: {pool_balance:.2f} NXT available, need {amount_nxt:.2f}"
+        
+        active_locks_amount = sum(
+            lock.amount_locked_nxt 
+            for lock in self.liquidity_locks.values() 
+            if lock.reserve_pool == reserve_pool and not lock.released
+        )
+        
+        if self._token_system:
+            pool_account = self._token_system.get_account(reserve_pool)
+            if pool_account:
+                available = pool_account.balance / self._token_system.UNITS_PER_NXT - active_locks_amount
+                if available < amount_nxt:
+                    return False, None, f"Insufficient unlocked reserves: {available:.2f} NXT available after existing locks"
+        
+        lock = LiquidityLock(
+            lock_id=lock_id,
+            reserve_pool=reserve_pool,
+            amount_locked_nxt=amount_nxt,
+            crisis_level=crisis_level,
+            locked_at=time.time(),
+            expires_at=time.time() + lock_duration_seconds,
+            purpose=purpose
+        )
+        
+        self.liquidity_locks[lock_id] = lock
+        
+        return True, lock, f"Locked {amount_nxt:.2f} NXT from {reserve_pool} for {purpose}"
+    
+    def release_liquidity_lock(
+        self,
+        lock_id: str,
+        recipient_address: str,
+        wavelength_nm: float = 550.0
+    ) -> SubstrateTransaction:
+        """
+        Release locked funds to authorized recipient through substrate.
+        
+        Args:
+            lock_id: Lock to release
+            recipient_address: Who receives the funds
+            wavelength_nm: Wavelength for energy calculation
+            
+        Returns:
+            SubstrateTransaction with settlement details
+        """
+        if lock_id not in self.liquidity_locks:
+            return SubstrateTransaction(
+                tx_id=f"RELEASE_FAILED_{lock_id}",
+                timestamp=time.time(),
+                module=EconomicModule.EMERGENCY,
+                sender="SYSTEM",
+                amount_nxt=0,
+                energy_joules=0,
+                lambda_boson_kg=0,
+                burned_to_reserve=0,
+                sdk_fee_routed=0,
+                bhls_category=None,
+                bhls_deducted=0,
+                success=False,
+                message=f"Lock {lock_id} not found"
+            )
+        
+        lock = self.liquidity_locks[lock_id]
+        
+        if lock.released:
+            return SubstrateTransaction(
+                tx_id=f"RELEASE_FAILED_{lock_id}",
+                timestamp=time.time(),
+                module=EconomicModule.EMERGENCY,
+                sender=lock.reserve_pool,
+                amount_nxt=lock.amount_locked_nxt,
+                energy_joules=0,
+                lambda_boson_kg=0,
+                burned_to_reserve=0,
+                sdk_fee_routed=0,
+                bhls_category=None,
+                bhls_deducted=0,
+                success=False,
+                message=f"Lock {lock_id} already released"
+            )
+        
+        substrate_tx = self.process_orbital_transfer(
+            source_address=lock.reserve_pool,
+            recipient_address=recipient_address,
+            amount_nxt=lock.amount_locked_nxt,
+            wavelength_nm=wavelength_nm,
+            module=EconomicModule.EMERGENCY,
+            transfer_id=f"EMERGENCY_RELEASE_{lock_id}"
+        )
+        
+        if substrate_tx.settlement_success:
+            lock.released = True
+            lock.release_recipient = recipient_address
+            self.total_emergency_liquidity_deployed_nxt += lock.amount_locked_nxt
+        
+        return substrate_tx
+    
+    def process_emergency_liquidity(
+        self,
+        source_pool: str,
+        recipient_address: str,
+        amount_nxt: float,
+        crisis_level: CrisisLevel,
+        reason: str,
+        wavelength_nm: float = 380.0
+    ) -> SubstrateTransaction:
+        """
+        Atomic emergency liquidity deployment through substrate.
+        
+        Combines lock + release for immediate emergency response.
+        Uses UV wavelength (380nm) for high-energy emergency transactions.
+        
+        Args:
+            source_pool: Reserve pool to draw from
+            recipient_address: Emergency responder/beneficiary
+            amount_nxt: Amount to deploy
+            crisis_level: Crisis severity (affects validation)
+            reason: Justification for emergency draw
+            wavelength_nm: Wavelength (default UV for emergency)
+            
+        Returns:
+            SubstrateTransaction with full details
+        """
+        lock_success, lock, lock_msg = self.initiate_liquidity_lock(
+            reserve_pool=source_pool,
+            amount_nxt=amount_nxt,
+            crisis_level=crisis_level,
+            purpose=reason,
+            lock_duration_seconds=60
+        )
+        
+        if not lock_success:
+            return SubstrateTransaction(
+                tx_id=f"EMERGENCY_FAILED_{int(time.time() * 1000)}",
+                timestamp=time.time(),
+                module=EconomicModule.EMERGENCY,
+                sender=source_pool,
+                amount_nxt=amount_nxt,
+                energy_joules=0,
+                lambda_boson_kg=0,
+                burned_to_reserve=0,
+                sdk_fee_routed=0,
+                bhls_category=None,
+                bhls_deducted=0,
+                success=False,
+                message=f"Emergency liquidity lock failed: {lock_msg}"
+            )
+        
+        substrate_tx = self.release_liquidity_lock(
+            lock_id=lock.lock_id,
+            recipient_address=recipient_address,
+            wavelength_nm=wavelength_nm
+        )
+        
+        self.emergency_interventions.append({
+            "type": "emergency_liquidity",
+            "lock_id": lock.lock_id,
+            "source": source_pool,
+            "recipient": recipient_address,
+            "amount_nxt": amount_nxt,
+            "crisis_level": crisis_level.value,
+            "reason": reason,
+            "success": substrate_tx.settlement_success,
+            "timestamp": time.time()
+        })
+        
+        return substrate_tx
+    
+    def process_supply_chain_payment(
+        self,
+        payer_address: str,
+        supplier_address: str,
+        amount_nxt: float,
+        resource_type: str,
+        wavelength_nm: float = 550.0
+    ) -> SubstrateTransaction:
+        """
+        Process supply chain payment through physics substrate.
+        
+        Routes supplier payments through E=hf pricing with SDK fees.
+        
+        Args:
+            payer_address: Who is paying
+            supplier_address: Resource supplier
+            amount_nxt: Payment amount
+            resource_type: Type of resource (FOOD, ENERGY, etc.)
+            wavelength_nm: Wavelength for energy calculation
+            
+        Returns:
+            SubstrateTransaction with details
+        """
+        bhls_category = None
+        if resource_type.upper() in ["FOOD", "WATER", "ENERGY", "HEALTHCARE"]:
+            bhls_category = resource_type.upper()
+        
+        return self.process_orbital_transfer(
+            source_address=payer_address,
+            recipient_address=supplier_address,
+            amount_nxt=amount_nxt,
+            wavelength_nm=wavelength_nm,
+            module=EconomicModule.SUPPLY_CHAIN,
+            transfer_id=f"SUPPLY_{resource_type}_{int(time.time() * 1000)}",
+            bhls_category=bhls_category
+        )
+    
+    def process_reserve_draw(
+        self,
+        reserve_pool: str,
+        recipient_address: str,
+        amount_nxt: float,
+        purpose: str,
+        wavelength_nm: float = 550.0
+    ) -> SubstrateTransaction:
+        """
+        Draw from reserve pool through physics substrate.
+        
+        All reserve draws must route through substrate for tracking.
+        
+        Args:
+            reserve_pool: Pool to draw from
+            recipient_address: Recipient of funds
+            amount_nxt: Amount to draw
+            purpose: Reason for draw
+            wavelength_nm: Wavelength for energy calculation
+            
+        Returns:
+            SubstrateTransaction with details
+        """
+        return self.process_orbital_transfer(
+            source_address=reserve_pool,
+            recipient_address=recipient_address,
+            amount_nxt=amount_nxt,
+            wavelength_nm=wavelength_nm,
+            module=EconomicModule.RESERVE,
+            transfer_id=f"RESERVE_DRAW_{int(time.time() * 1000)}"
+        )
+    
+    def get_crisis_status(self) -> Dict[str, Any]:
+        """Get current crisis coordination status"""
+        active_locks = [
+            {
+                "lock_id": lock.lock_id,
+                "reserve_pool": lock.reserve_pool,
+                "amount_nxt": lock.amount_locked_nxt,
+                "crisis_level": lock.crisis_level.value,
+                "purpose": lock.purpose,
+                "expires_in_seconds": max(0, lock.expires_at - time.time())
+            }
+            for lock in self.liquidity_locks.values()
+            if not lock.released
+        ]
+        
+        return {
+            "current_crisis_level": self.current_crisis_level.value,
+            "active_liquidity_locks": len(active_locks),
+            "total_locked_nxt": sum(l["amount_nxt"] for l in active_locks),
+            "locks": active_locks,
+            "total_emergency_deployed_nxt": self.total_emergency_liquidity_deployed_nxt,
+            "recent_interventions": self.emergency_interventions[-10:]
+        }
+    
     def get_substrate_summary(self) -> Dict[str, Any]:
         """Get summary of substrate layer activity"""
         module_stats = {}
@@ -459,6 +812,8 @@ class PhysicsEconomicsAdapter:
                 "total_energy_joules": sum(t.energy_joules for t in module_txs)
             }
         
+        crisis_status = self.get_crisis_status()
+        
         return {
             "total_transactions": len(self.transactions),
             "total_energy_processed_joules": self.total_energy_processed_joules,
@@ -466,6 +821,7 @@ class PhysicsEconomicsAdapter:
             "total_sdk_fees_nxt": self.total_sdk_fees_nxt,
             "sdk_wallet": SDK_WALLET,
             "module_breakdown": module_stats,
+            "crisis_coordination": crisis_status,
             "physics_formulas": {
                 "energy": "E = h × f (Planck 1900)",
                 "lambda_boson": "Λ = hf/c² (Lambda Boson 2024)",

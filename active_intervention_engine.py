@@ -7,13 +7,32 @@ Philosophy: "Intervention is better than a cure"
 - Automatically blocks/isolates threats
 - Escalates based on severity
 - Provides emergency kill-switches
+
+Physics Substrate Integration:
+- Emergency economic interventions route through PhysicsEconomicsAdapter
+- Penalty slashing and compensation gated on settlement_success
+- Crisis level coordination with supply chain and reserve modules
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set, Any
 from enum import Enum
 from datetime import datetime, timedelta
 import time
+
+try:
+    from physics_economics_adapter import (
+        get_physics_adapter,
+        PhysicsEconomicsAdapter,
+        EconomicModule,
+        CrisisLevel,
+        SubstrateTransaction
+    )
+    SUBSTRATE_AVAILABLE = True
+except ImportError:
+    SUBSTRATE_AVAILABLE = False
+    get_physics_adapter = None
+    CrisisLevel = None
 
 
 class ThreatLevel(Enum):
@@ -397,6 +416,182 @@ class ActiveInterventionEngine:
             threats = [t for t in threats if level_priority[t.threat_level] >= min_priority]
         
         return sorted(threats, key=lambda t: t.detected_at, reverse=True)
+    
+    def slash_validator_stake(
+        self,
+        validator_address: str,
+        slash_amount_nxt: float,
+        reason: str
+    ) -> Tuple[bool, str, Optional[Any]]:
+        """
+        Slash validator stake through physics substrate.
+        
+        Routes penalty slashing through PhysicsEconomicsAdapter.
+        Slashed funds route to TRANSITION_RESERVE.
+        Gated on settlement_success.
+        
+        Args:
+            validator_address: Validator being slashed
+            slash_amount_nxt: Amount to slash
+            reason: Justification for slashing
+            
+        Returns:
+            (success, message, substrate_transaction)
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False, "Physics substrate not available", None
+        
+        adapter = get_physics_adapter()
+        
+        substrate_tx = adapter.process_orbital_transfer(
+            source_address=validator_address,
+            recipient_address="TRANSITION_RESERVE",
+            amount_nxt=slash_amount_nxt,
+            wavelength_nm=380.0,
+            module=EconomicModule.INTERVENTION,
+            transfer_id=f"SLASH_{validator_address[:8]}_{int(time.time())}"
+        )
+        
+        if not substrate_tx.settlement_success:
+            return False, f"Slashing settlement failed: {substrate_tx.message}", substrate_tx
+        
+        return True, f"Slashed {slash_amount_nxt:.4f} NXT from {validator_address}: {reason}", substrate_tx
+    
+    def compensate_victim(
+        self,
+        victim_address: str,
+        compensation_nxt: float,
+        attacker_address: str,
+        attack_type: str
+    ) -> Tuple[bool, str, Optional[Any]]:
+        """
+        Compensate attack victim through physics substrate.
+        
+        Routes compensation from ECOSYSTEM_FUND to victim.
+        Uses emergency liquidity primitives for immediate payout.
+        
+        Args:
+            victim_address: Address of attack victim
+            compensation_nxt: Compensation amount
+            attacker_address: Who caused the damage
+            attack_type: Type of attack
+            
+        Returns:
+            (success, message, substrate_transaction)
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False, "Physics substrate not available", None
+        
+        adapter = get_physics_adapter()
+        
+        substrate_tx = adapter.process_emergency_liquidity(
+            source_pool="ECOSYSTEM_FUND",
+            recipient_address=victim_address,
+            amount_nxt=compensation_nxt,
+            crisis_level=CrisisLevel.WARNING,
+            reason=f"COMPENSATION_{attack_type}: Victim of {attacker_address[:12]}",
+            wavelength_nm=550.0
+        )
+        
+        if not substrate_tx.settlement_success:
+            return False, f"Compensation settlement failed: {substrate_tx.message}", substrate_tx
+        
+        return True, f"Compensated {victim_address}: {compensation_nxt:.4f} NXT", substrate_tx
+    
+    def trigger_economic_emergency(
+        self,
+        crisis_reason: str,
+        emergency_fund_nxt: float,
+        responder_address: str
+    ) -> Tuple[bool, str, Optional[Any]]:
+        """
+        Trigger economic emergency response through physics substrate.
+        
+        Deploys emergency liquidity for crisis mitigation.
+        Updates substrate crisis level to EMERGENCY.
+        
+        Args:
+            crisis_reason: Description of the crisis
+            emergency_fund_nxt: Amount to deploy
+            responder_address: Who receives emergency funds
+            
+        Returns:
+            (success, message, substrate_transaction)
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False, "Physics substrate not available", None
+        
+        adapter = get_physics_adapter()
+        
+        adapter.set_crisis_level(CrisisLevel.EMERGENCY, crisis_reason)
+        
+        substrate_tx = adapter.process_emergency_liquidity(
+            source_pool="VALIDATOR_POOL",
+            recipient_address=responder_address,
+            amount_nxt=emergency_fund_nxt,
+            crisis_level=CrisisLevel.EMERGENCY,
+            reason=f"ECONOMIC_EMERGENCY: {crisis_reason}",
+            wavelength_nm=380.0
+        )
+        
+        if not substrate_tx.settlement_success:
+            return False, f"Emergency response failed: {substrate_tx.message}", substrate_tx
+        
+        return True, f"Emergency deployed: {emergency_fund_nxt:.4f} NXT for {crisis_reason}", substrate_tx
+    
+    def sync_crisis_level_with_threat(self, threat: ThreatDetection) -> bool:
+        """
+        Sync physics substrate crisis level with current threat level.
+        
+        Maps threat levels to crisis levels for coordinated response.
+        
+        Args:
+            threat: Current threat detection
+            
+        Returns:
+            True if crisis level was updated
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False
+        
+        adapter = get_physics_adapter()
+        
+        threat_to_crisis = {
+            ThreatLevel.LOW: CrisisLevel.NORMAL,
+            ThreatLevel.MEDIUM: CrisisLevel.ELEVATED,
+            ThreatLevel.HIGH: CrisisLevel.WARNING,
+            ThreatLevel.CRITICAL: CrisisLevel.CRITICAL
+        }
+        
+        new_level = threat_to_crisis.get(threat.threat_level, CrisisLevel.NORMAL)
+        
+        return adapter.set_crisis_level(
+            level=new_level,
+            reason=f"Threat: {threat.threat_type} from {threat.entity}"
+        )
+    
+    def get_substrate_intervention_summary(self) -> Dict[str, Any]:
+        """Get intervention stats with substrate integration status"""
+        base_stats = self.get_intervention_stats()
+        
+        substrate_status = {
+            "substrate_available": SUBSTRATE_AVAILABLE,
+            "slashing_enabled": SUBSTRATE_AVAILABLE,
+            "compensation_enabled": SUBSTRATE_AVAILABLE,
+            "emergency_response_enabled": SUBSTRATE_AVAILABLE
+        }
+        
+        if SUBSTRATE_AVAILABLE and get_physics_adapter:
+            adapter = get_physics_adapter()
+            crisis_status = adapter.get_crisis_status()
+            substrate_status["current_crisis_level"] = crisis_status.get("current_crisis_level", "unknown")
+            substrate_status["active_liquidity_locks"] = crisis_status.get("active_liquidity_locks", 0)
+            substrate_status["total_emergency_deployed_nxt"] = crisis_status.get("total_emergency_deployed_nxt", 0)
+        
+        return {
+            **base_stats,
+            "substrate_integration": substrate_status
+        }
     
     def get_intervention_stats(self) -> Dict:
         """Get intervention statistics"""

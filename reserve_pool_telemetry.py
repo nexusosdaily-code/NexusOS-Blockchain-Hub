@@ -10,12 +10,32 @@ Hierarchical Architecture:
   support F_floor which then enables all economic service pools:
   - DEX Pool, Investment Pool, Staking Pool, Bonus Pool, Lottery Pool
   - Environmental Pool, Recycling Pool, Product/Service Pool, etc.
+
+Physics Substrate Integration:
+- Reserve draws route through PhysicsEconomicsAdapter
+- Emergency liquidity coordination for BHLS floor protection
+- Crisis level management based on reserve thresholds
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from datetime import datetime
 import numpy as np
+import time
+
+try:
+    from physics_economics_adapter import (
+        get_physics_adapter,
+        PhysicsEconomicsAdapter,
+        EconomicModule,
+        CrisisLevel,
+        SubstrateTransaction
+    )
+    SUBSTRATE_AVAILABLE = True
+except ImportError:
+    SUBSTRATE_AVAILABLE = False
+    get_physics_adapter = None
+    CrisisLevel = None
 
 # Pool ecosystem integration
 try:
@@ -285,6 +305,154 @@ class ReservePoolTelemetry:
             anomalies.append("F_floor violation detected in recent history")
         
         return anomalies
+    
+    def draw_reserve_through_substrate(
+        self,
+        reserve_pool: str,
+        recipient_address: str,
+        amount_nxt: float,
+        purpose: str
+    ) -> Tuple[bool, str, Optional[Any]]:
+        """
+        Draw from reserve pool through physics substrate.
+        
+        Routes all reserve draws through PhysicsEconomicsAdapter for:
+        - E=hf energy tracking
+        - SDK fee routing
+        - Settlement verification
+        
+        Args:
+            reserve_pool: Pool to draw from (VALIDATOR_POOL, TRANSITION_RESERVE, ECOSYSTEM_FUND)
+            recipient_address: Who receives the funds
+            amount_nxt: Amount to draw
+            purpose: Reason for the draw
+            
+        Returns:
+            (success, message, substrate_transaction)
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False, "Physics substrate not available", None
+        
+        adapter = get_physics_adapter()
+        
+        substrate_tx = adapter.process_reserve_draw(
+            reserve_pool=reserve_pool,
+            recipient_address=recipient_address,
+            amount_nxt=amount_nxt,
+            purpose=purpose,
+            wavelength_nm=550.0
+        )
+        
+        if not substrate_tx.settlement_success:
+            return False, f"Reserve draw settlement failed: {substrate_tx.message}", substrate_tx
+        
+        return True, f"Reserve draw: {amount_nxt:.4f} NXT from {reserve_pool}", substrate_tx
+    
+    def trigger_bhls_emergency_funding(
+        self,
+        beneficiary_address: str,
+        amount_nxt: float,
+        bhls_category: str
+    ) -> Tuple[bool, str, Optional[Any]]:
+        """
+        Trigger emergency BHLS funding through physics substrate.
+        
+        Uses emergency liquidity primitives to ensure BHLS floor is maintained.
+        Routes through ECOSYSTEM_FUND for BHLS emergency interventions.
+        
+        Args:
+            beneficiary_address: Citizen needing emergency BHLS funding
+            amount_nxt: Emergency amount needed
+            bhls_category: Which BHLS category (FOOD, WATER, ENERGY, etc.)
+            
+        Returns:
+            (success, message, substrate_transaction)
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False, "Physics substrate not available", None
+        
+        adapter = get_physics_adapter()
+        
+        substrate_tx = adapter.process_emergency_liquidity(
+            source_pool="ECOSYSTEM_FUND",
+            recipient_address=beneficiary_address,
+            amount_nxt=amount_nxt,
+            crisis_level=CrisisLevel.CRITICAL,
+            reason=f"BHLS_{bhls_category}_EMERGENCY: Floor protection",
+            wavelength_nm=380.0
+        )
+        
+        if not substrate_tx.settlement_success:
+            return False, f"BHLS emergency funding failed: {substrate_tx.message}", substrate_tx
+        
+        return True, f"BHLS emergency: {amount_nxt:.4f} NXT for {bhls_category}", substrate_tx
+    
+    def update_crisis_level_from_projection(
+        self,
+        projection: 'FFloorProjection'
+    ) -> bool:
+        """
+        Update physics substrate crisis level based on F_floor projection.
+        
+        Maps projection risk levels to substrate crisis levels.
+        
+        Args:
+            projection: F_floor projection result
+            
+        Returns:
+            True if crisis level was updated
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False
+        
+        adapter = get_physics_adapter()
+        
+        risk_to_crisis = {
+            "safe": CrisisLevel.NORMAL,
+            "warning": CrisisLevel.WARNING,
+            "critical": CrisisLevel.CRITICAL
+        }
+        
+        new_level = risk_to_crisis.get(projection.risk_level, CrisisLevel.NORMAL)
+        
+        return adapter.set_crisis_level(
+            level=new_level,
+            reason=f"F_floor projection: {projection.recommended_action}"
+        )
+    
+    def get_substrate_telemetry_summary(self) -> Dict[str, Any]:
+        """Get telemetry summary with substrate integration status"""
+        current_state = self.get_current_state()
+        anomalies = self.detect_reserve_anomalies()
+        
+        summary = {
+            "substrate_available": SUBSTRATE_AVAILABLE,
+            "f_floor_minimum_monthly": self.f_floor_minimum_monthly,
+            "burn_runway_days": self.get_burn_runway_days(),
+            "historical_burn_rate_30d": self.get_historical_burn_rate(30),
+            "anomalies_detected": len(anomalies),
+            "anomalies": anomalies,
+            "history_length": len(self.history)
+        }
+        
+        if current_state:
+            summary["current_reserves"] = {
+                "validator": current_state.validator_reserve,
+                "transition": current_state.transition_reserve,
+                "ecosystem": current_state.ecosystem_reserve,
+                "total": current_state.total_reserves
+            }
+            summary["f_floor_current"] = current_state.f_floor_value
+            summary["net_flow_24h"] = current_state.net_flow_24h
+        
+        if SUBSTRATE_AVAILABLE and get_physics_adapter:
+            adapter = get_physics_adapter()
+            crisis_status = adapter.get_crisis_status()
+            summary["crisis_level"] = crisis_status.get("current_crisis_level", "unknown")
+            summary["active_liquidity_locks"] = crisis_status.get("active_liquidity_locks", 0)
+            summary["total_emergency_deployed"] = crisis_status.get("total_emergency_deployed_nxt", 0)
+        
+        return summary
 
 
 def create_snapshot_from_token_system(token_system, f_floor_value: float) -> ReservePoolSnapshot:

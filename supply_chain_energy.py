@@ -1,13 +1,33 @@
 """
 Supply Chain & Energy Systems - NexusOS Civilization OS
 Track resource flows, energy throughput, production chains, waste streams
+
+Physics Substrate Integration:
+- All supplier payments route through PhysicsEconomicsAdapter
+- E=hf energy calculation for resource transactions
+- SDK fees routed to founder wallet
+- Emergency liquidity coordination for supply disruptions
 """
 
 import numpy as np
+import time
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Tuple, Any
 from datetime import datetime, timedelta
 from enum import Enum
+
+try:
+    from physics_economics_adapter import (
+        get_physics_adapter,
+        PhysicsEconomicsAdapter,
+        EconomicModule,
+        CrisisLevel,
+        SubstrateTransaction
+    )
+    SUBSTRATE_AVAILABLE = True
+except ImportError:
+    SUBSTRATE_AVAILABLE = False
+    get_physics_adapter = None
 
 class ResourceType(Enum):
     """Types of resources in the economy"""
@@ -178,6 +198,180 @@ class SupplyChainSystem:
             "distributors": len(distributors),
             "total_distribution": total_distribution,
             "supply_chain_stages": len(producers) + len(processors) + len(distributors)
+        }
+    
+    def process_supplier_payment(
+        self,
+        payer_wallet: str,
+        supplier_wallet: str,
+        amount_nxt: float,
+        resource_type: ResourceType,
+        node_id: Optional[str] = None
+    ) -> Tuple[bool, str, Optional[Any]]:
+        """
+        Process supplier payment through physics substrate.
+        
+        Routes payment through E=hf energy calculation with SDK fees.
+        Gated on settlement_success before recording payment.
+        
+        Args:
+            payer_wallet: Who is paying
+            supplier_wallet: Resource supplier receiving payment
+            amount_nxt: Payment amount
+            resource_type: Type of resource being purchased
+            node_id: Optional node ID for tracking
+            
+        Returns:
+            (success, message, substrate_transaction)
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False, "Physics substrate not available", None
+        
+        adapter = get_physics_adapter()
+        
+        wavelength_map = {
+            ResourceType.FOOD: 550.0,
+            ResourceType.WATER: 470.0,
+            ResourceType.ENERGY: 380.0,
+            ResourceType.MATERIALS: 600.0,
+            ResourceType.MANUFACTURED: 580.0,
+            ResourceType.SERVICES: 520.0
+        }
+        wavelength_nm = wavelength_map.get(resource_type, 550.0)
+        
+        substrate_tx = adapter.process_supply_chain_payment(
+            payer_address=payer_wallet,
+            supplier_address=supplier_wallet,
+            amount_nxt=amount_nxt,
+            resource_type=resource_type.value,
+            wavelength_nm=wavelength_nm
+        )
+        
+        if not substrate_tx.settlement_success:
+            return False, f"Payment settlement failed: {substrate_tx.message}", substrate_tx
+        
+        return True, f"Supplier payment: {amount_nxt:.4f} NXT for {resource_type.value}", substrate_tx
+    
+    def request_emergency_restock(
+        self,
+        resource_type: ResourceType,
+        amount_nxt: float,
+        recipient_supplier: str,
+        crisis_reason: str
+    ) -> Tuple[bool, str, Optional[Any]]:
+        """
+        Request emergency restocking through physics substrate.
+        
+        Triggers emergency liquidity draw for critical supply shortages.
+        Uses ECOSYSTEM_FUND for emergency supply chain interventions.
+        
+        Args:
+            resource_type: Resource type needing emergency restock
+            amount_nxt: Funding amount needed
+            recipient_supplier: Supplier to receive emergency funds
+            crisis_reason: Justification for emergency draw
+            
+        Returns:
+            (success, message, substrate_transaction)
+        """
+        if not SUBSTRATE_AVAILABLE or get_physics_adapter is None:
+            return False, "Physics substrate not available", None
+        
+        adapter = get_physics_adapter()
+        
+        crisis_level_map = {
+            ResourceType.FOOD: CrisisLevel.CRITICAL,
+            ResourceType.WATER: CrisisLevel.CRITICAL,
+            ResourceType.ENERGY: CrisisLevel.WARNING,
+            ResourceType.MATERIALS: CrisisLevel.ELEVATED,
+            ResourceType.MANUFACTURED: CrisisLevel.ELEVATED,
+            ResourceType.SERVICES: CrisisLevel.ELEVATED
+        }
+        crisis_level = crisis_level_map.get(resource_type, CrisisLevel.ELEVATED)
+        
+        substrate_tx = adapter.process_emergency_liquidity(
+            source_pool="ECOSYSTEM_FUND",
+            recipient_address=recipient_supplier,
+            amount_nxt=amount_nxt,
+            crisis_level=crisis_level,
+            reason=f"SUPPLY_CHAIN_{resource_type.value}: {crisis_reason}",
+            wavelength_nm=380.0
+        )
+        
+        if not substrate_tx.settlement_success:
+            return False, f"Emergency restock failed: {substrate_tx.message}", substrate_tx
+        
+        return True, f"Emergency restock: {amount_nxt:.4f} NXT for {resource_type.value}", substrate_tx
+    
+    def detect_supply_crisis(self) -> Tuple[bool, Optional[str], Optional[Any]]:
+        """
+        Detect supply chain crisis conditions.
+        
+        Checks production vs consumption balance and energy utilization.
+        Updates physics substrate crisis level if thresholds exceeded.
+        
+        Returns:
+            (crisis_detected, crisis_type, crisis_details)
+        """
+        stats = self.get_system_stats()
+        crisis_detected = False
+        crisis_type = None
+        crisis_details = {}
+        
+        for rt in ResourceType:
+            resource_stats = stats["resource_summary"].get(rt.value, {})
+            balance = resource_stats.get("balance", 0)
+            production = resource_stats.get("production", 0)
+            
+            if production > 0 and balance < 0:
+                deficit_ratio = abs(balance) / production
+                if deficit_ratio > 0.3:
+                    crisis_detected = True
+                    crisis_type = f"SUPPLY_DEFICIT_{rt.value}"
+                    crisis_details[rt.value] = {
+                        "deficit_ratio": deficit_ratio,
+                        "balance": balance,
+                        "production": production
+                    }
+        
+        if stats.get("energy_utilization", 0) > 95:
+            crisis_detected = True
+            crisis_type = "ENERGY_CAPACITY_CRITICAL"
+            crisis_details["energy"] = {
+                "utilization": stats["energy_utilization"],
+                "demand_mw": stats["total_energy_demand_mw"],
+                "capacity_mw": stats["total_energy_capacity_mw"]
+            }
+        
+        if crisis_detected and SUBSTRATE_AVAILABLE and get_physics_adapter:
+            adapter = get_physics_adapter()
+            if crisis_type and "CRITICAL" in crisis_type:
+                adapter.set_crisis_level(CrisisLevel.CRITICAL, crisis_type)
+            elif crisis_type and "DEFICIT" in crisis_type:
+                adapter.set_crisis_level(CrisisLevel.WARNING, crisis_type)
+        
+        return crisis_detected, crisis_type, crisis_details if crisis_details else None
+    
+    def get_substrate_supply_chain_summary(self) -> Dict[str, Any]:
+        """Get supply chain summary with substrate integration status"""
+        base_stats = self.get_system_stats()
+        
+        substrate_status = {
+            "substrate_available": SUBSTRATE_AVAILABLE,
+            "crisis_detection_enabled": SUBSTRATE_AVAILABLE,
+            "emergency_restock_enabled": SUBSTRATE_AVAILABLE
+        }
+        
+        if SUBSTRATE_AVAILABLE and get_physics_adapter:
+            adapter = get_physics_adapter()
+            crisis_status = adapter.get_crisis_status()
+            substrate_status["current_crisis_level"] = crisis_status.get("current_crisis_level", "unknown")
+            substrate_status["active_liquidity_locks"] = crisis_status.get("active_liquidity_locks", 0)
+            substrate_status["total_emergency_deployed_nxt"] = crisis_status.get("total_emergency_deployed_nxt", 0)
+        
+        return {
+            **base_stats,
+            "substrate_integration": substrate_status
         }
     
     def get_system_stats(self) -> dict:
