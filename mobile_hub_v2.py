@@ -143,7 +143,7 @@ def get_physics_metrics() -> List[Dict]:
 
 
 def render_mobile_nav(current: str) -> str:
-    """Render bottom navigation as fixed bar with interactive buttons"""
+    """Render bottom navigation using native Streamlit components"""
     
     nav_items = [
         {'id': 'home', 'icon': '🏠', 'label': 'Home'},
@@ -153,113 +153,23 @@ def render_mobile_nav(current: str) -> str:
         {'id': 'more', 'icon': '☰', 'label': 'More'},
     ]
     
-    nav_html = ""
-    for item in nav_items:
-        is_active = current == item['id']
-        active_style = "color: #00d4ff; background: rgba(0, 212, 255, 0.15);" if is_active else "color: #64748b;"
-        nav_html += f"""
-            <button class="mobile-nav-btn" data-view="{item['id']}" style="{active_style}">
-                <span style="font-size: 1.25rem;">{item['icon']}</span>
-                <span style="font-size: 0.65rem; font-weight: 500;">{item['label']}</span>
-            </button>
-        """
+    st.divider()
     
-    st.markdown(f"""
-        <style>
-        .mobile-nav-container {{
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(180deg, rgba(10, 10, 26, 0.95), rgba(10, 10, 26, 0.99));
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(102, 126, 234, 0.25);
-            padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
-            z-index: 9999;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-        }}
-        
-        .mobile-nav-btn {{
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 12px;
-            background: transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            flex: 1;
-            max-width: 80px;
-        }}
-        
-        .mobile-nav-btn:hover {{
-            background: rgba(102, 126, 234, 0.1);
-        }}
-        
-        .mobile-nav-btn:active {{
-            transform: scale(0.95);
-        }}
-        
-        /* Content padding for fixed nav */
-        .main .block-container {{
-            padding-bottom: 90px !important;
-        }}
-        </style>
-        
-        <div class="mobile-nav-container" id="mobileNavBar">
-            {nav_html}
-        </div>
-        
-        <script>
-        (function() {{
-            const viewLabels = {{
-                'home': 'Home',
-                'wallet': 'Wallet',
-                'dex': 'Swap',
-                'governance': 'Govern',
-                'more': 'More'
-            }};
-            
-            const navBtns = document.querySelectorAll('.mobile-nav-btn');
-            navBtns.forEach(btn => {{
-                btn.addEventListener('click', function() {{
-                    const view = this.dataset.view;
-                    const targetLabel = viewLabels[view];
-                    const allBtns = document.querySelectorAll('button[data-testid="baseButton-secondary"], button[data-testid="baseButton-primary"]');
-                    allBtns.forEach(streamlitBtn => {{
-                        if (streamlitBtn.textContent.trim() === targetLabel) {{
-                            streamlitBtn.click();
-                        }}
-                    }});
-                }});
-            }});
-        }})();
-        </script>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<div style='display: none;'>", unsafe_allow_html=True)
     cols = st.columns(len(nav_items))
     selected = current
     
     for i, item in enumerate(nav_items):
         with cols[i]:
             is_active = current == item['id']
+            btn_label = f"{item['icon']} {item['label']}"
             if st.button(
-                item['label'],
+                btn_label,
                 key=f"nav_{item['id']}",
-                width="stretch",
+                use_container_width=True,
                 type="primary" if is_active else "secondary"
             ):
                 selected = item['id']
                 st.session_state.current_view = item['id']
-    
-    st.markdown("</div>", unsafe_allow_html=True)
     
     return selected
 
@@ -308,7 +218,11 @@ def render_home_view(wallet_data: Dict, bhls_data: Dict):
     
     render_section_header("Network Status", "Physics-based blockchain metrics")
     physics = get_physics_metrics()
-    render_physics_metrics(physics)
+    
+    metric_cols = st.columns(4)
+    for idx, metric in enumerate(physics):
+        with metric_cols[idx]:
+            st.metric(label=metric['label'], value=metric['value'])
     
     st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
     
