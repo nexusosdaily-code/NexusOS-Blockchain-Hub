@@ -737,6 +737,60 @@ def get_responsive_css() -> str:
         border-radius: 12px !important;
     }
     
+    /* Selectbox - Selected value text */
+    .stApp [data-baseweb="select"] [data-testid="stMarkdownContainer"],
+    .stApp [data-baseweb="select"] span {
+        color: var(--text-primary) !important;
+    }
+    
+    /* Selectbox dropdown menu/popover */
+    .stApp [data-baseweb="popover"],
+    .stApp [data-baseweb="menu"],
+    [data-baseweb="popover"],
+    [data-baseweb="menu"] {
+        background: var(--bg-card) !important;
+        border: 1px solid rgba(102, 126, 234, 0.3) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+    }
+    
+    /* Selectbox dropdown list container */
+    .stApp [data-baseweb="menu"] ul,
+    [data-baseweb="menu"] ul {
+        background: var(--bg-card) !important;
+        padding: 8px !important;
+    }
+    
+    /* Selectbox dropdown list items */
+    .stApp [data-baseweb="menu"] li,
+    [data-baseweb="menu"] li,
+    .stApp [role="option"],
+    [role="option"] {
+        background: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+        padding: 10px 16px !important;
+        border-radius: 8px !important;
+        margin: 2px 0 !important;
+    }
+    
+    /* Selectbox dropdown hover state */
+    .stApp [data-baseweb="menu"] li:hover,
+    [data-baseweb="menu"] li:hover,
+    .stApp [role="option"]:hover,
+    [role="option"]:hover {
+        background: var(--bg-elevated) !important;
+        color: var(--accent-cyan) !important;
+    }
+    
+    /* Selectbox dropdown selected/highlighted item */
+    .stApp [data-baseweb="menu"] li[aria-selected="true"],
+    [data-baseweb="menu"] li[aria-selected="true"],
+    .stApp [role="option"][aria-selected="true"],
+    [role="option"][aria-selected="true"] {
+        background: linear-gradient(135deg, var(--primary-start), var(--primary-end)) !important;
+        color: white !important;
+    }
+    
     /* Progress bar */
     .stApp .stProgress > div > div {
         background: linear-gradient(90deg, var(--primary-start), var(--primary-end)) !important;
