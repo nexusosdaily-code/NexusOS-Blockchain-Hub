@@ -35,6 +35,12 @@ from wnsp_v7.substrate import (
 
 from wnsp_v7.mass_routing import SubstrateNetwork
 
+try:
+    from wnsp_protocol_v7 import encode_lambda_message, LambdaEncoder
+except ImportError:
+    encode_lambda_message = None
+    LambdaEncoder = None
+
 
 @st.cache_resource
 def get_network() -> HarmonicNetwork:
@@ -801,6 +807,63 @@ def render_physics_foundation():
         - **HarmonicRatio**: Resonance strength based on musical intervals
         """)
 
+def render_oscillating_encoder():
+    """Render the oscillating wavelength encoder (2+ chars/particle)."""
+    st.subheader("Oscillating Wavelength Encoder")
+    st.markdown("**2+ characters per particle via λ₁ → λ₂ oscillation**")
+    
+    if encode_lambda_message is None:
+        st.error("Oscillating encoder module not available")
+        return
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        message = st.text_area(
+            "Message to Encode",
+            value="LAMBDA BOSON IS REAL MASS",
+            height=80
+        )
+        sender = st.text_input("Sender", value="TeRataPou")
+        recipient = st.text_input("Recipient", value="NexusNetwork")
+    
+    with col2:
+        intensity = st.slider("Intensity", 1, 63, 32)
+        cycles = st.slider("Cycles", 1, 10, 1)
+    
+    if st.button("🔬 Encode (2 chars/particle)", type="primary", use_container_width=True):
+        result = encode_lambda_message(
+            content=message,
+            sender=sender,
+            recipient=recipient,
+            intensity=intensity,
+            cycles=cycles
+        )
+        
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Characters", result['efficiency']['characters'])
+        col2.metric("Particles", result['efficiency']['particles'])
+        col3.metric("Chars/Particle", f"{result['efficiency']['chars_per_particle']:.2f}")
+        col4.metric("vs v2.0", result['efficiency']['vs_v2_improvement'])
+        
+        st.success(f"✅ {result['validation']['status']}")
+        
+        st.markdown("### Lambda Frames")
+        import pandas as pd
+        frames = result['message']['frames']
+        if frames:
+            df = pd.DataFrame([{
+                'Frame': i+1,
+                'λ₁→λ₂': f"{f['wavelength_start_nm']:.0f}→{f['wavelength_end_nm']:.0f}nm",
+                'Chars': ''.join(f['char_pair']),
+                'Λ Mass': f"{f['lambda_mass_kg']:.2e} kg"
+            } for i, f in enumerate(frames)])
+            st.dataframe(df, use_container_width=True)
+        
+        with st.expander("Full Result"):
+            st.json(result)
+
+
 def main():
     network = get_network()
     substrate = get_substrate_network()
@@ -809,6 +872,7 @@ def main():
     
     tabs = st.tabs([
         "Λ Lambda Substrate",
+        "🔄 Oscillating Encoder",
         "🌈 Octave Spectrum",
         "🎼 Node Tones",
         "🔗 Resonance Network",
@@ -822,24 +886,27 @@ def main():
         render_lambda_substrate(substrate)
     
     with tabs[1]:
-        render_octave_spectrum()
+        render_oscillating_encoder()
     
     with tabs[2]:
-        render_node_tones(network)
+        render_octave_spectrum()
     
     with tabs[3]:
-        render_resonance_network(network)
+        render_node_tones(network)
     
     with tabs[4]:
-        render_packet_creator(network)
+        render_resonance_network(network)
     
     with tabs[5]:
-        render_excitation_chain()
+        render_packet_creator(network)
     
     with tabs[6]:
-        render_network_status(network)
+        render_excitation_chain()
     
     with tabs[7]:
+        render_network_status(network)
+    
+    with tabs[8]:
         render_physics_foundation()
     
     st.markdown("---")
