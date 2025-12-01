@@ -55,7 +55,25 @@ from .mass_routing import (
     SubstrateNetwork,
 )
 
-__version__ = "7.0.0"
+from .consciousness import (
+    ConsciousnessLevel,
+    SpectralBand,
+    StokesVector,
+    ConsciousNode,
+    ConsciousnessNetwork,
+    get_consciousness_network,
+)
+
+from .substrate_coordinator import (
+    OperationType,
+    SubstrateTransaction,
+    SubstrateCoordinator,
+    get_substrate_coordinator,
+    validate_substrate_transaction,
+    FOUNDER_WALLET,
+)
+
+__version__ = "7.1.0"
 __all__ = [
     # Protocol layer
     "Octave",
@@ -96,4 +114,18 @@ __all__ = [
     "lambda_mass_from_wavelength",
     "energy_from_lambda",
     "frequency_from_lambda",
+    # Consciousness layer (merged from v6)
+    "ConsciousnessLevel",
+    "SpectralBand",
+    "StokesVector",
+    "ConsciousNode",
+    "ConsciousnessNetwork",
+    "get_consciousness_network",
+    # Substrate coordinator (links ALL modules)
+    "OperationType",
+    "SubstrateTransaction",
+    "SubstrateCoordinator",
+    "get_substrate_coordinator",
+    "validate_substrate_transaction",
+    "FOUNDER_WALLET",
 ]

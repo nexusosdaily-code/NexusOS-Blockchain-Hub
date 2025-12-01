@@ -406,7 +406,7 @@ class LiquidityPool:
         
         return output_amount, price_impact
     
-    def swap(self, input_token: str, input_amount: float, min_output: float = 0.0) -> Tuple[bool, float, str]:
+    def swap(self, input_token: str, input_amount: float, min_output: float = 0.0, trader: str = "anonymous") -> Tuple[bool, float, str]:
         """
         Execute token swap with physics-based E=hf fee structure.
         
@@ -415,8 +415,23 @@ class LiquidityPool:
         - Pool's spectral region is determined by TVL
         - Higher TVL = higher frequency = higher energy = higher fees
         
+        All swaps are validated via the WNSP v7 Substrate Coordinator
+        for Lambda mass conservation (Λ = hf/c²).
+        
         Returns: (success, output_amount, message)
         """
+        adapter = get_physics_adapter()
+        pool_id = f"{self.token_a}_{self.token_b}"
+        valid, reason, substrate_tx = adapter.validate_via_substrate(
+            sender=trader,
+            recipient=f"dex_pool_{pool_id}",
+            amount_nxt=input_amount,
+            module=EconomicModule.DEX,
+            frequency_hz=SPECTRAL_FEE_TIERS.get(self.spectral_region, SPECTRAL_FEE_TIERS['VISIBLE'])['frequency_hz']
+        )
+        if not valid:
+            return False, 0.0, f"Substrate validation failed: {reason}"
+        
         output_amount, price_impact = self.calculate_output_amount(input_token, input_amount)
         
         if output_amount < min_output:

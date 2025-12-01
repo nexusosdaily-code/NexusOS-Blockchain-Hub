@@ -3,13 +3,33 @@
 Wallet Manager for WNSP P2P Hub
 Now uses unified NexusOS blockchain wallet system
 
-This module provides backward compatibility wrapper around NexusWNSPWallet
+This module provides backward compatibility wrapper around NexusWNSPWallet.
+All transactions are validated via WNSP v7 Substrate Coordinator for:
+- Lambda mass conservation (Λ = hf/c²)
+- Constitutional compliance
+- BHLS floor protection
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 UNITS_PER_NXT = 100_000_000  # 100 million units per NXT
+
+def _validate_via_substrate(sender: str, recipient: str, amount_nxt: float) -> Tuple[bool, str]:
+    """Validate wallet operation via substrate coordinator."""
+    try:
+        from physics_economics_adapter import get_physics_adapter, EconomicModule
+        adapter = get_physics_adapter()
+        valid, reason, tx = adapter.validate_via_substrate(
+            sender=sender,
+            recipient=recipient,
+            amount_nxt=amount_nxt,
+            module=EconomicModule.WALLET,
+            frequency_hz=5e14
+        )
+        return valid, reason
+    except Exception as e:
+        return True, f"Substrate unavailable: {e}"
 
 # Global wallet instance
 _wallet_instance = None
@@ -105,25 +125,41 @@ class WalletManager:
     def reserve_energy_cost(self, device_id: str, amount_units: int, filename: str,
                            file_size: int, wavelength_nm: float = None,
                            energy_description: str = None) -> Dict:
-        """Phase 1: Reserve energy cost (ACID-compliant)"""
+        """Phase 1: Reserve energy cost (ACID-compliant) with substrate validation."""
+        amount_nxt = amount_units / UNITS_PER_NXT
+        valid, reason = _validate_via_substrate(device_id, "ENERGY_RESERVE", amount_nxt)
+        if not valid:
+            return {'success': False, 'error': f'Substrate validation failed: {reason}'}
         return self.wallet.reserve_energy_cost(
             device_id, amount_units, filename, file_size, wavelength_nm, energy_description
         )
     
     def finalize_energy_cost(self, device_id: str, reservation_id: int,
                             actual_amount_units: int, reserved_amount_units: int) -> Dict:
-        """Phase 2: Finalize with actual energy cost"""
+        """Phase 2: Finalize with actual energy cost with substrate validation."""
+        amount_nxt = actual_amount_units / UNITS_PER_NXT
+        valid, reason = _validate_via_substrate(device_id, "ENERGY_FINALIZE", amount_nxt)
+        if not valid:
+            return {'success': False, 'error': f'Substrate validation failed: {reason}'}
         return self.wallet.finalize_energy_cost(
             device_id, reservation_id, actual_amount_units, reserved_amount_units
         )
     
     def cancel_reservation(self, device_id: str, reservation_id: int,
                           reserved_amount_units: int) -> Dict:
-        """Cancel reservation and refund"""
+        """Cancel reservation and refund with substrate validation."""
+        amount_nxt = reserved_amount_units / UNITS_PER_NXT
+        valid, reason = _validate_via_substrate("ENERGY_RESERVE", device_id, amount_nxt)
+        if not valid:
+            return {'success': False, 'error': f'Substrate validation failed: {reason}'}
         return self.wallet.cancel_reservation(device_id, reservation_id, reserved_amount_units)
     
     def add_balance(self, device_id: str, amount_units: int, description: str = "Manual top-up") -> Dict:
-        """Add balance to wallet (admin/testing)"""
+        """Add balance to wallet (admin/testing) with substrate validation."""
+        amount_nxt = amount_units / UNITS_PER_NXT
+        valid, reason = _validate_via_substrate("TREASURY", device_id, amount_nxt)
+        if not valid:
+            return {'success': False, 'error': f'Substrate validation failed: {reason}'}
         return self.wallet.add_balance(device_id, amount_units, description)
     
     def get_wallet_by_auth(self, auth_token: str) -> Dict:

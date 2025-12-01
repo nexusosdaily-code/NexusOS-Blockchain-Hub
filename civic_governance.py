@@ -224,8 +224,13 @@ class CivicGovernance:
         
         return proposal.proposal_id
     
-    def cast_vote(self, validator_id: str, proposal_id: str, choice: VoteChoice):
-        """Validator casts a vote on a proposal"""
+    def cast_vote(self, validator_id: str, proposal_id: str, choice: VoteChoice, energy_escrow_nxt: float = 0.1):
+        """
+        Validator casts a vote on a proposal.
+        
+        All governance votes are validated via WNSP v7 Substrate Coordinator
+        for constitutional compliance (C-0003: Energy-Backed Validity).
+        """
         if validator_id not in self.validators:
             raise ValueError(f"Validator {validator_id} not registered")
         
@@ -237,6 +242,16 @@ class CivicGovernance:
         
         if not proposal.is_active():
             raise ValueError(f"Proposal {proposal_id} is not accepting votes")
+        
+        valid, reason, substrate_tx = self._physics_adapter.validate_via_substrate(
+            sender=validator_id,
+            recipient=f"governance_{proposal_id}",
+            amount_nxt=energy_escrow_nxt,
+            module=EconomicModule.GOVERNANCE,
+            frequency_hz=3e16
+        )
+        if not valid:
+            raise ValueError(f"Substrate validation failed: {reason}")
         
         # Check if validator already voted
         existing_votes = [v for v in self.votes[proposal_id] if v.validator_id == validator_id]

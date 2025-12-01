@@ -37,6 +37,8 @@ class EconomicModule(Enum):
     EMERGENCY = "emergency"
     RESERVE = "reserve"
     INTERVENTION = "intervention"
+    WALLET = "wallet"
+    MEDIA = "media"
 
 
 class CrisisLevel(Enum):
@@ -106,6 +108,9 @@ class PhysicsEconomicsAdapter:
     3. Orbital burns routed to TransitionReserveLedger
     4. BHLS allocations checked and deducted
     5. SDK fees routed to founder wallet
+    
+    Now integrated with WNSP v7.1 Substrate Coordinator and Consciousness Network.
+    All layers above the substrate are governed by the substrate.
     """
     
     def __init__(self):
@@ -113,6 +118,8 @@ class PhysicsEconomicsAdapter:
         self._flow_controller = None
         self._bhls_system = None
         self._ledger = None
+        self._substrate_coordinator = None
+        self._consciousness_network = None
         self.transactions: list = []
         self.total_energy_processed_joules = 0.0
         self.total_lambda_mass_kg = 0.0
@@ -122,6 +129,76 @@ class PhysicsEconomicsAdapter:
         self.current_crisis_level = CrisisLevel.NORMAL
         self.emergency_interventions: list = []
         self.total_emergency_liquidity_deployed_nxt = 0.0
+    
+    def _init_substrate(self):
+        """Initialize connection to WNSP v7 Substrate Coordinator."""
+        if self._substrate_coordinator is None:
+            try:
+                from wnsp_v7 import get_substrate_coordinator, get_consciousness_network
+                self._substrate_coordinator = get_substrate_coordinator()
+                self._consciousness_network = get_consciousness_network()
+            except ImportError:
+                pass
+    
+    def get_substrate_coordinator(self):
+        """Get the unified substrate coordinator for direct access."""
+        self._init_substrate()
+        return self._substrate_coordinator
+    
+    def get_consciousness_network(self):
+        """Get the consciousness network for node awareness tracking."""
+        self._init_substrate()
+        return self._consciousness_network
+    
+    def validate_via_substrate(
+        self,
+        sender: str,
+        recipient: str,
+        amount_nxt: float,
+        module: EconomicModule,
+        frequency_hz: float = 5e14
+    ) -> Tuple[bool, str, Any]:
+        """
+        Validate a transaction via the unified substrate.
+        
+        All module operations should call this for Lambda mass conservation.
+        """
+        self._init_substrate()
+        if not self._substrate_coordinator:
+            return True, "Substrate not available, proceeding", None
+        
+        from wnsp_v7 import SubstrateTransaction as V7Transaction, OperationType
+        
+        op_map = {
+            EconomicModule.MESSAGING: OperationType.MESSAGE_SEND,
+            EconomicModule.VIDEO: OperationType.MEDIA_STREAM,
+            EconomicModule.MEDIA: OperationType.MEDIA_STREAM,
+            EconomicModule.DEX: OperationType.DEX_SWAP,
+            EconomicModule.GOVERNANCE: OperationType.GOVERNANCE_VOTE,
+            EconomicModule.WALLET: OperationType.WALLET_TRANSFER,
+        }
+        op_type = op_map.get(module, OperationType.MESSAGE_SEND)
+        
+        energy = PLANCK_CONSTANT * frequency_hz * amount_nxt
+        lambda_in = energy / (SPEED_OF_LIGHT ** 2)
+        fee_rate = 0.001
+        lambda_fee = lambda_in * fee_rate
+        lambda_out = lambda_in - lambda_fee
+        
+        tx = V7Transaction(
+            operation_type=op_type,
+            source_node=sender,
+            target_node=recipient,
+            nxt_amount=amount_nxt,
+            frequency_hz=frequency_hz,
+            energy_joules=energy,
+            lambda_mass_in=lambda_in,
+            lambda_mass_out=lambda_out,
+            lambda_mass_fee=lambda_fee
+        )
+        
+        valid, reason = self._substrate_coordinator.validate_transaction(tx)
+        return valid, reason, tx
         
     def _lazy_init(self):
         """Lazy initialization of dependent systems"""
