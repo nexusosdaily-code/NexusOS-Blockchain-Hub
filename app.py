@@ -28,11 +28,6 @@ import streamlit as st
 # Import all dashboard modules
 from civilization_dashboard import main as civilization_main
 from web3_wallet_dashboard import render_web3_wallet_dashboard
-from wnsp_dashboard_v2 import render_wnsp_v2_dashboard
-from wnsp_v3_dashboard import render_wnsp_v3_dashboard
-from wnsp_v4_quantum_dashboard import render_wnsp_v4_dashboard
-from wnsp_v5_dashboard import main as render_wnsp_v5_dashboard
-from wnsp_v6_consciousness_dashboard import render_v6_page as render_wnsp_v6_dashboard
 from wnsp_v7.dashboard import main as render_wnsp_v7_dashboard
 from wavelength_economics_dashboard import render_wavelength_economics_dashboard
 from nexus_consensus_dashboard import render_nexus_consensus_dashboard
@@ -893,28 +888,9 @@ def main():
         # Native wallet interface
         render_web3_wallet_dashboard()
     
-    elif module == "📡 WNSP Protocol v2.0":
-        # WNSP protocol dashboard
-        render_wnsp_v2_dashboard()
-    
-    elif module == "🚀 WNSP Protocol v3.0":
-        # WNSP v3.0 - Hardware Abstraction + Adaptive Encoding
-        render_wnsp_v3_dashboard()
-    
-    elif module == "⚛️ WNSP Protocol v4.0":
-        # WNSP v4.0 - Quantum Entanglement Consensus
-        render_wnsp_v4_dashboard()
-    
-    elif module == "🌊 WNSP Protocol v5.0":
-        # WNSP v5.0 - 7-Band Multi-Scale Architecture
-        render_wnsp_v5_dashboard()
-    
-    elif module == "🔮 WNSP Protocol v6.0":
-        # WNSP v6.0 - Spectrum Consciousness
-        render_wnsp_v6_dashboard()
-    
-    elif module == "🎵 WNSP Protocol v7.0":
-        # WNSP v7.0 - Harmonic Octave Protocol
+    elif module in ["📡 WNSP Protocol v2.0", "🚀 WNSP Protocol v3.0", "⚛️ WNSP Protocol v4.0", 
+                     "🌊 WNSP Protocol v5.0", "🔮 WNSP Protocol v6.0", "🎵 WNSP Protocol v7.0",
+                     "🎵 WNSP v7.1 Substrate"]:
         render_wnsp_v7_dashboard()
     
     elif module == "💬 Mobile DAG Messaging":
